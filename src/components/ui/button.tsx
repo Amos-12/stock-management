@@ -19,7 +19,7 @@ const buttonVariants = cva(
         warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-md",
         hero: "gradient-hero text-white hover:shadow-primary transform hover:scale-[1.02] transition-bounce shadow-lg",
         admin: "bg-primary text-primary-foreground hover:bg-primary-hover shadow-primary",
-        seller: "bg-success text-success-foreground hover:bg-success/90 shadow-md"
+        seller: "gradient-primary text-white hover:shadow-primary transition-all duration-300"
       },
       size: {
         default: "h-10 px-4 py-2",

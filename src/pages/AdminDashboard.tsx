@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { StatsCard } from '@/components/Dashboard/StatsCard';
+import { AdminDashboardCharts } from '@/components/Dashboard/AdminDashboardCharts';
 import { ResponsiveDashboardLayout } from '@/components/Layout/ResponsiveDashboardLayout';
 import { UserManagementPanel } from '@/components/UserManagement/UserManagementPanel';
 import { AdvancedReports } from '@/components/Reports/AdvancedReports';
@@ -9,9 +9,9 @@ import {
   Package, 
   AlertTriangle, 
   ShoppingCart, 
-  Users,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  Calendar
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -19,8 +19,15 @@ import { toast } from '@/hooks/use-toast';
 interface DashboardStats {
   totalProducts: number;
   lowStockProducts: number;
-  totalSales: number;
+  todaySales: number;
+  todayRevenue: number;
+  weekSales: number;
+  weekRevenue: number;
+  monthSales: number;
+  monthRevenue: number;
   totalRevenue: number;
+  salesGrowth: number;
+  revenueGrowth: number;
 }
 
 const AdminDashboard = () => {
@@ -28,8 +35,15 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalProducts: 0,
     lowStockProducts: 0,
-    totalSales: 0,
-    totalRevenue: 0
+    todaySales: 0,
+    todayRevenue: 0,
+    weekSales: 0,
+    weekRevenue: 0,
+    monthSales: 0,
+    monthRevenue: 0,
+    totalRevenue: 0,
+    salesGrowth: 0,
+    revenueGrowth: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -41,27 +55,83 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       
+      // Get current date periods
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+      const lastWeekStart = new Date(weekAgo.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const lastMonthStart = new Date(monthAgo.getFullYear(), monthAgo.getMonth() - 1, monthAgo.getDate());
+
+      // Fetch products data
       const { data: productsData } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
 
-      const { data: salesData } = await supabase
+      // Fetch all sales for analytics
+      const { data: allSalesData } = await supabase
         .from('sales')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .order('created_at', { ascending: false });
 
+      // Calculate product stats
       const totalProducts = productsData?.length || 0;
       const lowStockProducts = productsData?.filter(p => p.quantity <= p.alert_threshold).length || 0;
-      const totalSales = salesData?.length || 0;
-      const totalRevenue = salesData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0;
+
+      // Calculate time-based stats
+      const todaySales = allSalesData?.filter(sale => 
+        new Date(sale.created_at) >= today
+      ) || [];
+      
+      const weekSales = allSalesData?.filter(sale => 
+        new Date(sale.created_at) >= weekAgo
+      ) || [];
+      
+      const monthSales = allSalesData?.filter(sale => 
+        new Date(sale.created_at) >= monthAgo
+      ) || [];
+
+      const lastWeekSales = allSalesData?.filter(sale => {
+        const saleDate = new Date(sale.created_at);
+        return saleDate >= lastWeekStart && saleDate < weekAgo;
+      }) || [];
+
+      const lastMonthSales = allSalesData?.filter(sale => {
+        const saleDate = new Date(sale.created_at);
+        return saleDate >= lastMonthStart && saleDate < monthAgo;
+      }) || [];
+
+      // Calculate revenues
+      const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total_amount, 0);
+      const weekRevenue = weekSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+      const monthRevenue = monthSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+      const totalRevenue = allSalesData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0;
+      
+      const lastWeekRevenue = lastWeekSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+      const lastMonthRevenue = lastMonthSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+
+      // Calculate growth percentages
+      const salesGrowth = lastWeekSales.length > 0 
+        ? ((weekSales.length - lastWeekSales.length) / lastWeekSales.length) * 100 
+        : weekSales.length > 0 ? 100 : 0;
+
+      const revenueGrowth = lastMonthRevenue > 0 
+        ? ((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+        : monthRevenue > 0 ? 100 : 0;
 
       setStats({
         totalProducts,
         lowStockProducts,
-        totalSales,
-        totalRevenue
+        todaySales: todaySales.length,
+        todayRevenue,
+        weekSales: weekSales.length,
+        weekRevenue,
+        monthSales: monthSales.length,
+        monthRevenue,
+        totalRevenue,
+        salesGrowth: Math.round(salesGrowth * 10) / 10,
+        revenueGrowth: Math.round(revenueGrowth * 10) / 10,
       });
 
     } catch (error) {
@@ -87,91 +157,78 @@ const AdminDashboard = () => {
       default:
         return (
           <div className="space-y-8">
-            {/* Stats Cards */}
+            {/* Période Stats - 2 cartes par ligne selon l'importance */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <StatsCard
+                title="Ventes du Jour"
+                value={`${stats.todaySales} vente${stats.todaySales > 1 ? 's' : ''}`}
+                icon={Calendar}
+                change={{
+                  value: stats.salesGrowth,
+                  isPositive: stats.salesGrowth >= 0,
+                  label: 'vs semaine'
+                }}
+                variant="default"
+              />
+              <StatsCard
+                title="CA du Jour"
+                value={`${stats.todayRevenue.toFixed(2)} €`}
+                icon={DollarSign}
+                change={{
+                  value: Math.abs(stats.revenueGrowth),
+                  isPositive: stats.revenueGrowth >= 0,
+                  label: 'vs mois'
+                }}
+                variant="success"
+              />
+            </div>
+
+            {/* Période étendue - 4 cartes */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="shadow-lg">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Produits</CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalProducts}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Stock Faible</CardTitle>
-                  <AlertTriangle className="h-4 w-4 text-warning" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-warning">{stats.lowStockProducts}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Ventes Totales</CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalSales}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Chiffre d'Affaires</CardTitle>
-                  <DollarSign className="h-4 w-4 text-success" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-success">
-                    {stats.totalRevenue.toFixed(2)} €
-                  </div>
-                </CardContent>
-              </Card>
+              <StatsCard
+                title="Ventes Semaine"
+                value={`${stats.weekSales}`}
+                icon={ShoppingCart}
+                variant="default"
+              />
+              <StatsCard
+                title="CA Semaine"
+                value={`${stats.weekRevenue.toFixed(2)} €`}
+                icon={DollarSign}
+                variant="success"
+              />
+              <StatsCard
+                title="Ventes Mois"
+                value={`${stats.monthSales}`}
+                icon={TrendingUp}
+                variant="default"
+              />
+              <StatsCard
+                title="CA Mois"
+                value={`${stats.monthRevenue.toFixed(2)} €`}
+                icon={DollarSign}
+                variant="success"
+              />
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Button
-                onClick={() => setCurrentSection('products')}
-                variant="outline"
-                className="h-20 flex flex-col items-center justify-center hover:bg-primary/10"
-              >
-                <Package className="w-6 h-6 mb-2" />
-                Gérer Produits
-              </Button>
-              <Button
-                onClick={() => setCurrentSection('users')}
-                variant="outline"
-                className="h-20 flex flex-col items-center justify-center hover:bg-primary/10"
-              >
-                <Users className="w-6 h-6 mb-2" />
-                Utilisateurs
-              </Button>
-              <Button
-                onClick={() => setCurrentSection('reports')}
-                variant="outline"
-                className="h-20 flex flex-col items-center justify-center hover:bg-primary/10"
-              >
-                <TrendingUp className="w-6 h-6 mb-2" />
-                Rapports
-              </Button>
-              <Button
-                onClick={() => setCurrentSection('notifications')}
-                variant="outline"
-                className="h-20 flex flex-col items-center justify-center hover:bg-primary/10 relative"
-              >
-                <AlertTriangle className="w-6 h-6 mb-2" />
-                Alertes Stock
-                {stats.lowStockProducts > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-warning text-warning-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {stats.lowStockProducts}
-                  </span>
-                )}
-              </Button>
+            {/* Inventaire et Alertes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <StatsCard
+                title="Total Produits"
+                value={stats.totalProducts}
+                icon={Package}
+                variant="default"
+              />
+              <StatsCard
+                title="Alertes Stock"
+                value={stats.lowStockProducts}
+                icon={AlertTriangle}
+                variant={stats.lowStockProducts > 0 ? "warning" : "default"}
+              />
             </div>
+
+            {/* Graphiques et Analytics */}
+            <AdminDashboardCharts />
           </div>
         );
     }
