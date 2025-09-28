@@ -1,15 +1,48 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Package, ArrowRight } from 'lucide-react';
+import { Package, ArrowRight, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { useState } from 'react';
 import AdminDashboard from './AdminDashboard';
 import SellerDashboard from './SellerDashboard';
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, profile, loading } = useAuth();
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
+
+  const handleCreateAdmin = async () => {
+    if (!user?.email) return;
+    
+    try {
+      setIsCreatingAdmin(true);
+      const { error } = await supabase.rpc('promote_user_to_admin', {
+        user_email: user.email
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Compte admin créé",
+        description: "Vous êtes maintenant administrateur. Veuillez actualiser la page.",
+      });
+      
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+      console.error('Error creating admin:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer le compte admin",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingAdmin(false);
+    }
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -71,11 +104,22 @@ const Index = () => {
         <CardHeader className="text-center">
           <CardTitle>Configuration en cours</CardTitle>
         </CardHeader>
-        <CardContent className="text-center">
+        <CardContent className="text-center space-y-4">
           <p className="mb-4">Votre compte est en cours de configuration...</p>
-          <Button onClick={() => window.location.reload()} variant="outline">
-            Actualiser
-          </Button>
+          <div className="space-y-2">
+            <Button onClick={() => window.location.reload()} variant="outline" className="w-full">
+              Actualiser
+            </Button>
+            <Button 
+              onClick={handleCreateAdmin} 
+              variant="default" 
+              className="w-full"
+              disabled={isCreatingAdmin}
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              {isCreatingAdmin ? 'Création...' : 'Créer le compte admin'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

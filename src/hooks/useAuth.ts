@@ -32,7 +32,7 @@ export const useAuth = () => {
                 .from('profiles')
                 .select('*')
                 .eq('user_id', session.user.id)
-                .single();
+                .maybeSingle();
 
               if (profileError) throw profileError;
 
@@ -40,7 +40,7 @@ export const useAuth = () => {
                 .from('user_roles')
                 .select('role')
                 .eq('user_id', session.user.id)
-                .single();
+                .maybeSingle();
 
               if (roleError) throw roleError;
 
