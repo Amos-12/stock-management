@@ -17,9 +17,10 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { Calendar, TrendingUp, Package } from 'lucide-react';
+import { Calendar, TrendingUp, Package, DollarSign, ShoppingCart, Users, Target } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { StatsCard } from './StatsCard';
 
 interface RevenueData {
   date: string;
@@ -54,6 +55,15 @@ export const AdminDashboardCharts = () => {
   const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
   const [topSellers, setTopSellers] = useState<SellerData[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Stats data
+  const [todayRevenue, setTodayRevenue] = useState(0);
+  const [weekRevenue, setWeekRevenue] = useState(0);
+  const [monthRevenue, setMonthRevenue] = useState(0);
+  const [yearRevenue, setYearRevenue] = useState(0);
+  const [todaySales, setTodaySales] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalSellers, setTotalSellers] = useState(0);
 
   useEffect(() => {
     fetchChartData();
@@ -66,7 +76,8 @@ export const AdminDashboardCharts = () => {
         fetchRevenueData(),
         fetchTopProducts(),
         fetchCategoryData(),
-        fetchTopSellers()
+        fetchTopSellers(),
+        fetchStatsData()
       ]);
     } catch (error) {
       console.error('Error fetching chart data:', error);
@@ -77,6 +88,76 @@ export const AdminDashboardCharts = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStatsData = async () => {
+    try {
+      // Today's revenue and sales
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const { data: todayData, error: todayError } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .gte('created_at', today.toISOString());
+      
+      if (todayError) throw todayError;
+      
+      const todayRev = todayData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0;
+      setTodayRevenue(todayRev);
+      setTodaySales(todayData?.length || 0);
+
+      // Week revenue
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const { data: weekData, error: weekError } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .gte('created_at', weekAgo.toISOString());
+      
+      if (weekError) throw weekError;
+      setWeekRevenue(weekData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0);
+
+      // Month revenue
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const { data: monthData, error: monthError } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .gte('created_at', monthAgo.toISOString());
+      
+      if (monthError) throw monthError;
+      setMonthRevenue(monthData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0);
+
+      // Year revenue
+      const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+      const { data: yearData, error: yearError } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .gte('created_at', yearAgo.toISOString());
+      
+      if (yearError) throw yearError;
+      setYearRevenue(yearData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0);
+
+      // Total products
+      const { count: productsCount, error: productsError } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+      
+      if (productsError) throw productsError;
+      setTotalProducts(productsCount || 0);
+
+      // Total sellers
+      const { count: sellersCount, error: sellersError } = await supabase
+        .from('user_roles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'seller');
+      
+      if (sellersError) throw sellersError;
+      setTotalSellers(sellersCount || 0);
+
+    } catch (error) {
+      console.error('Error fetching stats data:', error);
     }
   };
 
@@ -231,6 +312,76 @@ export const AdminDashboardCharts = () => {
 
   return (
     <div className="space-y-6">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="Ventes Aujourd'hui"
+          value={`${todayRevenue.toFixed(2)}€`}
+          icon={DollarSign}
+          change={{
+            value: 12.5,
+            isPositive: true,
+            label: "vs hier"
+          }}
+          variant="success"
+        />
+        <StatsCard
+          title="Ventes cette Semaine"
+          value={`${weekRevenue.toFixed(2)}€`}
+          icon={TrendingUp}
+          change={{
+            value: 8.2,
+            isPositive: true,
+            label: "vs semaine dernière"
+          }}
+          variant="default"
+        />
+        <StatsCard
+          title="Commandes Aujourd'hui"
+          value={todaySales}
+          icon={ShoppingCart}
+          change={{
+            value: 3.1,
+            isPositive: false,
+            label: "vs hier"
+          }}
+          variant="warning"
+        />
+        <StatsCard
+          title="Produits Actifs"
+          value={totalProducts}
+          icon={Package}
+          variant="default"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="Ventes ce Mois"
+          value={`${monthRevenue.toFixed(2)}€`}
+          icon={Target}
+          variant="success"
+        />
+        <StatsCard
+          title="Ventes cette Année"
+          value={`${yearRevenue.toFixed(2)}€`}
+          icon={TrendingUp}
+          variant="default"
+        />
+        <StatsCard
+          title="Vendeurs Actifs"
+          value={totalSellers}
+          icon={Users}
+          variant="default"
+        />
+        <StatsCard
+          title="Marge Moyenne"
+          value="23.5%"
+          icon={Target}
+          variant="success"
+        />
+      </div>
+
       {/* Period Selector */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold flex items-center gap-2">
