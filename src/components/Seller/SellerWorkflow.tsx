@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   ShoppingCart, 
   Package, 
@@ -14,11 +14,13 @@ import {
   Receipt,
   CheckCircle,
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { InvoiceGenerator } from '@/components/Invoice/InvoiceGenerator';
 
 interface Product {
   id: string;
@@ -36,7 +38,11 @@ interface CartItem extends Product {
 
 type WorkflowStep = 'products' | 'cart' | 'checkout' | 'success';
 
-export const SellerWorkflow = () => {
+interface SellerWorkflowProps {
+  onSaleComplete?: () => void;
+}
+
+export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('products');
   const [products, setProducts] = useState<Product[]>([]);
@@ -46,6 +52,7 @@ export const SellerWorkflow = () => {
   const [customerName, setCustomerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [completedSale, setCompletedSale] = useState<any>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -204,9 +211,21 @@ export const SellerWorkflow = () => {
       });
 
       setCurrentStep('success');
+      setCompletedSale({
+        ...saleData,
+        items: cart.map(item => ({
+          name: item.name,
+          quantity: item.cartQuantity,
+          unit_price: item.price,
+          total: item.price * item.cartQuantity
+        }))
+      });
       
       // Refresh products
       fetchProducts();
+      
+      // Call parent callback
+      onSaleComplete?.();
 
     } catch (error) {
       console.error('Error processing sale:', error);
@@ -225,6 +244,8 @@ export const SellerWorkflow = () => {
     setCart([]);
     setCustomerName('');
     setSearchTerm('');
+    setCompletedSale(null);
+    onSaleComplete?.();
   };
 
   const categories = [
@@ -510,10 +531,25 @@ export const SellerWorkflow = () => {
             <p className="text-muted-foreground mb-6">
               La vente de {getTotalAmount().toFixed(2)}€ a été enregistrée avec succès.
             </p>
-            <Button onClick={resetWorkflow} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Nouvelle vente
-            </Button>
+            <div className="flex gap-2 justify-center">
+              {completedSale && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <FileText className="w-4 h-4" />
+                      Imprimer Reçu
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <InvoiceGenerator saleData={completedSale} />
+                  </DialogContent>
+                </Dialog>
+              )}
+              <Button onClick={resetWorkflow} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Nouvelle vente
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

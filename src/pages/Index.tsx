@@ -91,11 +91,13 @@ const Index = () => {
   }
 
   // Redirect based on user role
-  if (profile?.role === 'admin') {
-    return <AdminDashboard />;
-  } else if (profile?.role === 'seller') {
-    return <SellerDashboard />;
-  }
+  useEffect(() => {
+    if (profile?.role === 'admin') {
+      window.location.href = '/admin';
+    } else if (profile?.role === 'seller') {
+      window.location.href = '/seller';
+    }
+  }, [profile?.role]);
 
   // Fallback for users without a role (shouldn't happen with proper setup)
   return (

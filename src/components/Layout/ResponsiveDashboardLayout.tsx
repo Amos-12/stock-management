@@ -41,7 +41,8 @@ export const ResponsiveDashboardLayout = ({
     { icon: Package, label: 'Produits', value: 'products' },
     { icon: ShoppingCart, label: 'Ventes', value: 'sales' },
     { icon: Users, label: 'Utilisateurs', value: 'users' },
-    { icon: TrendingUp, label: 'Rapports', value: 'reports' }
+    { icon: TrendingUp, label: 'Rapports', value: 'reports' },
+    { icon: Bell, label: 'Notifications', value: 'notifications' }
   ];
 
   const sellerNavItems = [
@@ -124,10 +125,11 @@ export const ResponsiveDashboardLayout = ({
                 <span className="font-medium">{profile?.full_name}</span>
               </div>
 
-              <Button 
+               <Button 
                 variant="ghost" 
                 size="icon"
                 className="hover:bg-primary/10 relative"
+                onClick={() => onSectionChange?.('notifications')}
               >
                 <Bell className="w-4 h-4" />
                 <span className="absolute -top-1 -right-1 bg-warning text-warning-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
@@ -157,17 +159,15 @@ export const ResponsiveDashboardLayout = ({
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
+      <div className="flex">
+        <div className="flex w-full">
           {/* Desktop Sidebar */}
-          <aside className="w-64 flex-shrink-0 hidden lg:block">
-            <Card className="shadow-lg overflow-hidden">
-              <SidebarContent />
-            </Card>
+          <aside className="w-64 flex-shrink-0 hidden lg:block bg-white border-r border-border h-[calc(100vh-64px)] sticky top-16">
+            <SidebarContent />
           </aside>
 
           {/* Main Content */}
-          <main className="flex-1 min-w-0">
+          <main className="flex-1 min-w-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {children}
           </main>
         </div>
