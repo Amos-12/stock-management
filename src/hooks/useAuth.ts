@@ -18,63 +18,76 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isMounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
+        if (session?.user && isMounted) {
           // Fetch user profile and role
-          setTimeout(async () => {
-            try {
-              const { data: profileData, error: profileError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .maybeSingle();
+          try {
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .maybeSingle();
 
-              if (profileError) throw profileError;
+            if (profileError) throw profileError;
 
-              const { data: roleData, error: roleError } = await supabase
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', session.user.id)
-                .maybeSingle();
+            const { data: roleData, error: roleError } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', session.user.id)
+              .maybeSingle();
 
-              if (roleError) throw roleError;
+            if (roleError) throw roleError;
 
+            if (isMounted) {
               setProfile({
                 ...profileData,
-                role: roleData.role
+                role: roleData?.role
               });
-            } catch (error) {
-              console.error('Error fetching profile:', error);
+            }
+          } catch (error) {
+            console.error('Error fetching profile:', error);
+            if (isMounted) {
               toast({
                 title: "Erreur",
                 description: "Impossible de charger le profil utilisateur",
                 variant: "destructive"
               });
             }
-          }, 0);
-        } else {
+          }
+        } else if (isMounted) {
           setProfile(null);
         }
         
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (!session) {
-        setLoading(false);
+      if (isMounted) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (!session) {
+          setLoading(false);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string, phone?: string) => {

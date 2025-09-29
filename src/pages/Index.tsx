@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Package, ArrowRight, Shield } from 'lucide-react';
@@ -6,46 +6,64 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useState } from 'react';
-import AdminDashboard from './AdminDashboard';
-import SellerDashboard from './SellerDashboard';
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, profile, loading } = useAuth();
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const handleCreateAdmin = async () => {
     if (!user?.email) return;
     
     try {
-      setIsCreatingAdmin(true);
+      if (mountedRef.current) {
+        setIsCreatingAdmin(true);
+      }
+      
       const { error } = await supabase.rpc('promote_user_to_admin', {
         user_email: user.email
       });
 
       if (error) throw error;
 
-      toast({
-        title: "Compte admin créé",
-        description: "Vous êtes maintenant administrateur. Veuillez actualiser la page.",
-      });
-      
-      setTimeout(() => window.location.reload(), 1500);
+      if (mountedRef.current) {
+        toast({
+          title: "Compte admin créé",
+          description: "Vous êtes maintenant administrateur. Redirection en cours...",
+        });
+        
+        // Use navigate instead of window.location for better React integration
+        setTimeout(() => {
+          if (mountedRef.current) {
+            navigate('/admin', { replace: true });
+          }
+        }, 1500);
+      }
     } catch (error) {
       console.error('Error creating admin:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer le compte admin",
-        variant: "destructive"
-      });
+      if (mountedRef.current) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de créer le compte admin",
+          variant: "destructive"
+        });
+      }
     } finally {
-      setIsCreatingAdmin(false);
+      if (mountedRef.current) {
+        setIsCreatingAdmin(false);
+      }
     }
   };
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && mountedRef.current) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
@@ -90,14 +108,16 @@ const Index = () => {
     );
   }
 
-  // Redirect based on user role
+  // Redirect based on user role using navigate instead of window.location
   useEffect(() => {
-    if (profile?.role === 'admin') {
-      window.location.href = '/admin';
-    } else if (profile?.role === 'seller') {
-      window.location.href = '/seller';
+    if (profile?.role && mountedRef.current) {
+      if (profile.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else if (profile.role === 'seller') {
+        navigate('/seller', { replace: true });
+      }
     }
-  }, [profile?.role]);
+  }, [profile?.role, navigate]);
 
   // Fallback for users without a role (shouldn't happen with proper setup)
   return (
@@ -109,7 +129,9 @@ const Index = () => {
         <CardContent className="text-center space-y-4">
           <p className="mb-4">Votre compte est en cours de configuration...</p>
           <div className="space-y-2">
-            <Button onClick={() => window.location.reload()} variant="outline" className="w-full">
+            <Button onClick={() => {
+              if (mountedRef.current) window.location.reload();
+            }} variant="outline" className="w-full">
               Actualiser
             </Button>
             <Button 
