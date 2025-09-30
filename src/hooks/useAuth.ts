@@ -201,6 +201,8 @@ export const useAuth = () => {
           title: "Déconnexion réussie",
           description: "À bientôt !",
         });
+        // Redirect to auth page after successful sign out
+        window.location.href = '/auth';
       }
     } catch (error) {
       console.error('Signout error:', error);

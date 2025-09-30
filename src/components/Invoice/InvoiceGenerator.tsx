@@ -33,11 +33,11 @@ interface InvoiceGeneratorProps {
     total_amount: number;
     payment_method: string;
     created_at: string;
-    sale_items: Array<{
-      product_name: string;
+    items?: Array<{
+      name: string;
       quantity: number;
       unit_price: number;
-      subtotal: number;
+      total: number;
     }>;
   };
 }
@@ -47,12 +47,7 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
     customer_name: saleData?.customer_name || '',
     customer_email: '',
     customer_address: '',
-    items: saleData?.sale_items?.map(item => ({
-      name: item.product_name,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total: item.subtotal
-    })) || [],
+    items: saleData?.items || [],
     total_amount: saleData?.total_amount || 0,
     payment_method: saleData?.payment_method || 'cash',
     date: saleData?.created_at ? new Date(saleData.created_at).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR'),
@@ -65,124 +60,116 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
     try {
       setIsGenerating(true);
 
-      const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.width;
-      const margin = 20;
-
-      // Company Header
-      pdf.setFontSize(24);
-      pdf.setTextColor(34, 85, 170); // Primary color
-      pdf.text('GF DISTRIBUTION', margin, 30);
+      // Format 58mm x 80mm pour imprimante thermique borlette QI2
+      // 58mm = ~165 points, 80mm = ~227 points à 72 DPI
+      const receiptWidth = 58; // mm
+      const receiptHeight = 80; // mm
       
-      pdf.setFontSize(10);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text('Système de gestion des ventes', margin, 40);
-      pdf.text('123 Rue de Commerce, 75001 Paris', margin, 50);
-      pdf.text('Tél: 01 23 45 67 89 | Email: contact@gfdistribution.fr', margin, 60);
-
-      // Invoice Title
-      pdf.setFontSize(20);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text('FACTURE', pageWidth - margin - 50, 30);
-      
-      pdf.setFontSize(12);
-      pdf.text(`N° ${invoiceData.invoice_number}`, pageWidth - margin - 50, 45);
-      pdf.text(`Date: ${invoiceData.date}`, pageWidth - margin - 50, 55);
-
-      // Customer Information
-      pdf.setFontSize(14);
-      pdf.text('Facturé à:', margin, 80);
-      
-      pdf.setFontSize(12);
-      pdf.text(invoiceData.customer_name || 'Client', margin, 95);
-      if (invoiceData.customer_email) {
-        pdf.text(invoiceData.customer_email, margin, 105);
-      }
-      if (invoiceData.customer_address) {
-        pdf.text(invoiceData.customer_address, margin, 115);
-      }
-
-      // Table Header
-      const tableTop = 140;
-      const tableLeft = margin;
-      const colWidths = [80, 30, 30, 40];
-      const colPositions = [
-        tableLeft,
-        tableLeft + colWidths[0],
-        tableLeft + colWidths[0] + colWidths[1],
-        tableLeft + colWidths[0] + colWidths[1] + colWidths[2]
-      ];
-
-      // Draw table header
-      pdf.setFillColor(34, 85, 170);
-      pdf.rect(tableLeft, tableTop, colWidths.reduce((a, b) => a + b, 0), 10, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(10);
-      pdf.text('Description', colPositions[0] + 2, tableTop + 7);
-      pdf.text('Qté', colPositions[1] + 2, tableTop + 7);
-      pdf.text('Prix U.', colPositions[2] + 2, tableTop + 7);
-      pdf.text('Total', colPositions[3] + 2, tableTop + 7);
-
-      // Table Content
-      pdf.setTextColor(0, 0, 0);
-      let currentY = tableTop + 10;
-
-      invoiceData.items.forEach((item, index) => {
-        const rowHeight = 8;
-        currentY += rowHeight;
-
-        // Alternate row colors
-        if (index % 2 === 0) {
-          pdf.setFillColor(250, 250, 250);
-          pdf.rect(tableLeft, currentY - 6, colWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
-        }
-
-        pdf.text(item.name, colPositions[0] + 2, currentY);
-        pdf.text(item.quantity.toString(), colPositions[1] + 2, currentY);
-        pdf.text(`${item.unit_price.toFixed(2)} €`, colPositions[2] + 2, currentY);
-        pdf.text(`${item.total.toFixed(2)} €`, colPositions[3] + 2, currentY);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [receiptWidth, receiptHeight]
       });
 
-      // Total Section
-      currentY += 20;
-      const totalBoxLeft = pageWidth - margin - 60;
-      
-      pdf.setFillColor(34, 85, 170);
-      pdf.rect(totalBoxLeft, currentY, 60, 15, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(12);
-      pdf.text('TOTAL', totalBoxLeft + 5, currentY + 10);
-      pdf.text(`${invoiceData.total_amount.toFixed(2)} €`, totalBoxLeft + 35, currentY + 10);
+      const margin = 3;
+      const contentWidth = receiptWidth - (margin * 2);
+      let currentY = margin;
 
-      // Payment Information
-      currentY += 30;
-      pdf.setTextColor(0, 0, 0);
+      // Company Header - Compact
       pdf.setFontSize(10);
-      pdf.text(`Mode de paiement: ${invoiceData.payment_method.toUpperCase()}`, margin, currentY);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('GF DISTRIBUTION', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      currentY += 4;
+      pdf.setFontSize(6);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Tel: 01 23 45 67 89', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Invoice Info - Compact
+      currentY += 4;
+      pdf.setFontSize(7);
+      pdf.text(`No: ${invoiceData.invoice_number.substring(0, 15)}`, margin, currentY);
+      currentY += 3;
+      pdf.text(`Date: ${invoiceData.date}`, margin, currentY);
+      
+      if (invoiceData.customer_name) {
+        currentY += 3;
+        pdf.text(`Client: ${invoiceData.customer_name.substring(0, 20)}`, margin, currentY);
+      }
+      
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Items - Very Compact Format
+      currentY += 4;
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Article', margin, currentY);
+      pdf.text('Qte', contentWidth - 20, currentY);
+      pdf.text('Prix', contentWidth - 10, currentY);
+      pdf.text('Total', contentWidth - 2, currentY, { align: 'right' });
+      
+      currentY += 2;
+      pdf.setFont('helvetica', 'normal');
+      
+      invoiceData.items.forEach((item) => {
+        currentY += 3;
+        
+        // Truncate long names
+        const itemName = item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name;
+        pdf.setFontSize(6);
+        pdf.text(itemName, margin, currentY);
+        
+        pdf.text(item.quantity.toString(), contentWidth - 20, currentY);
+        pdf.text(`${item.unit_price.toFixed(2)}`, contentWidth - 10, currentY);
+        pdf.text(`${item.total.toFixed(2)}`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      });
+      
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Total - Bold and Larger
+      currentY += 4;
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('TOTAL:', margin, currentY);
+      pdf.text(`${invoiceData.total_amount.toFixed(2)} EUR`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      
+      currentY += 4;
+      pdf.setFontSize(6);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Paiement: ${invoiceData.payment_method.toUpperCase()}`, margin, currentY);
+      
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Footer - Very Small
+      currentY += 3;
+      pdf.setFontSize(5);
+      pdf.text('Merci de votre visite!', contentWidth / 2 + margin, currentY, { align: 'center' });
 
-      // Footer
-      const footerY = pdf.internal.pageSize.height - 30;
-      pdf.setFontSize(8);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text('Merci pour votre confiance !', margin, footerY);
-      pdf.text('GF Distribution - Tous droits réservés', pageWidth - margin - 70, footerY);
-
-      // Save the PDF
-      const fileName = `facture_${invoiceData.invoice_number}_${invoiceData.customer_name.replace(/\s+/g, '_')}.pdf`;
+      // Save/Print the PDF
+      const fileName = `recu_${invoiceData.invoice_number}.pdf`;
       pdf.save(fileName);
 
+      // Auto-print
+      setTimeout(() => {
+        window.print();
+      }, 500);
+
       toast({
-        title: "Succès",
-        description: "Facture PDF générée avec succès"
+        title: "Reçu généré",
+        description: "Le reçu thermique 58x80mm a été créé"
       });
 
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error('Error generating thermal receipt:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de générer la facture PDF",
+        description: "Impossible de générer le reçu",
         variant: "destructive"
       });
     } finally {
