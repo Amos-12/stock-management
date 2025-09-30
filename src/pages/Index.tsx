@@ -68,6 +68,16 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
+  // Redirect based on user role using navigate instead of window.location
+  useEffect(() => {
+    if (profile?.role && mountedRef.current) {
+      if (profile.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else if (profile.role === 'seller') {
+        navigate('/seller', { replace: true });
+      }
+    }
+  }, [profile?.role, navigate]);
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background">
@@ -107,17 +117,6 @@ const Index = () => {
       </div>
     );
   }
-
-  // Redirect based on user role using navigate instead of window.location
-  useEffect(() => {
-    if (profile?.role && mountedRef.current) {
-      if (profile.role === 'admin') {
-        navigate('/admin', { replace: true });
-      } else if (profile.role === 'seller') {
-        navigate('/seller', { replace: true });
-      }
-    }
-  }, [profile?.role, navigate]);
 
   // Fallback for users without a role (shouldn't happen with proper setup)
   return (
