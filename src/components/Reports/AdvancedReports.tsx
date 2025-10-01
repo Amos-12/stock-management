@@ -185,13 +185,13 @@ export const AdvancedReports = () => {
 Rapport de Ventes - ${format(dateRange.from, 'dd/MM/yyyy', { locale: fr })} au ${format(dateRange.to, 'dd/MM/yyyy', { locale: fr })}
 
 Résumé:
-Chiffre d'affaires total,${reportData.totalRevenue.toFixed(2)} €
+Chiffre d'affaires total,${reportData.totalRevenue.toFixed(2)} HTG
 Nombre de ventes,${reportData.totalSales}
-Panier moyen,${reportData.averageOrderValue.toFixed(2)} €
+Panier moyen,${reportData.averageOrderValue.toFixed(2)} HTG
 
 Top Produits:
 Produit,Quantité vendue,Chiffre d'affaires
-${reportData.topProducts.map(p => `${p.product_name},${p.quantity_sold},${p.total_revenue.toFixed(2)} €`).join('\n')}
+${reportData.topProducts.map(p => `${p.product_name},${p.quantity_sold},${p.total_revenue.toFixed(2)} HTG`).join('\n')}
 
 Méthodes de paiement:
 Méthode,Nombre,Pourcentage
@@ -305,7 +305,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-success">
-                  {reportData.totalRevenue.toFixed(2)} €
+                  {reportData.totalRevenue.toFixed(2)} HTG
                 </div>
               </CardContent>
             </Card>
@@ -329,7 +329,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-warning">
-                  {reportData.averageOrderValue.toFixed(2)} €
+                  {reportData.averageOrderValue.toFixed(2)} HTG
                 </div>
               </CardContent>
             </Card>
@@ -372,10 +372,10 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                     </div>
                     <div className="text-right">
                       <div className="font-semibold text-success">
-                        {product.total_revenue.toFixed(2)} €
+                        {product.total_revenue.toFixed(2)} HTG
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {((product.total_revenue / reportData.totalRevenue) * 100).toFixed(1)}% du CA
+                        {((product.total_revenue / reportData.totalRevenue) * 100).toFixed(1)}% du CA HTG total
                       </div>
                     </div>
                   </div>

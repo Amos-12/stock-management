@@ -89,7 +89,7 @@ const SellerDashboard = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-success">{sale.total_amount.toFixed(2)} €</div>
+                        <div className="font-bold text-success">{sale.total_amount.toFixed(2)} HTG</div>
                       </div>
                     </div>
                   ))}

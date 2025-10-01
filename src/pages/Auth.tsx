@@ -126,7 +126,7 @@ const Auth = () => {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <Package className="w-12 h-12 text-primary mr-3" />
-            <h1 className="text-3xl font-bold text-primary">GF Distribution</h1>
+            <h1 className="text-3xl font-bold text-primary">GF Distribution & Multi-Services</h1>
           </div>
           <p className="text-muted-foreground">Gestion de stock et ventes professionnelles</p>
         </div>

@@ -76,25 +76,18 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
       let currentY = margin;
 
       // Company Header - Compact
-      pdf.setFontSize(10);
+      pdf.setFontSize(8);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('GF DISTRIBUTION', contentWidth / 2 + margin, currentY, { align: 'center' });
-      
       currentY += 4;
+      pdf.text('GF DISTRIBUTION & MULTI-SERVICES', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2;
       pdf.setFontSize(6);
       pdf.setFont('helvetica', 'normal');
-      pdf.text('123 Rue du Commerce', contentWidth / 2 + margin, currentY, { align: 'center' });
+      pdf.text('Aux Cayes, Sud, Haïti', contentWidth / 2 + margin, currentY, { align: 'center' });
       currentY += 2.5;
-      pdf.text('75001 Paris, France', contentWidth / 2 + margin, currentY, { align: 'center' });
+      pdf.text('Tel: +509 3134-3213', contentWidth / 2 + margin, currentY, { align: 'center' });
       currentY += 2.5;
-      pdf.text('Tel: +33 1 23 45 67 89', contentWidth / 2 + margin, currentY, { align: 'center' });
-      currentY += 2.5;
-      pdf.text('contact@gfdistribution.fr', contentWidth / 2 + margin, currentY, { align: 'center' });
-      currentY += 2.5;
-      pdf.text('SIRET: 123 456 789 00012', contentWidth / 2 + margin, currentY, { align: 'center' });
-      currentY += 2.5;
-      pdf.text('TVA: FR12345678900', contentWidth / 2 + margin, currentY, { align: 'center' });
-      
+      pdf.text('contact@gfdistribution.com', contentWidth / 2 + margin, currentY, { align: 'center' });
       currentY += 3;
       pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
       
@@ -118,9 +111,9 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
       pdf.setFontSize(7);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Article', margin, currentY);
-      pdf.text('Qte', contentWidth - 20, currentY);
-      pdf.text('Prix', contentWidth - 10, currentY);
-      pdf.text('Total', contentWidth - 2, currentY, { align: 'right' });
+      pdf.text('Qte', contentWidth - 30, currentY);
+      pdf.text('Prix', contentWidth - 20, currentY);
+      pdf.text('Total', contentWidth - 1, currentY, { align: 'right' });
       
       currentY += 2;
       pdf.setFont('helvetica', 'normal');
@@ -133,8 +126,8 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
         pdf.setFontSize(6);
         pdf.text(itemName, margin, currentY);
         
-        pdf.text(item.quantity.toString(), contentWidth - 20, currentY);
-        pdf.text(`${item.unit_price.toFixed(2)}`, contentWidth - 10, currentY);
+        pdf.text(item.quantity.toString(), contentWidth - 30, currentY);
+        pdf.text(`${item.unit_price.toFixed(2)}`, contentWidth - 20, currentY);
         pdf.text(`${item.total.toFixed(2)}`, contentWidth - 2 + margin, currentY, { align: 'right' });
       });
       
@@ -146,7 +139,7 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'bold');
       pdf.text('TOTAL:', margin, currentY);
-      pdf.text(`${invoiceData.total_amount.toFixed(2)} EUR`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      pdf.text(`${invoiceData.total_amount.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
       
       currentY += 4;
       pdf.setFontSize(6);
@@ -159,7 +152,7 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
       // Footer - Very Small
       currentY += 3;
       pdf.setFontSize(5);
-      pdf.text('Merci de votre visite!', contentWidth / 2 + margin, currentY, { align: 'center' });
+      pdf.text('Merci de votre visite!', contentWidth / 2 + margin, currentY, { align: 'center'});
 
       // Save/Print the PDF
       const fileName = `recu_${invoiceData.invoice_number}.pdf`;
@@ -215,11 +208,11 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
       </head>
       <body>
         <div class="header">
-          <h1 class="company-name">GF DISTRIBUTION</h1>
+          <h1 class="company-name">GF DISTRIBUTION & MULTI-SERVICES</h1>
           <div class="company-info">
             Système de gestion des ventes<br>
-            123 Rue de Commerce, 75001 Paris<br>
-            Tél: 01 23 45 67 89 | Email: contact@gfdistribution.fr
+            Aux Cayes, Sud, Haïti<br>
+            Tél: +509 3134-3213 | Email: contact@gfdistribution.com
           </div>
         </div>
 
@@ -250,8 +243,8 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
               <tr>
                 <td>${item.name}</td>
                 <td>${item.quantity}</td>
-                <td>${item.unit_price.toFixed(2)} €</td>
-                <td>${item.total.toFixed(2)} €</td>
+                <td>${item.unit_price.toFixed(2)} HTG</td>
+                <td>${item.total.toFixed(2)} HTG</td>
               </tr>
             `).join('')}
           </tbody>
@@ -259,7 +252,7 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
 
         <div class="total-section">
           <div class="total-box">
-            <strong>TOTAL: ${invoiceData.total_amount.toFixed(2)} €</strong>
+            <strong>TOTAL: ${invoiceData.total_amount.toFixed(2)} HTG</strong>
           </div>
         </div>
 
@@ -339,7 +332,7 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
               </div>
               <div>
                 <span className="text-muted-foreground">Total:</span>
-                <div className="font-semibold text-success">{invoiceData.total_amount.toFixed(2)} €</div>
+                <div className="font-semibold text-success">{invoiceData.total_amount.toFixed(2)} HTG</div>
               </div>
               <div>
                 <span className="text-muted-foreground">Paiement:</span>
@@ -366,8 +359,8 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
                     <tr key={index} className="border-t">
                       <td className="p-2">{item.name}</td>
                       <td className="text-right p-2">{item.quantity}</td>
-                      <td className="text-right p-2">{item.unit_price.toFixed(2)} €</td>
-                      <td className="text-right p-2">{item.total.toFixed(2)} €</td>
+                      <td className="text-right p-2">{item.unit_price.toFixed(2)} HTG</td>
+                      <td className="text-right p-2">{item.total.toFixed(2)} HTG</td>
                     </tr>
                   ))}
                 </tbody>

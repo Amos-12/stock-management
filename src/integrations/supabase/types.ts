@@ -261,6 +261,7 @@ export type Database = {
         | "boissons"
         | "gazeuses"
         | "electronique"
+        | "energie"
         | "autres"
     }
     CompositeTypes: {
@@ -395,6 +396,7 @@ export const Constants = {
         "boissons",
         "gazeuses",
         "electronique",
+        "energie",
         "autres",
       ],
     },

@@ -46,7 +46,7 @@ export const DashboardLayout = ({ children, title, role }: DashboardLayoutProps)
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <Package className="w-8 h-8 text-primary mr-3" />
-              <h1 className="text-xl font-bold text-primary">GF Distribution</h1>
+              <h1 className="text-xl font-bold text-primary">GF Distribution & Multi-Services</h1>
             </div>
 
             <div className="flex items-center gap-4">

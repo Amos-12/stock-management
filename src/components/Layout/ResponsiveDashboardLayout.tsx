@@ -115,7 +115,7 @@ export const ResponsiveDashboardLayout = ({
               
               <div className="flex items-center">
                 <Package className="w-8 h-8 text-primary mr-3" />
-                <h1 className="text-xl font-bold text-primary hidden sm:block">GF Distribution</h1>
+                <h1 className="text-xl font-bold text-primary hidden sm:block">GF Distribution & Multi-Services</h1>
               </div>
             </div>
 

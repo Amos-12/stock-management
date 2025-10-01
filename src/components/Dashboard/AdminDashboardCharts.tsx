@@ -316,7 +316,7 @@ export const AdminDashboardCharts = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Ventes Aujourd'hui"
-          value={`${todayRevenue.toFixed(2)}€`}
+          value={`${todayRevenue.toFixed(2)} HTG`}
           icon={DollarSign}
           change={{
             value: 12.5,
@@ -327,7 +327,7 @@ export const AdminDashboardCharts = () => {
         />
         <StatsCard
           title="Ventes cette Semaine"
-          value={`${weekRevenue.toFixed(2)}€`}
+          value={`${weekRevenue.toFixed(2)} HTG`}
           icon={TrendingUp}
           change={{
             value: 8.2,
@@ -358,13 +358,13 @@ export const AdminDashboardCharts = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Ventes ce Mois"
-          value={`${monthRevenue.toFixed(2)}€`}
+          value={`${monthRevenue.toFixed(2)} HTG`}
           icon={Target}
           variant="success"
         />
         <StatsCard
           title="Ventes cette Année"
-          value={`${yearRevenue.toFixed(2)}€`}
+          value={`${yearRevenue.toFixed(2)} HTG`}
           icon={TrendingUp}
           variant="default"
         />
@@ -415,7 +415,7 @@ export const AdminDashboardCharts = () => {
                 <YAxis />
                 <Tooltip 
                   formatter={(value: any, name: any) => [
-                    name === 'revenue' ? `${value}€` : value,
+                    name === 'revenue' ? `${value} HTG` : value,
                     name === 'revenue' ? 'CA' : 'Ventes'
                   ]}
                 />
@@ -442,7 +442,7 @@ export const AdminDashboardCharts = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Tooltip formatter={(value: any) => [`${value}€`, 'Revenus']} />
+                <Tooltip formatter={(value: any) => [`${value} HTG`, 'Revenus']} />
                 <Bar dataKey="revenue" fill="hsl(var(--success))" />
               </BarChart>
             </ResponsiveContainer>
@@ -497,7 +497,7 @@ export const AdminDashboardCharts = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-success">{seller.revenue.toFixed(2)}€</div>
+                    <div className="font-bold text-success">{seller.revenue.toFixed(2)} HTG</div>
                   </div>
                 </div>
               ))}

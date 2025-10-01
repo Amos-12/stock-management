@@ -132,7 +132,7 @@ export const SalesManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Revenu total</p>
-                <p className="text-2xl font-bold text-success">{totalRevenue.toFixed(2)} €</p>
+                <p className="text-2xl font-bold text-success">{totalRevenue.toFixed(2)} HTG</p>
               </div>
               <TrendingUp className="w-8 h-8 text-success opacity-50" />
             </div>
@@ -144,7 +144,7 @@ export const SalesManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Aujourd'hui</p>
-                <p className="text-2xl font-bold text-success">{todayRevenue.toFixed(2)} €</p>
+                <p className="text-2xl font-bold text-success">{todayRevenue.toFixed(2)} HTG</p>
               </div>
               <Calendar className="w-8 h-8 text-success opacity-50" />
             </div>
@@ -201,7 +201,7 @@ export const SalesManagement = () => {
                         {sale.profiles?.full_name || <span className="text-muted-foreground italic">N/A</span>}
                       </TableCell>
                       <TableCell className="font-bold text-success">
-                        {parseFloat(sale.total_amount.toString()).toFixed(2)} €
+                        {parseFloat(sale.total_amount.toString()).toFixed(2)} HTG
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="capitalize">

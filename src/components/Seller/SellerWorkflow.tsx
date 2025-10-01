@@ -207,7 +207,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       toast({
         title: "Vente enregistrée",
-        description: `Vente de ${totalAmount.toFixed(2)}€ enregistrée avec succès`,
+        description: `Vente de ${totalAmount.toFixed(2)} HTG enregistrée avec succès`,
       });
 
       setCurrentStep('success');
@@ -253,6 +253,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     { value: 'boissons', label: 'Boissons' },
     { value: 'gazeuses', label: 'Gazeuses' },
     { value: 'electronique', label: 'Électronique' },
+    { value: 'energie', label: 'Energie' },
     { value: 'autres', label: 'Autres' }
   ];
 
@@ -345,7 +346,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                           <Badge variant="outline" className="text-xs">
                             {categories.find(c => c.value === product.category)?.label}
                           </Badge>
-                          <span className="text-success font-medium">{product.price.toFixed(2)} €</span>
+                          <span className="text-success font-medium">{product.price.toFixed(2)} HTG</span>
                         </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <span>Stock: {product.quantity}</span>
@@ -409,7 +410,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                     <div className="flex-1">
                       <h5 className="font-medium">{item.name}</h5>
                       <p className="text-sm text-muted-foreground">
-                        {item.price.toFixed(2)} € × {item.cartQuantity} = {(item.price * item.cartQuantity).toFixed(2)} €
+                        {item.price.toFixed(2)} HTG × {item.cartQuantity} = {(item.price * item.cartQuantity).toFixed(2)} HTG
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -439,7 +440,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-lg font-semibold">Total:</span>
                     <span className="text-xl font-bold text-success">
-                      {getTotalAmount().toFixed(2)} €
+                      {getTotalAmount().toFixed(2)} HTG
                     </span>
                   </div>
                   
@@ -490,12 +491,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               {cart.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm mb-2">
                   <span>{item.name} × {item.cartQuantity}</span>
-                  <span>{(item.price * item.cartQuantity).toFixed(2)} €</span>
+                  <span>{(item.price * item.cartQuantity).toFixed(2)} HTG</span>
                 </div>
               ))}
               <div className="border-t mt-3 pt-3 flex justify-between font-semibold text-lg">
                 <span>Total</span>
-                <span className="text-success">{getTotalAmount().toFixed(2)} €</span>
+                <span className="text-success">{getTotalAmount().toFixed(2)} HTG</span>
               </div>
             </div>
 
@@ -531,7 +532,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             <CheckCircle className="w-16 h-16 text-success mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">Vente confirmée !</h3>
             <p className="text-muted-foreground mb-6">
-              La vente de {getTotalAmount().toFixed(2)}€ a été enregistrée avec succès.
+              La vente de {getTotalAmount().toFixed(2)} HTG a été enregistrée avec succès.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               {completedSale && (
