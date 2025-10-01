@@ -26,9 +26,10 @@ interface Sale {
 const SellerDashboard = () => {
   const { user } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
-  const [currentSection, setCurrentSection] = useState('sale');
+  const [currentSection, setCurrentSection] = useState('dashboard');
 
   useEffect(() => {
+    setCurrentSection('dashboard');
     fetchMySales();
   }, []);
 

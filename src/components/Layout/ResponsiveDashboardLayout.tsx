@@ -50,7 +50,6 @@ export const ResponsiveDashboardLayout = ({
   const sellerNavItems = [
     { icon: Home, label: 'Dashboard', value: 'dashboard' },
     { icon: ShoppingCart, label: 'Nouvelle vente', value: 'sale' },
-    { icon: Package, label: 'Produits', value: 'products' },
     { icon: TrendingUp, label: 'Mes ventes', value: 'history' }
   ];
 

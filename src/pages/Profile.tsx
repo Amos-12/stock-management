@@ -4,22 +4,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { User, Mail, Phone, Save } from 'lucide-react';
+import { User, Mail, Phone, Save, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
-  const { user, profile, role } = useAuth();
+  const { user, profile, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     phone: ''
   });
+  const [passwordData, setPasswordData] = useState({
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [pwdLoading, setPwdLoading] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       navigate('/auth');
       return;
@@ -31,7 +37,7 @@ const Profile = () => {
         phone: profile.phone || ''
       });
     }
-  }, [user, profile, navigate]);
+  }, [user, profile, navigate, authLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +69,46 @@ const Profile = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordUpdate = async () => {
+    if (!user) return;
+    if (!passwordData.newPassword || passwordData.newPassword.length < 6) {
+      toast({
+        title: 'Mot de passe trop court',
+        description: 'Minimum 6 caractères',
+        variant: 'destructive'
+      });
+      return;
+    }
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: 'Confirmation invalide',
+        description: 'Les mots de passe ne correspondent pas',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setPwdLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passwordData.newPassword });
+      if (error) throw error;
+      toast({
+        title: 'Mot de passe mis à jour',
+        description: 'Votre mot de passe a été modifié avec succès'
+      });
+      setPasswordData({ newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      console.error('Error updating password:', error);
+      toast({
+        title: 'Erreur',
+        description: "Impossible de mettre à jour le mot de passe",
+        variant: 'destructive'
+      });
+    } finally {
+      setPwdLoading(false);
     }
   };
 
@@ -138,6 +184,38 @@ const Profile = () => {
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="Votre numéro de téléphone"
                 />
+              </div>
+
+              {/* Changer le mot de passe */}
+              <div className="space-y-2 border-t pt-4">
+                <Label htmlFor="new_password" className="flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  Nouveau mot de passe
+                </Label>
+                <Input
+                  id="new_password"
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                  placeholder="******"
+                />
+                <Label htmlFor="confirm_password" className="sr-only">Confirmer le mot de passe</Label>
+                <Input
+                  id="confirm_password"
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                  placeholder="Confirmer le mot de passe"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePasswordUpdate}
+                  disabled={pwdLoading}
+                  className="w-full sm:w-auto"
+                >
+                  {pwdLoading ? 'Mise à jour...' : 'Mettre à jour le mot de passe'}
+                </Button>
               </div>
 
               {/* Actions */}
