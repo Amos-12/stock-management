@@ -15,6 +15,7 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [role, setRole] = useState<'admin' | 'seller' | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export const useAuth = () => {
             ...profileData,
             role: (roleData?.role as any)
           });
+          setRole(roleData?.role as 'admin' | 'seller' | null);
         } else {
           // Graceful fallback when profile row doesn't exist yet
           setProfile({
@@ -53,6 +55,7 @@ export const useAuth = () => {
             full_name: '',
             role: (roleData?.role as any)
           });
+          setRole(roleData?.role as 'admin' | 'seller' | null);
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -80,6 +83,7 @@ export const useAuth = () => {
         }, 0);
       } else {
         setProfile(null);
+        setRole(null);
       }
     });
 
@@ -97,6 +101,7 @@ export const useAuth = () => {
         }, 0);
       } else {
         setProfile(null);
+        setRole(null);
       }
     });
 
@@ -209,13 +214,14 @@ export const useAuth = () => {
     }
   };
 
-  return {
-    user,
-    session,
-    profile,
-    loading,
-    signUp,
-    signIn,
-    signOut
+  return { 
+    user, 
+    session, 
+    profile, 
+    role,
+    loading, 
+    signUp, 
+    signIn, 
+    signOut 
   };
 };

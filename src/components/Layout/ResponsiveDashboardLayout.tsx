@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -34,6 +35,7 @@ export const ResponsiveDashboardLayout = ({
   onSectionChange 
 }: ResponsiveDashboardLayoutProps) => {
   const { signOut, profile } = useAuth();
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const adminNavItems = [
@@ -140,9 +142,11 @@ export const ResponsiveDashboardLayout = ({
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="hover:bg-primary/10 hidden sm:inline-flex"
+                className="hover:bg-primary/10"
+                onClick={() => navigate('/profile')}
+                title="Profil"
               >
-                <Settings className="w-4 h-4" />
+                <User className="w-4 h-4" />
               </Button>
 
               <Button 

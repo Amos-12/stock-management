@@ -278,33 +278,35 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     <div className="space-y-6">
       {/* Workflow Progress */}
       <Card className="shadow-lg">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             {steps.map((step, index) => {
               const StepIcon = step.icon;
               const isActive = step.id === currentStep;
               const isCompleted = index < getCurrentStepIndex();
               
               return (
-                <div key={step.id} className="flex items-center">
-                  <div
-                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-smooth ${
-                      isActive
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : isCompleted
-                        ? 'border-success bg-success text-success-foreground'
-                        : 'border-muted-foreground text-muted-foreground'
-                    }`}
-                  >
-                    <StepIcon className="w-5 h-5" />
-                  </div>
-                  <div className="ml-3">
-                    <div className={`text-sm font-medium ${isActive ? 'text-primary' : isCompleted ? 'text-success' : 'text-muted-foreground'}`}>
-                      {step.label}
+                <div key={step.id} className="flex items-center w-full sm:w-auto">
+                  <div className="flex items-center flex-1 sm:flex-initial">
+                    <div
+                      className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-smooth ${
+                        isActive
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : isCompleted
+                          ? 'border-success bg-success text-success-foreground'
+                          : 'border-muted-foreground text-muted-foreground'
+                      }`}
+                    >
+                      <StepIcon className="w-5 h-5" />
+                    </div>
+                    <div className="ml-3">
+                      <div className={`text-sm font-medium ${isActive ? 'text-primary' : isCompleted ? 'text-success' : 'text-muted-foreground'}`}>
+                        {step.label}
+                      </div>
                     </div>
                   </div>
                   {index < steps.length - 1 && (
-                    <ArrowRight className="w-5 h-5 mx-4 text-muted-foreground" />
+                    <ArrowRight className="hidden sm:block w-5 h-5 mx-4 text-muted-foreground" />
                   )}
                 </div>
               );
@@ -332,7 +334,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
               {filteredProducts.map((product) => (
                 <Card key={product.id} className="border hover:shadow-md transition-smooth">
                   <CardContent className="p-4">
@@ -368,8 +370,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             </div>
             
             {cart.length > 0 && (
-              <div className="mt-6 flex justify-end">
-                <Button onClick={() => setCurrentStep('cart')} className="gap-2">
+              <div className="mt-6 flex flex-col sm:flex-row justify-end gap-2">
+                <Button onClick={() => setCurrentStep('cart')} className="gap-2 w-full sm:w-auto">
                   Voir le panier ({cart.length})
                   <ArrowRight className="w-4 h-4" />
                 </Button>
@@ -441,7 +443,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                     </span>
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button 
                       onClick={() => setCurrentStep('products')} 
                       variant="outline"
@@ -497,7 +499,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 onClick={() => setCurrentStep('cart')}
                 variant="outline"
@@ -531,11 +533,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             <p className="text-muted-foreground mb-6">
               La vente de {getTotalAmount().toFixed(2)}€ a été enregistrée avec succès.
             </p>
-            <div className="flex gap-2 justify-center">
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
               {completedSale && (
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="gap-2">
+                    <Button variant="outline" className="gap-2 w-full sm:w-auto">
                       <FileText className="w-4 h-4" />
                       Imprimer Reçu
                     </Button>
@@ -545,7 +547,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   </DialogContent>
                 </Dialog>
               )}
-              <Button onClick={resetWorkflow} className="gap-2">
+              <Button onClick={resetWorkflow} className="gap-2 w-full sm:w-auto">
                 <Plus className="w-4 h-4" />
                 Nouvelle vente
               </Button>

@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveDashboardLayout } from '@/components/Layout/ResponsiveDashboardLayout';
 import { SellerWorkflow } from '@/components/Seller/SellerWorkflow';
+import { SellerDashboardStats } from '@/components/Dashboard/SellerDashboardStats';
+import { StockAlerts } from '@/components/Notifications/StockAlerts';
+import { ProductManagement } from '@/components/Products/ProductManagement';
 import { 
   TrendingUp,
   Receipt,
@@ -49,23 +52,14 @@ const SellerDashboard = () => {
 
   const renderContent = () => {
     switch (currentSection) {
-      case 'sale':
       case 'dashboard':
+        return <SellerDashboardStats />;
+      case 'sale':
         return <SellerWorkflow onSaleComplete={fetchMySales} />;
       case 'products':
-        return (
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Produits Disponibles
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Liste des produits disponibles pour la vente</p>
-            </CardContent>
-          </Card>
-        );
+        return <ProductManagement />;
+      case 'notifications':
+        return <StockAlerts />;
       case 'history':
         return (
           <Card className="shadow-lg">

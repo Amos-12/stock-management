@@ -83,7 +83,17 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
       currentY += 4;
       pdf.setFontSize(6);
       pdf.setFont('helvetica', 'normal');
-      pdf.text('Tel: 01 23 45 67 89', contentWidth / 2 + margin, currentY, { align: 'center' });
+      pdf.text('123 Rue du Commerce', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2.5;
+      pdf.text('75001 Paris, France', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2.5;
+      pdf.text('Tel: +33 1 23 45 67 89', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2.5;
+      pdf.text('contact@gfdistribution.fr', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2.5;
+      pdf.text('SIRET: 123 456 789 00012', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2.5;
+      pdf.text('TVA: FR12345678900', contentWidth / 2 + margin, currentY, { align: 'center' });
       
       currentY += 3;
       pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
