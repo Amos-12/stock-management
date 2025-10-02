@@ -29,9 +29,10 @@ const SellerDashboard = () => {
   const [currentSection, setCurrentSection] = useState('dashboard');
 
   useEffect(() => {
-    setCurrentSection('dashboard');
-    fetchMySales();
-  }, []);
+    if (user) {
+      fetchMySales();
+    }
+  }, [user]);
 
   const fetchMySales = async () => {
     if (!user) return;

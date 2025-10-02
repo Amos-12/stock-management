@@ -140,14 +140,10 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-1">
                 <TabsTrigger value="signin" className="flex items-center gap-2">
                   <UserCheck className="w-4 h-4" />
                   Connexion
-                </TabsTrigger>
-                <TabsTrigger value="signup" className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  Inscription
                 </TabsTrigger>
               </TabsList>
 
@@ -187,66 +183,6 @@ const Auth = () => {
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup" className="space-y-4">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-fullname">Nom complet</Label>
-                    <Input
-                      id="signup-fullname"
-                      type="text"
-                      placeholder="Votre nom complet"
-                      value={signUpForm.fullName}
-                      onChange={(e) => setSignUpForm(prev => ({ ...prev, fullName: e.target.value }))}
-                      className={errors.fullName ? 'border-destructive' : ''}
-                      required
-                    />
-                    {errors.fullName && <p className="text-sm text-destructive">{errors.fullName}</p>}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="votre@email.com"
-                      value={signUpForm.email}
-                      onChange={(e) => setSignUpForm(prev => ({ ...prev, email: e.target.value }))}
-                      className={errors.email ? 'border-destructive' : ''}
-                      required
-                    />
-                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-phone">Téléphone (optionnel)</Label>
-                    <Input
-                      id="signup-phone"
-                      type="tel"
-                      placeholder="+33 6 12 34 56 78"
-                      value={signUpForm.phone}
-                      onChange={(e) => setSignUpForm(prev => ({ ...prev, phone: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Mot de passe</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={signUpForm.password}
-                      onChange={(e) => setSignUpForm(prev => ({ ...prev, password: e.target.value }))}
-                      className={errors.password ? 'border-destructive' : ''}
-                      required
-                    />
-                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={isSubmitting} variant="success">
-                    {isSubmitting ? 'Création...' : 'Créer mon compte'}
-                  </Button>
-                </form>
-              </TabsContent>
             </Tabs>
 
             <div className="mt-6 pt-6 border-t border-border text-center">

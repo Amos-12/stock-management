@@ -60,25 +60,35 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
     try {
       setIsGenerating(true);
 
-      // Format 58mm x 80mm pour imprimante thermique borlette QI2
-      // 58mm = ~165 points, 80mm = ~227 points à 72 DPI
+      // Format 58mm largeur pour imprimante thermique borlette QI2
+      // Hauteur dynamique selon le contenu
       const receiptWidth = 58; // mm
-      const receiptHeight = 80; // mm
+      
+      // Calculer hauteur approximative basée sur le contenu
+      const baseHeight = 80; // hauteur de base
+      const itemsHeight = invoiceData.items.length * 6; // ~6mm par item
+      const dynamicHeight = Math.max(baseHeight, baseHeight + itemsHeight);
       
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: [receiptWidth, receiptHeight]
+        format: [receiptWidth, dynamicHeight]
       });
 
       const margin = 3;
       const contentWidth = receiptWidth - (margin * 2);
       let currentY = margin;
 
-      // Company Header - Compact
-      pdf.setFontSize(8);
+      // Logo - Centré en haut
+      const logoText = 'GF';
+      pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
+      currentY += 6;
+      pdf.text(logoText, contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Company Header - Compact
       currentY += 4;
+      pdf.setFontSize(8);
       pdf.text('GF DISTRIBUTION & MULTI-SERVICES', contentWidth / 2 + margin, currentY, { align: 'center' });
       currentY += 2;
       pdf.setFontSize(6);

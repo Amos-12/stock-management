@@ -336,38 +336,43 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-              {filteredProducts.map((product) => (
-                <Card key={product.id} className="border hover:shadow-md transition-smooth">
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div>
-                        <h4 className="font-medium">{product.name}</h4>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Badge variant="outline" className="text-xs">
-                            {categories.find(c => c.value === product.category)?.label}
-                          </Badge>
-                          <span className="text-success font-medium">{product.price.toFixed(2)} HTG</span>
+              {filteredProducts.map((product) => {
+                const cartItem = cart.find(item => item.id === product.id);
+                const availableStock = product.quantity - (cartItem?.cartQuantity || 0);
+                
+                return (
+                  <Card key={product.id} className="border hover:shadow-md transition-smooth">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div>
+                          <h4 className="font-medium">{product.name}</h4>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Badge variant="outline" className="text-xs">
+                              {categories.find(c => c.value === product.category)?.label}
+                            </Badge>
+                            <span className="text-success font-medium">{product.price.toFixed(2)} HTG</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <span>Disponible: {availableStock} {cartItem ? `(${cartItem.cartQuantity} au panier)` : ''}</span>
+                            {availableStock <= product.alert_threshold && (
+                              <AlertCircle className="w-3 h-3 text-warning" />
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <span>Stock: {product.quantity}</span>
-                          {product.quantity <= product.alert_threshold && (
-                            <AlertCircle className="w-3 h-3 text-warning" />
-                          )}
-                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => addToCart(product)}
+                          disabled={availableStock === 0}
+                          className="w-full"
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Ajouter au panier
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={() => addToCart(product)}
-                        disabled={product.quantity === 0}
-                        className="w-full"
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Ajouter au panier
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
             
             {cart.length > 0 && (
