@@ -149,60 +149,29 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     try {
       const totalAmount = getTotalAmount();
 
-      // Create sale record
-      const { data: saleData, error: saleError } = await supabase
-        .from('sales')
-        .insert([{
-          customer_name: customerName.trim() || null,
-          seller_id: user.id,
-          total_amount: totalAmount,
-          payment_method: 'cash'
-        }])
-        .select()
-        .single();
+      // Prepare sale data for Edge Function
+      const saleRequest = {
+        customer_name: customerName.trim() || null,
+        payment_method: 'cash',
+        total_amount: totalAmount,
+        items: cart.map(item => ({
+          product_id: item.id,
+          product_name: item.name,
+          quantity: item.cartQuantity,
+          unit_price: item.price,
+          subtotal: item.price * item.cartQuantity
+        }))
+      };
 
-      if (saleError) throw saleError;
+      // Call Edge Function to process sale
+      const { data, error } = await supabase.functions.invoke('process-sale', {
+        body: saleRequest
+      });
 
-      // Create sale items and update stock
-      for (const item of cart) {
-        // Insert sale item
-        const { error: itemError } = await supabase
-          .from('sale_items')
-          .insert([{
-            sale_id: saleData.id,
-            product_id: item.id,
-            product_name: item.name,
-            quantity: item.cartQuantity,
-            unit_price: item.price,
-            subtotal: item.price * item.cartQuantity
-          }]);
-
-        if (itemError) throw itemError;
-
-        // Update product quantity
-        const newQuantity = item.quantity - item.cartQuantity;
-        const { error: updateError } = await supabase
-          .from('products')
-          .update({ quantity: newQuantity })
-          .eq('id', item.id);
-
-        if (updateError) throw updateError;
-
-        // Record stock movement
-        const { error: movementError } = await supabase
-          .from('stock_movements')
-          .insert([{
-            product_id: item.id,
-            movement_type: 'out',
-            quantity: -item.cartQuantity,
-            previous_quantity: item.quantity,
-            new_quantity: newQuantity,
-            reason: `Vente #${saleData.id}`,
-            sale_id: saleData.id,
-            created_by: user.id
-          }]);
-
-        if (movementError) throw movementError;
+      if (error) throw error;
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Échec du traitement de la vente');
       }
 
       toast({
@@ -212,7 +181,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       setCurrentStep('success');
       setCompletedSale({
-        ...saleData,
+        ...data.sale,
         items: cart.map(item => ({
           name: item.name,
           quantity: item.cartQuantity,
@@ -229,9 +198,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
     } catch (error) {
       console.error('Error processing sale:', error);
+      const errorMessage = error instanceof Error ? error.message : "Impossible d'enregistrer la vente";
       toast({
         title: "Erreur",
-        description: "Impossible d'enregistrer la vente",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

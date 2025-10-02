@@ -1,1 +1,4 @@
 project_id = "xngppwphedaexwkgfjdv"
+
+[functions.process-sale]
+verify_jwt = true

@@ -24,15 +24,15 @@ interface Sale {
 }
 
 const SellerDashboard = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
   const [currentSection, setCurrentSection] = useState('dashboard');
 
   useEffect(() => {
-    if (user) {
+    if (user && !authLoading) {
       fetchMySales();
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   const fetchMySales = async () => {
     if (!user) return;
@@ -103,6 +103,27 @@ const SellerDashboard = () => {
         return <SellerWorkflow onSaleComplete={fetchMySales} />;
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Package className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
+          <p className="text-muted-foreground">Chargement du tableau de bord...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-muted-foreground">Veuillez vous connecter</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ResponsiveDashboardLayout 

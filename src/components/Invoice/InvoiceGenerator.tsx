@@ -60,14 +60,14 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
     try {
       setIsGenerating(true);
 
-      // Format 58mm largeur pour imprimante thermique borlette QI2
-      // Hauteur dynamique selon le contenu
+      // Format 58mm largeur pour imprimante thermique borlette
       const receiptWidth = 58; // mm
       
-      // Calculer hauteur approximative basée sur le contenu
-      const baseHeight = 80; // hauteur de base
-      const itemsHeight = invoiceData.items.length * 6; // ~6mm par item
-      const dynamicHeight = Math.max(baseHeight, baseHeight + itemsHeight);
+      // Calculer hauteur dynamique basée sur le contenu réel
+      const headerHeight = 30; // En-tête avec logo et info
+      const itemsHeight = invoiceData.items.length * 8; // ~8mm par item
+      const footerHeight = 25; // Total et footer
+      const dynamicHeight = headerHeight + itemsHeight + footerHeight;
       
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -79,12 +79,18 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
       const contentWidth = receiptWidth - (margin * 2);
       let currentY = margin;
 
-      // Logo - Centré en haut
-      const logoText = 'GF';
-      pdf.setFontSize(18);
+      // Logo SVG - Centré en haut
+      const logoSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <rect x="10" y="10" width="80" height="80" rx="10" fill="#2255aa"/>
+          <text x="50" y="65" font-size="45" font-weight="bold" text-anchor="middle" fill="white">GF</text>
+        </svg>
+      `;
+      
+      currentY += 5;
+      pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      currentY += 6;
-      pdf.text(logoText, contentWidth / 2 + margin, currentY, { align: 'center' });
+      pdf.text('GF', contentWidth / 2 + margin, currentY, { align: 'center' });
       
       // Company Header - Compact
       currentY += 4;
@@ -199,25 +205,45 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
       <!DOCTYPE html>
       <html>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8">
         <title>Aperçu Facture - ${invoiceData.invoice_number}</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
-          .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #2255aa; padding-bottom: 20px; }
-          .company-name { color: #2255aa; font-size: 28px; font-weight: bold; margin: 0; }
-          .company-info { color: #666; font-size: 12px; margin-top: 10px; }
-          .invoice-info { text-align: right; margin-bottom: 30px; }
-          .customer-info { margin-bottom: 30px; }
-          .table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-          .table th { background-color: #2255aa; color: white; padding: 10px; text-align: left; }
-          .table td { padding: 8px; border-bottom: 1px solid #ddd; }
+          * { box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; margin: 20px; padding: 0; color: #333; max-width: 100%; overflow-x: hidden; }
+          @media (max-width: 768px) {
+            body { margin: 10px; font-size: 14px; }
+          }
+          .logo { width: 60px; height: 60px; margin: 0 auto 15px; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2255aa; padding-bottom: 20px; }
+          .company-name { color: #2255aa; font-size: 24px; font-weight: bold; margin: 10px 0 0; }
+          .company-info { color: #666; font-size: 11px; margin-top: 10px; line-height: 1.4; }
+          .invoice-info { text-align: right; margin-bottom: 25px; }
+          .customer-info { margin-bottom: 25px; }
+          .table { width: 100%; border-collapse: collapse; margin-bottom: 25px; overflow-x: auto; }
+          .table th { background-color: #2255aa; color: white; padding: 8px; text-align: left; font-size: 12px; }
+          .table td { padding: 6px 8px; border-bottom: 1px solid #ddd; font-size: 12px; }
           .table tr:nth-child(even) { background-color: #f9f9f9; }
           .total-section { text-align: right; margin-top: 20px; }
-          .total-box { background-color: #2255aa; color: white; padding: 15px; display: inline-block; margin-left: auto; }
-          .footer { margin-top: 50px; text-align: center; color: #666; font-size: 12px; border-top: 1px solid #ddd; padding-top: 20px; }
+          .total-box { background-color: #2255aa; color: white; padding: 12px 20px; display: inline-block; margin-left: auto; border-radius: 4px; }
+          .footer { margin-top: 40px; text-align: center; color: #666; font-size: 11px; border-top: 1px solid #ddd; padding-top: 15px; }
+          @media (max-width: 600px) {
+            .company-name { font-size: 20px; }
+            .table th, .table td { padding: 5px; font-size: 11px; }
+            .total-box { padding: 10px 15px; }
+          }
+          @media print {
+            body { margin: 0; }
+            .footer { page-break-inside: avoid; }
+          }
         </style>
       </head>
       <body>
         <div class="header">
+          <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <rect x="10" y="10" width="80" height="80" rx="10" fill="#2255aa"/>
+            <text x="50" y="65" font-size="45" font-weight="bold" text-anchor="middle" fill="white">GF</text>
+          </svg>
           <h1 class="company-name">GF DISTRIBUTION & MULTI-SERVICES</h1>
           <div class="company-info">
             Système de gestion des ventes<br>
