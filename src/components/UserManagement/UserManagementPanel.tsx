@@ -28,10 +28,10 @@ export const UserManagementPanel = () => {
     try {
       setLoading(true);
       
-      // Fetch all users with their roles
+      // Fetch all users with their roles and approval status
       const { data: userRoles, error } = await supabase
         .from('user_roles')
-        .select('user_id, role');
+        .select('user_id, role, is_active');
 
       if (error) throw error;
 

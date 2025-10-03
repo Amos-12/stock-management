@@ -63,10 +63,10 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
       // Format 58mm largeur pour imprimante thermique borlette
       const receiptWidth = 58; // mm
       
-      // Calculer hauteur dynamique basée sur le contenu réel
-      const headerHeight = 30; // En-tête avec logo et info
-      const itemsHeight = invoiceData.items.length * 8; // ~8mm par item
-      const footerHeight = 25; // Total et footer
+      // Calculer hauteur entièrement dynamique selon le nombre d'items
+      const headerHeight = 28;
+      const itemsHeight = Math.max(invoiceData.items.length * 8, 10);
+      const footerHeight = 22;
       const dynamicHeight = headerHeight + itemsHeight + footerHeight;
       
       const pdf = new jsPDF({
@@ -79,14 +79,7 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
       const contentWidth = receiptWidth - (margin * 2);
       let currentY = margin;
 
-      // Logo SVG - Centré en haut
-      const logoSvg = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-          <rect x="10" y="10" width="80" height="80" rx="10" fill="#2255aa"/>
-          <text x="50" y="65" font-size="45" font-weight="bold" text-anchor="middle" fill="white">GF</text>
-        </svg>
-      `;
-      
+      // Logo SVG from header (same as in ResponsiveDashboardLayout)
       currentY += 5;
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');

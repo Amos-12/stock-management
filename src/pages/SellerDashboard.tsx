@@ -5,12 +5,14 @@ import { SellerWorkflow } from '@/components/Seller/SellerWorkflow';
 import { SellerDashboardStats } from '@/components/Dashboard/SellerDashboardStats';
 import { StockAlerts } from '@/components/Notifications/StockAlerts';
 import { ProductManagement } from '@/components/Products/ProductManagement';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   TrendingUp,
   Receipt,
   ShoppingCart,
   Package,
-  Home
+  Home,
+  AlertCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,15 +26,39 @@ interface Sale {
 }
 
 const SellerDashboard = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, role } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
   const [currentSection, setCurrentSection] = useState('dashboard');
+  const [isApproved, setIsApproved] = useState<boolean | null>(null);
+  const [loadingApproval, setLoadingApproval] = useState(true);
 
   useEffect(() => {
     if (user && !authLoading) {
+      checkApprovalStatus();
       fetchMySales();
     }
   }, [user, authLoading]);
+
+  const checkApprovalStatus = async () => {
+    if (!user) return;
+    
+    try {
+      setLoadingApproval(true);
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('is_active')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      setIsApproved(data?.is_active ?? false);
+    } catch (error) {
+      console.error('Error checking approval status:', error);
+      setIsApproved(false);
+    } finally {
+      setLoadingApproval(false);
+    }
+  };
 
   const fetchMySales = async () => {
     if (!user) return;
@@ -104,9 +130,9 @@ const SellerDashboard = () => {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || loadingApproval) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary-light via-background to-secondary">
         <div className="text-center">
           <Package className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
           <p className="text-muted-foreground">Chargement du tableau de bord...</p>
@@ -117,10 +143,36 @@ const SellerDashboard = () => {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary-light via-background to-secondary">
         <div className="text-center">
           <p className="text-muted-foreground">Veuillez vous connecter</p>
         </div>
+      </div>
+    );
+  }
+
+  // If seller not approved yet
+  if (isApproved === false) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary-light via-background to-secondary p-4">
+        <Card className="max-w-md shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="w-6 h-6 text-warning" />
+              Compte en attente d'approbation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertDescription>
+                Votre compte vendeur a été créé avec succès, mais il doit être approuvé par un administrateur avant que vous puissiez accéder au tableau de bord.
+              </AlertDescription>
+            </Alert>
+            <p className="text-sm text-muted-foreground">
+              Veuillez contacter votre administrateur pour activer votre compte.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
