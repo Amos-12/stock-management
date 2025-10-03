@@ -22,9 +22,11 @@ export const SellerDashboardStats = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStats();
-    fetchRecentSales();
-  }, []);
+    if (user) {
+      fetchStats();
+      fetchRecentSales();
+    }
+  }, [user]);
 
   const fetchStats = async () => {
     if (!user) return;

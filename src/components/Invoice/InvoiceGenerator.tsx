@@ -307,7 +307,7 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
           Générer Facture
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
@@ -315,7 +315,7 @@ export const InvoiceGenerator = ({ saleData }: InvoiceGeneratorProps) => {
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Customer Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">

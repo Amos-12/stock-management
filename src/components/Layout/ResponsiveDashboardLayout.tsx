@@ -14,7 +14,8 @@ import {
   Bell,
   User,
   Menu,
-  Home
+  Home,
+  PackagePlus
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -43,6 +44,7 @@ export const ResponsiveDashboardLayout = ({
     { icon: Package, label: 'Produits', value: 'products' },
     { icon: ShoppingCart, label: 'Ventes', value: 'sales' },
     { icon: Users, label: 'Utilisateurs', value: 'users' },
+    { icon: PackagePlus, label: 'Réapprovisionnement', value: 'restock', route: '/restock' },
     { icon: TrendingUp, label: 'Rapports', value: 'reports' },
     { icon: Bell, label: 'Notifications', value: 'notifications' }
   ];
@@ -55,8 +57,12 @@ export const ResponsiveDashboardLayout = ({
 
   const navItems = role === 'admin' ? adminNavItems : sellerNavItems;
 
-  const handleNavClick = (value: string) => {
-    onSectionChange?.(value);
+  const handleNavClick = (value: string, route?: string) => {
+    if (route) {
+      navigate(route);
+    } else {
+      onSectionChange?.(value);
+    }
     setIsMobileMenuOpen(false);
   };
 
@@ -71,7 +77,7 @@ export const ResponsiveDashboardLayout = ({
       </div>
       
       <nav className="space-y-2">
-        {navItems.map((item) => {
+        {navItems.map((item: any) => {
           const Icon = item.icon;
           return (
             <Button
@@ -83,7 +89,7 @@ export const ResponsiveDashboardLayout = ({
                   ? "bg-primary text-primary-foreground shadow-primary" 
                   : "hover:bg-primary/10 hover:text-primary"
               )}
-              onClick={() => handleNavClick(item.value)}
+              onClick={() => handleNavClick(item.value, item.route)}
             >
               <Icon className="w-4 h-4 mr-3" />
               {item.label}
