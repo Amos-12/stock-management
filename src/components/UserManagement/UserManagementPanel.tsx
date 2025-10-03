@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { Users, UserCheck, Mail, Calendar, Search, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -14,6 +15,7 @@ interface User {
   full_name: string;
   email: string;
   role: 'admin' | 'seller';
+  is_active: boolean;
   created_at: string;
 }
 
@@ -70,6 +72,7 @@ export const UserManagementPanel = () => {
           full_name: profile?.full_name || 'Nom non défini',
           email: authUser?.email || 'Email non trouvé',
           role: userRole.role,
+          is_active: userRole.is_active,
           created_at: authUser?.created_at || new Date().toISOString()
         };
       }) || [];
@@ -90,6 +93,31 @@ export const UserManagementPanel = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const handleToggleActive = async (userId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ is_active: !currentStatus })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: !currentStatus ? "Vendeur activé avec succès" : "Vendeur désactivé"
+      });
+
+      fetchUsers();
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier le statut",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handlePromoteToAdmin = async () => {
     if (!emailToPromote.trim()) {
@@ -252,6 +280,7 @@ export const UserManagementPanel = () => {
                   <TableHead>Nom</TableHead>
                   <TableHead className="hidden sm:table-cell">Email</TableHead>
                   <TableHead>Rôle</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead className="hidden md:table-cell">Créé le</TableHead>
                 </TableRow>
               </TableHeader>
@@ -276,6 +305,21 @@ export const UserManagementPanel = () => {
                       >
                         {user.role === 'admin' ? 'Admin' : 'Vendeur'}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {user.role === 'seller' ? (
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={user.is_active}
+                            onCheckedChange={() => handleToggleActive(user.id, user.is_active)}
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            {user.is_active ? 'Actif' : 'Inactif'}
+                          </span>
+                        </div>
+                      ) : (
+                        <Badge variant="outline">Admin</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center text-sm text-muted-foreground">
