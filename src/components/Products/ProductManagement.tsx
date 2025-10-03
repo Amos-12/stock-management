@@ -35,7 +35,7 @@ export const ProductManagement = () => {
   
   const [formData, setFormData] = useState<{
     name: string;
-    category: 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'energie' | 'autres';
+    category: 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres';
     price: string;
     quantity: string;
     alert_threshold: string;
@@ -56,7 +56,6 @@ export const ProductManagement = () => {
     { value: 'boissons', label: 'Boissons' },
     { value: 'gazeuses', label: 'Gazeuses' },
     { value: 'electronique', label: 'Électronique' },
-    { value: 'energie', label: 'Energie' },
     { value: 'autres', label: 'Autres' }
   ];
 
@@ -110,7 +109,7 @@ export const ProductManagement = () => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
-      category: product.category as 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'energie' | 'autres',
+      category: product.category as 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres',
       price: product.price.toString(),
       quantity: product.quantity.toString(),
       alert_threshold: product.alert_threshold.toString(),
@@ -253,7 +252,7 @@ export const ProductManagement = () => {
                     <Label htmlFor="category">Catégorie *</Label>
                     <Select
                       value={formData.category}
-                      onValueChange={(value: 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'energie' | 'autres') => setFormData({...formData, category: value})}
+                      onValueChange={(value: 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres') => setFormData({...formData, category: value})}
                     >
                       <SelectTrigger>
                         <SelectValue />
