@@ -58,12 +58,12 @@ export const ResponsiveDashboardLayout = ({
   const navItems = role === 'admin' ? adminNavItems : sellerNavItems;
 
   const handleNavClick = (value: string, route?: string) => {
+    setIsMobileMenuOpen(false);
     if (route) {
       navigate(route);
-    } else {
-      onSectionChange?.(value);
+    } else if (onSectionChange) {
+      onSectionChange(value);
     }
-    setIsMobileMenuOpen(false);
   };
 
   const SidebarContent = () => (

@@ -99,6 +99,7 @@ const RestockPage = () => {
       if (updateError) throw updateError;
 
       // Record stock movement
+      const { data: { user } } = await supabase.auth.getUser();
       const { error: movementError } = await supabase
         .from('stock_movements')
         .insert({
@@ -107,7 +108,8 @@ const RestockPage = () => {
           quantity: quantityToAdd,
           previous_quantity: product.quantity,
           new_quantity: newQuantity,
-          reason: reason || 'Réapprovisionnement manuel'
+          reason: reason || 'Réapprovisionnement manuel',
+          user_id: user?.id
         });
 
       if (movementError) throw movementError;
@@ -145,7 +147,13 @@ const RestockPage = () => {
       title="Réapprovisionnement" 
       role="admin"
       currentSection="restock"
-      onSectionChange={() => {}}
+      onSectionChange={(section) => {
+        if (section === 'dashboard') {
+          window.location.href = '/admin';
+        } else if (section === 'restock') {
+          window.location.href = '/restock';
+        }
+      }}
     >
       <div className="space-y-6">
         {/* Low Stock Alert */}
