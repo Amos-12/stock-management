@@ -5,10 +5,13 @@ import {
   TrendingUp,
   Receipt,
   Package,
-  DollarSign
+  DollarSign,
+  ShoppingCart,
+  Calendar
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { Badge } from '@/components/ui/badge';
 
 export const SellerDashboardStats = () => {
   const { user } = useAuth();
@@ -16,7 +19,13 @@ export const SellerDashboardStats = () => {
     totalSales: 0,
     todaySales: 0,
     totalRevenue: 0,
-    todayRevenue: 0
+    todayRevenue: 0,
+    weekSales: 0,
+    weekRevenue: 0,
+    monthSales: 0,
+    monthRevenue: 0,
+    averageSale: 0,
+    topProducts: [] as { product_name: string; quantity: number; revenue: number }[]
   });
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +44,7 @@ export const SellerDashboardStats = () => {
       // Total sales count and revenue
       const { data: allSales, error: allError } = await supabase
         .from('sales')
-        .select('total_amount')
+        .select('id, total_amount')
         .eq('seller_id', user.id);
 
       if (allError) throw allError;
@@ -52,11 +61,67 @@ export const SellerDashboardStats = () => {
 
       if (todayError) throw todayError;
 
+      // Week sales
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      weekAgo.setHours(0, 0, 0, 0);
+
+      const { data: weekSales, error: weekError } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .eq('seller_id', user.id)
+        .gte('created_at', weekAgo.toISOString());
+
+      if (weekError) throw weekError;
+
+      // Month sales
+      const monthAgo = new Date();
+      monthAgo.setDate(monthAgo.getDate() - 30);
+      monthAgo.setHours(0, 0, 0, 0);
+
+      const { data: monthSales, error: monthError } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .eq('seller_id', user.id)
+        .gte('created_at', monthAgo.toISOString());
+
+      if (monthError) throw monthError;
+
+      // Top products
+      const { data: saleItems, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('product_name, quantity, subtotal, sale_id')
+        .in('sale_id', allSales?.map(s => s.id) || []);
+
+      if (itemsError) throw itemsError;
+
+      const productStats = saleItems?.reduce((acc: any, item: any) => {
+        if (!acc[item.product_name]) {
+          acc[item.product_name] = { product_name: item.product_name, quantity: 0, revenue: 0 };
+        }
+        acc[item.product_name].quantity += item.quantity;
+        acc[item.product_name].revenue += Number(item.subtotal);
+        return acc;
+      }, {});
+
+      const topProducts = Object.values(productStats || {})
+        .sort((a: any, b: any) => b.revenue - a.revenue)
+        .slice(0, 5);
+
+      const totalRevenue = allSales?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0;
+      const averageSale = allSales?.length ? totalRevenue / allSales.length : 0;
+
       setStats({
         totalSales: allSales?.length || 0,
         todaySales: todaySales?.length || 0,
-        totalRevenue: allSales?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0,
-        todayRevenue: todaySales?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0
+        totalRevenue,
+        todayRevenue: todaySales?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0,
+        weekSales: weekSales?.length || 0,
+        weekRevenue: weekSales?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0,
+        monthSales: monthSales?.length || 0,
+        monthRevenue: monthSales?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0,
+        averageSale,
+        topProducts: topProducts as any
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -103,7 +168,7 @@ export const SellerDashboardStats = () => {
         />
         <StatsCard
           title="Revenu Aujourd'hui"
-          value={`${stats.todayRevenue.toFixed(2)} €`}
+          value={`${stats.todayRevenue.toFixed(2)} HTG`}
           icon={DollarSign}
         />
         <StatsCard
@@ -113,10 +178,94 @@ export const SellerDashboardStats = () => {
         />
         <StatsCard
           title="Revenu Total"
-          value={`${stats.totalRevenue.toFixed(2)} €`}
+          value={`${stats.totalRevenue.toFixed(2)} HTG`}
           icon={DollarSign}
         />
       </div>
+
+      {/* Additional Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Cette Semaine
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              <p className="text-2xl font-bold">{stats.weekSales}</p>
+              <p className="text-xs text-muted-foreground">Ventes</p>
+              <p className="text-sm font-semibold text-primary">{stats.weekRevenue.toFixed(2)} HTG</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Ce Mois
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              <p className="text-2xl font-bold">{stats.monthSales}</p>
+              <p className="text-xs text-muted-foreground">Ventes</p>
+              <p className="text-sm font-semibold text-primary">{stats.monthRevenue.toFixed(2)} HTG</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4" />
+              Moyenne par Vente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              <p className="text-2xl font-bold">{stats.averageSale.toFixed(2)} HTG</p>
+              <p className="text-xs text-muted-foreground">Valeur moyenne</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Products */}
+      {stats.topProducts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Top 5 Produits
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stats.topProducts.map((product, index) => (
+                <div key={product.product_name} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className="w-8 h-8 flex items-center justify-center">
+                      {index + 1}
+                    </Badge>
+                    <div>
+                      <div className="font-medium">{product.product_name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {product.quantity} unités vendues
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-primary">{product.revenue.toFixed(2)} HTG</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Sales */}
       <Card className="shadow-lg">
@@ -145,7 +294,7 @@ export const SellerDashboardStats = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-success">{Number(sale.total_amount).toFixed(2)} €</div>
+                    <div className="font-bold text-success">{Number(sale.total_amount).toFixed(2)} HTG</div>
                     <div className="text-xs text-muted-foreground">{sale.payment_method}</div>
                   </div>
                 </div>
