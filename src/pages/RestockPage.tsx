@@ -103,7 +103,7 @@ const RestockPage = () => {
         .from('stock_movements')
         .insert({
           product_id: selectedProduct,
-          movement_type: 'restock',
+          movement_type: 'in',
           quantity: quantityToAdd,
           previous_quantity: product.quantity,
           new_quantity: newQuantity,

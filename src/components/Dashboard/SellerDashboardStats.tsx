@@ -233,74 +233,112 @@ export const SellerDashboardStats = () => {
         </Card>
       </div>
 
-      {/* Top Products */}
-      {stats.topProducts.length > 0 && (
+      {/* Top Products & Recent Sales - Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Top Products */}
+        {stats.topProducts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Top 5 Produits
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {stats.topProducts.map((product, index) => (
+                  <div key={product.product_name} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="w-8 h-8 flex items-center justify-center">
+                        {index + 1}
+                      </Badge>
+                      <div>
+                        <div className="font-medium">{product.product_name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {product.quantity} unités vendues
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-primary">{product.revenue.toFixed(2)} HTG</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Recent Sales */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Top 5 Produits
+              <Receipt className="w-5 h-5" />
+              Ventes Récentes
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {stats.topProducts.map((product, index) => (
-                <div key={product.product_name} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="w-8 h-8 flex items-center justify-center">
-                      {index + 1}
-                    </Badge>
+            {recentSales.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Aucune vente récente</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentSales.map((sale) => (
+                  <div key={sale.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-smooth">
                     <div>
-                      <div className="font-medium">{product.product_name}</div>
+                      <div className="font-medium">
+                        {sale.customer_name || 'Client non renseigné'}
+                      </div>
                       <div className="text-sm text-muted-foreground">
-                        {product.quantity} unités vendues
+                        {new Date(sale.created_at).toLocaleString('fr-FR')}
                       </div>
                     </div>
+                    <div className="text-right">
+                      <div className="font-bold text-success">{Number(sale.total_amount).toFixed(2)} HTG</div>
+                      <div className="text-xs text-muted-foreground">{sale.payment_method}</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-bold text-primary">{product.revenue.toFixed(2)} HTG</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+      </div>
 
-      {/* Recent Sales */}
-      <Card className="shadow-lg">
+      {/* Analytics Zone */}
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Receipt className="w-5 h-5" />
-            Ventes Récentes
+            <TrendingUp className="w-5 h-5" />
+            Analyse des Performances
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {recentSales.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Aucune vente récente</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Croissance Hebdomadaire</p>
+              <p className="text-2xl font-bold text-primary">
+                {stats.weekSales > 0 ? '+' : ''}{stats.weekSales}
+              </p>
+              <p className="text-xs text-muted-foreground">ventes cette semaine</p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {recentSales.map((sale) => (
-                <div key={sale.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-smooth">
-                  <div>
-                    <div className="font-medium">
-                      {sale.customer_name || 'Client non renseigné'}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {new Date(sale.created_at).toLocaleString('fr-FR')}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-success">{Number(sale.total_amount).toFixed(2)} HTG</div>
-                    <div className="text-xs text-muted-foreground">{sale.payment_method}</div>
-                  </div>
-                </div>
-              ))}
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Revenu Mensuel</p>
+              <p className="text-2xl font-bold text-primary">
+                {stats.monthRevenue.toFixed(2)} HTG
+              </p>
+              <p className="text-xs text-muted-foreground">{stats.monthSales} ventes ce mois</p>
             </div>
-          )}
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Performance Journalière</p>
+              <p className="text-2xl font-bold text-primary">
+                {((stats.todayRevenue / (stats.averageSale || 1)) * 100).toFixed(0)}%
+              </p>
+              <p className="text-xs text-muted-foreground">par rapport à la moyenne</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
