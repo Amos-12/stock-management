@@ -13,7 +13,7 @@ import { toast } from '@/hooks/use-toast';
 interface User {
   id: string;
   full_name: string;
-  email: string;
+  email?: string;
   role: 'admin' | 'seller';
   is_active: boolean;
   created_at: string;
