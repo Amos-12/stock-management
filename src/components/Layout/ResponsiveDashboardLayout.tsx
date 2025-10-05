@@ -61,8 +61,16 @@ export const ResponsiveDashboardLayout = ({
     setIsMobileMenuOpen(false);
     if (route) {
       navigate(route);
-    } else if (onSectionChange) {
+      return;
+    }
+    if (onSectionChange) {
       onSectionChange(value);
+    } else {
+      if (role === 'admin') {
+        navigate(`/admin?section=${value}`);
+      } else if (role === 'seller') {
+        navigate(`/seller?section=${value}`);
+      }
     }
   };
 
@@ -136,7 +144,13 @@ export const ResponsiveDashboardLayout = ({
                 variant="ghost" 
                 size="icon"
                 className="hover:bg-primary/10 relative"
-                onClick={() => onSectionChange?.('notifications')}
+                onClick={() => {
+                  if (onSectionChange) {
+                    onSectionChange('notifications');
+                  } else {
+                    navigate('/admin?section=notifications');
+                  }
+                }}
               >
                 <Bell className="w-4 h-4" />
                 <span className="absolute -top-1 -right-1 bg-warning text-warning-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">

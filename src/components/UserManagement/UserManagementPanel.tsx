@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Users, UserCheck, Mail, Calendar, Search, UserPlus } from 'lucide-react';
+import { Users, UserCheck, Mail, Calendar, Search, UserPlus, RefreshCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -30,52 +30,42 @@ export const UserManagementPanel = () => {
     try {
       setLoading(true);
       
-      // Fetch all users with their roles and approval status
+      // Fetch user roles and statuses
       const { data: userRoles, error } = await supabase
         .from('user_roles')
         .select('user_id, role, is_active');
 
       if (error) throw error;
 
-      // Get profiles and auth users
-      const userIds = userRoles?.map(ur => ur.user_id) || [];
-      
-      const profilesPromises = userIds.map(async (userId) => {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('full_name, user_id')
-          .eq('user_id', userId)
-          .single();
-        return profileData;
-      });
+      const userIds = userRoles?.map((ur) => ur.user_id) || [];
+      if (userIds.length === 0) {
+        setUsers([]);
+        return;
+      }
 
-      const authPromises = userIds.map(async (userId) => {
-        // For now, we'll create dummy auth data since we can't access auth.admin
-        return {
-          id: userId,
-          email: 'email@example.com',
-          created_at: new Date().toISOString()
-        };
-      });
+      // Fetch profiles with emails in a single query
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, created_at')
+        .in('user_id', userIds);
 
-      const [profiles, authUsers] = await Promise.all([
-        Promise.all(profilesPromises),
-        Promise.all(authPromises)
-      ]);
+      if (profilesError) throw profilesError;
 
-      // Combine data
-      const usersData = userRoles?.map((userRole, index) => {
-        const profile = profiles[index];
-        const authUser = authUsers[index];
+      const profileMap = new Map(
+        (profilesData || []).map((p: any) => [p.user_id, p])
+      );
+
+      const usersData = (userRoles || []).map((userRole: any) => {
+        const profile = profileMap.get(userRole.user_id);
         return {
           id: userRole.user_id,
           full_name: profile?.full_name || 'Nom non défini',
-          email: authUser?.email || 'Email non trouvé',
+          email: profile?.email || 'Email non défini',
           role: userRole.role,
           is_active: userRole.is_active,
-          created_at: authUser?.created_at || new Date().toISOString()
+          created_at: profile?.created_at || new Date().toISOString(),
         };
-      }) || [];
+      });
 
       setUsers(usersData);
     } catch (error) {
@@ -222,41 +212,45 @@ export const UserManagementPanel = () => {
               <Users className="w-5 h-5" />
               Gestion des Utilisateurs
             </CardTitle>
-            
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="default" className="bg-primary hover:bg-primary-hover">
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Promouvoir Admin
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Promouvoir un utilisateur</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="email" className="text-sm font-medium">
-                      Email de l'utilisateur
-                    </label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="user@example.com"
-                      value={emailToPromote}
-                      onChange={(e) => setEmailToPromote(e.target.value)}
-                    />
-                  </div>
-                  <Button 
-                    onClick={handlePromoteToAdmin}
-                    disabled={isPromoting}
-                    className="w-full"
-                  >
-                    {isPromoting ? 'Promotion...' : 'Promouvoir Admin'}
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={fetchUsers} title="Rafraîchir">
+                <RefreshCcw className="w-4 h-4" />
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="default" className="bg-primary hover:bg-primary-hover">
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Promouvoir Admin
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Promouvoir un utilisateur</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label htmlFor="email" className="text-sm font-medium">
+                        Email de l'utilisateur
+                      </label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="user@example.com"
+                        value={emailToPromote}
+                        onChange={(e) => setEmailToPromote(e.target.value)}
+                      />
+                    </div>
+                    <Button 
+                      onClick={handlePromoteToAdmin}
+                      disabled={isPromoting}
+                      className="w-full"
+                    >
+                      {isPromoting ? 'Promotion...' : 'Promouvoir Admin'}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </CardHeader>
         

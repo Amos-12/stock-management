@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ResponsiveDashboardLayout } from '@/components/Layout/ResponsiveDashboardLayout';
 import { AdminDashboardCharts } from '@/components/Dashboard/AdminDashboardCharts';
 import { UserManagementPanel } from '@/components/UserManagement/UserManagementPanel';
@@ -8,8 +9,8 @@ import { ProductManagement } from '@/components/Products/ProductManagement';
 import { SalesManagement } from '@/components/Sales/SalesManagement';
 
 const AdminDashboard = () => {
-  const [currentSection, setCurrentSection] = useState('dashboard');
-
+  const [searchParams] = useSearchParams();
+  const [currentSection, setCurrentSection] = useState(searchParams.get('section') || 'dashboard');
   const renderContent = () => {
     switch (currentSection) {
       case 'dashboard':

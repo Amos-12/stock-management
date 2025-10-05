@@ -21,7 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Package, Plus, TrendingUp, AlertCircle } from 'lucide-react';
+import { Package, Plus, TrendingUp, AlertCircle, RefreshCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -241,10 +241,15 @@ const RestockPage = () => {
         {/* Products Table */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Tous les Produits
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Tous les Produits
+              </CardTitle>
+              <Button variant="ghost" size="sm" onClick={fetchProducts} title="Rafraîchir">
+                <RefreshCcw className="w-4 h-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
