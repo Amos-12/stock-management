@@ -109,7 +109,7 @@ const RestockPage = () => {
           previous_quantity: product.quantity,
           new_quantity: newQuantity,
           reason: reason || 'Réapprovisionnement manuel',
-          user_id: user?.id
+          created_by: user?.id
         });
 
       if (movementError) throw movementError;
@@ -147,13 +147,6 @@ const RestockPage = () => {
       title="Réapprovisionnement" 
       role="admin"
       currentSection="restock"
-      onSectionChange={(section) => {
-        if (section === 'dashboard') {
-          window.location.href = '/admin';
-        } else if (section === 'restock') {
-          window.location.href = '/restock';
-        }
-      }}
     >
       <div className="space-y-6">
         {/* Low Stock Alert */}
