@@ -20,6 +20,7 @@ interface Product {
   quantity: number;
   alert_threshold: number;
   is_active: boolean;
+  sale_type: 'retail' | 'wholesale';
   description?: string;
   created_at: string;
 }
@@ -41,6 +42,7 @@ export const ProductManagement = () => {
     alert_threshold: string;
     description: string;
     is_active: boolean;
+    sale_type: 'retail' | 'wholesale';
   }>({
     name: '',
     category: 'alimentaires',
@@ -48,7 +50,8 @@ export const ProductManagement = () => {
     quantity: '',
     alert_threshold: '10',
     description: '',
-    is_active: true
+    is_active: true,
+    sale_type: 'retail'
   });
 
   const categories = [
@@ -100,7 +103,8 @@ export const ProductManagement = () => {
       quantity: '',
       alert_threshold: '10',
       description: '',
-      is_active: true
+      is_active: true,
+      sale_type: 'retail'
     });
     setEditingProduct(null);
   };
@@ -114,7 +118,8 @@ export const ProductManagement = () => {
       quantity: product.quantity.toString(),
       alert_threshold: product.alert_threshold.toString(),
       description: product.description || '',
-      is_active: product.is_active
+      is_active: product.is_active,
+      sale_type: product.sale_type
     });
     setIsDialogOpen(true);
   };
@@ -133,6 +138,7 @@ export const ProductManagement = () => {
         alert_threshold: parseInt(formData.alert_threshold),
         description: formData.description || null,
         is_active: formData.is_active,
+        sale_type: formData.sale_type,
         created_by: user.id
       };
 
@@ -315,6 +321,21 @@ export const ProductManagement = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sale_type">Type de vente *</Label>
+                    <Select
+                      value={formData.sale_type}
+                      onValueChange={(value: 'retail' | 'wholesale') => setFormData({...formData, sale_type: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="retail">Détail</SelectItem>
+                        <SelectItem value="wholesale">Gros</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
@@ -354,6 +375,7 @@ export const ProductManagement = () => {
               <TableRow>
                 <TableHead>Nom</TableHead>
                 <TableHead>Catégorie</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Prix</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Statut</TableHead>
@@ -363,7 +385,7 @@ export const ProductManagement = () => {
             <TableBody>
               {filteredProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     Aucun produit trouvé
                   </TableCell>
                 </TableRow>
@@ -374,6 +396,11 @@ export const ProductManagement = () => {
                     <TableCell>
                       <Badge variant="outline">
                         {categories.find(c => c.value === product.category)?.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.sale_type === 'retail' ? "default" : "secondary"}>
+                        {product.sale_type === 'retail' ? 'Détail' : 'Gros'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-success font-medium">

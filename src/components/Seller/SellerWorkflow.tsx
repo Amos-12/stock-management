@@ -30,6 +30,7 @@ interface Product {
   quantity: number;
   alert_threshold: number;
   is_active: boolean;
+  sale_type: 'retail' | 'wholesale';
 }
 
 interface CartItem extends Product {
@@ -49,6 +50,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [saleTypeFilter, setSaleTypeFilter] = useState<'all' | 'retail' | 'wholesale'>('all');
   const [customerName, setCustomerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -59,12 +61,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   }, []);
 
   useEffect(() => {
-    const filtered = products.filter(product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.category.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSaleType = saleTypeFilter === 'all' || product.sale_type === saleTypeFilter;
+      return matchesSearch && matchesSaleType;
+    });
     setFilteredProducts(filtered);
-  }, [searchTerm, products]);
+  }, [searchTerm, saleTypeFilter, products]);
 
   const fetchProducts = async () => {
     try {
@@ -214,6 +218,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     setCart([]);
     setCustomerName('');
     setSearchTerm('');
+    setSaleTypeFilter('all');
     setCompletedSale(null);
     onSaleComplete?.();
   };
@@ -294,14 +299,39 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               <Package className="w-5 h-5" />
               Étape 1: Sélection des Produits
             </CardTitle>
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher un produit..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher un produit..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={saleTypeFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setSaleTypeFilter('all')}
+                >
+                  Tous
+                </Button>
+                <Button
+                  size="sm"
+                  variant={saleTypeFilter === 'retail' ? 'default' : 'outline'}
+                  onClick={() => setSaleTypeFilter('retail')}
+                >
+                  Détail
+                </Button>
+                <Button
+                  size="sm"
+                  variant={saleTypeFilter === 'wholesale' ? 'default' : 'outline'}
+                  onClick={() => setSaleTypeFilter('wholesale')}
+                >
+                  Gros
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -314,11 +344,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   <Card key={product.id} className="border hover:shadow-md transition-smooth">
                     <CardContent className="p-4">
                       <div className="space-y-3">
-                        <div>
+                          <div>
                           <h4 className="font-medium">{product.name}</h4>
-                          <div className="flex items-center gap-2 text-sm">
+                          <div className="flex items-center gap-2 text-sm flex-wrap">
                             <Badge variant="outline" className="text-xs">
                               {categories.find(c => c.value === product.category)?.label}
+                            </Badge>
+                            <Badge variant={product.sale_type === 'retail' ? 'default' : 'secondary'} className="text-xs">
+                              {product.sale_type === 'retail' ? 'Détail' : 'Gros'}
                             </Badge>
                             <span className="text-success font-medium">{product.price.toFixed(2)} HTG</span>
                           </div>
