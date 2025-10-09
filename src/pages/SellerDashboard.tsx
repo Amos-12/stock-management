@@ -151,30 +151,10 @@ const SellerDashboard = () => {
     );
   }
 
-  // If seller not approved yet
+  // If seller not approved, redirect to Index page which handles inactive accounts
   if (isApproved === false) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary-light via-background to-secondary p-4">
-        <Card className="max-w-md shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="w-6 h-6 text-warning" />
-              Compte en attente d'approbation
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert>
-              <AlertDescription>
-                Votre compte vendeur a été créé avec succès, mais il doit être approuvé par un administrateur avant que vous puissiez accéder au tableau de bord.
-              </AlertDescription>
-            </Alert>
-            <p className="text-sm text-muted-foreground">
-              Veuillez contacter votre administrateur pour activer votre compte.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    window.location.href = '/';
+    return null;
   }
 
   return (

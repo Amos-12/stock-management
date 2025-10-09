@@ -121,13 +121,21 @@ const Index = () => {
   // Show inactive account message
   if (user && !isActive) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background p-4">
         <Card className="max-w-md w-full shadow-lg">
           <CardHeader className="text-center">
-            <CardTitle>Compte inactif</CardTitle>
+            <div className="flex items-center justify-center mb-2">
+              <Shield className="w-8 h-8 text-warning" />
+            </div>
+            <CardTitle>Compte en attente d'approbation</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <p className="mb-4">Votre compte est en attente d'activation par un administrateur.</p>
+            <p className="text-muted-foreground">
+              Votre compte a été créé avec succès, mais il doit être approuvé par un administrateur avant que vous puissiez accéder au système.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Veuillez contacter votre administrateur pour activer votre compte.
+            </p>
             <Button 
               onClick={signOut} 
               variant="destructive" 
