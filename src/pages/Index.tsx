@@ -9,7 +9,7 @@ import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, isActive, signOut } = useAuth();
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const mountedRef = useRef(true);
 
@@ -118,6 +118,29 @@ const Index = () => {
     );
   }
 
+  // Show inactive account message
+  if (user && !isActive) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background">
+        <Card className="max-w-md w-full shadow-lg">
+          <CardHeader className="text-center">
+            <CardTitle>Compte inactif</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="mb-4">Votre compte est en attente d'activation par un administrateur.</p>
+            <Button 
+              onClick={signOut} 
+              variant="destructive" 
+              className="w-full"
+            >
+              Se déconnecter
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Fallback for users without a role (shouldn't happen with proper setup)
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background">
@@ -133,7 +156,7 @@ const Index = () => {
             }} variant="outline" className="w-full">
               Actualiser
             </Button>
-            <Button 
+            {/* <Button 
               onClick={handleCreateAdmin} 
               variant="default" 
               className="w-full"
@@ -141,7 +164,7 @@ const Index = () => {
             >
               <Shield className="w-4 h-4 mr-2" />
               {isCreatingAdmin ? 'Création...' : 'Créer le compte admin'}
-            </Button>
+            </Button> */}
           </div>
         </CardContent>
       </Card>

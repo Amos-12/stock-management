@@ -9,6 +9,7 @@ export interface UserProfile {
   full_name: string;
   phone?: string;
   role?: 'admin' | 'seller';
+  is_active?: boolean;
 }
 
 export const useAuth = () => {
@@ -16,6 +17,7 @@ export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [role, setRole] = useState<'admin' | 'seller' | null>(null);
+  const [isActive, setIsActive] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export const useAuth = () => {
 
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
-          .select('role')
+          .select('role, is_active')
           .eq('user_id', userId)
           .maybeSingle();
 
@@ -41,10 +43,13 @@ export const useAuth = () => {
 
         if (!isMounted) return;
 
+        setIsActive(roleData?.is_active ?? true);
+
         if (profileData) {
           setProfile({
             ...profileData,
-            role: (roleData?.role as any)
+            role: (roleData?.role as any),
+            is_active: roleData?.is_active
           });
           setRole(roleData?.role as 'admin' | 'seller' | null);
         } else {
@@ -53,7 +58,8 @@ export const useAuth = () => {
             id: userId,
             user_id: userId,
             full_name: '',
-            role: (roleData?.role as any)
+            role: (roleData?.role as any),
+            is_active: roleData?.is_active
           });
           setRole(roleData?.role as 'admin' | 'seller' | null);
         }
@@ -84,6 +90,7 @@ export const useAuth = () => {
       } else {
         setProfile(null);
         setRole(null);
+        setIsActive(true);
       }
     });
 
@@ -102,6 +109,7 @@ export const useAuth = () => {
       } else {
         setProfile(null);
         setRole(null);
+        setIsActive(true);
       }
     });
 
@@ -219,6 +227,7 @@ export const useAuth = () => {
     session, 
     profile, 
     role,
+    isActive,
     loading, 
     signUp, 
     signIn, 
