@@ -26,6 +26,7 @@ export type Database = {
           name: string
           price: number
           quantity: number
+          sale_type: Database["public"]["Enums"]["sale_type"]
           updated_at: string
         }
         Insert: {
@@ -39,6 +40,7 @@ export type Database = {
           name: string
           price: number
           quantity?: number
+          sale_type?: Database["public"]["Enums"]["sale_type"]
           updated_at?: string
         }
         Update: {
@@ -52,6 +54,7 @@ export type Database = {
           name?: string
           price?: number
           quantity?: number
+          sale_type?: Database["public"]["Enums"]["sale_type"]
           updated_at?: string
         }
         Relationships: []
@@ -269,6 +272,7 @@ export type Database = {
         | "electronique"
         | "autres"
         | "energie"
+      sale_type: "retail" | "wholesale"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -405,6 +409,7 @@ export const Constants = {
         "autres",
         "energie",
       ],
+      sale_type: ["retail", "wholesale"],
     },
   },
 } as const
