@@ -77,6 +77,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [customQuantityDialog, setCustomQuantityDialog] = useState<{open: boolean, product: Product | null}>({open: false, product: null});
   const [customQuantityValue, setCustomQuantityValue] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile'>('cash');
 
   useEffect(() => {
     fetchProducts();
@@ -364,6 +365,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     setSaleTypeFilter('all');
     setDiscountType('none');
     setDiscountValue('0');
+    setPaymentMethod('cash');
     setCompletedSale(null);
     onSaleComplete?.();
   };
@@ -455,6 +457,23 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       currentY += 3;
       pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
       
+      // Subtotal
+      currentY += 4;
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Sous-total:', margin, currentY);
+      pdf.text(`${completedSale.subtotal.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      
+      // Discount (if applicable)
+      if (completedSale.discount_amount && completedSale.discount_amount > 0) {
+        currentY += 3;
+        pdf.text(`Remise (${completedSale.discount_type === 'percentage' ? completedSale.discount_value + '%' : 'fixe'}):`, margin, currentY);
+        pdf.text(`-${completedSale.discount_amount.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      }
+      
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
       // Total
       currentY += 4;
       pdf.setFontSize(9);
@@ -493,6 +512,169 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       toast({
         title: "Erreur",
         description: "Impossible d'imprimer le reçu",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const printInvoice = async () => {
+    if (!completedSale) return;
+    
+    try {
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+      let currentY = margin;
+
+      // Header - Company Info
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('GF DISTRIBUTION', margin, currentY);
+      
+      currentY += 8;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('& MULTI-SERVICES', margin, currentY);
+      
+      currentY += 6;
+      pdf.setFontSize(9);
+      pdf.text('Aux Cayes, Sud, Haïti', margin, currentY);
+      currentY += 5;
+      pdf.text('Tel: +509 3134-3213', margin, currentY);
+      currentY += 5;
+      pdf.text('Email: contact@gfdistribution.com', margin, currentY);
+
+      // Invoice Title
+      currentY += 15;
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('FACTURE', pageWidth / 2, currentY, { align: 'center' });
+
+      // Invoice Info
+      currentY += 10;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const invoiceNumber = `INV-${completedSale.id.substring(0, 8).toUpperCase()}`;
+      pdf.text(`Numéro: ${invoiceNumber}`, margin, currentY);
+      currentY += 6;
+      const date = new Date(completedSale.created_at).toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      pdf.text(`Date: ${date}`, margin, currentY);
+
+      // Customer Info
+      if (completedSale.customer_name) {
+        currentY += 10;
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Client:', margin, currentY);
+        currentY += 6;
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(completedSale.customer_name, margin, currentY);
+      }
+
+      // Items Table
+      currentY += 15;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      
+      // Table header
+      const colX = {
+        description: margin,
+        quantity: margin + 90,
+        unitPrice: margin + 120,
+        total: margin + 150
+      };
+      
+      pdf.text('Description', colX.description, currentY);
+      pdf.text('Qté', colX.quantity, currentY);
+      pdf.text('Prix Unit.', colX.unitPrice, currentY);
+      pdf.text('Total', colX.total, currentY);
+      
+      currentY += 2;
+      pdf.line(margin, currentY, pageWidth - margin, currentY);
+      
+      // Items
+      currentY += 8;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      
+      const items = completedSale.items || [];
+      items.forEach((item: any) => {
+        pdf.text(item.name, colX.description, currentY);
+        pdf.text(item.quantity.toString(), colX.quantity, currentY);
+        pdf.text(`${item.unit_price.toFixed(2)} HTG`, colX.unitPrice, currentY);
+        pdf.text(`${item.total.toFixed(2)} HTG`, colX.total, currentY);
+        currentY += 7;
+      });
+
+      // Line before totals
+      currentY += 3;
+      pdf.line(margin + 90, currentY, pageWidth - margin, currentY);
+
+      // Subtotal
+      currentY += 8;
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Sous-total:', colX.unitPrice, currentY);
+      pdf.text(`${completedSale.subtotal.toFixed(2)} HTG`, colX.total, currentY);
+
+      // Discount
+      if (completedSale.discount_amount && completedSale.discount_amount > 0) {
+        currentY += 7;
+        const discountLabel = completedSale.discount_type === 'percentage' 
+          ? `Remise (${completedSale.discount_value}%):` 
+          : 'Remise:';
+        pdf.text(discountLabel, colX.unitPrice, currentY);
+        pdf.text(`-${completedSale.discount_amount.toFixed(2)} HTG`, colX.total, currentY);
+      }
+
+      // Total
+      currentY += 10;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.text('TOTAL:', colX.unitPrice, currentY);
+      pdf.text(`${completedSale.total_amount.toFixed(2)} HTG`, colX.total, currentY);
+
+      // Payment method
+      currentY += 10;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      const paymentMethodLabel = {
+        cash: 'Espèces',
+        card: 'Carte bancaire',
+        mobile: 'Paiement mobile'
+      }[completedSale.payment_method] || completedSale.payment_method;
+      pdf.text(`Méthode de paiement: ${paymentMethodLabel}`, margin, currentY);
+
+      // Footer
+      currentY = pageHeight - 30;
+      pdf.setFontSize(8);
+      pdf.text('Merci pour votre confiance!', pageWidth / 2, currentY, { align: 'center' });
+      currentY += 5;
+      pdf.text('GF Distribution & Multi-Services - Tous droits réservés', pageWidth / 2, currentY, { align: 'center' });
+
+      // Save
+      const fileName = `facture_${invoiceNumber}.pdf`;
+      pdf.save(fileName);
+
+      toast({
+        title: "Facture générée",
+        description: "La facture a été téléchargée avec succès"
+      });
+
+    } catch (error) {
+      console.error('Error printing invoice:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer la facture",
         variant: "destructive"
       });
     }
@@ -809,6 +991,23 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="payment-method">Méthode de paiement</Label>
+              <Select
+                value={paymentMethod}
+                onValueChange={(value: 'cash' | 'card' | 'mobile') => setPaymentMethod(value)}
+              >
+                <SelectTrigger id="payment-method">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Espèces</SelectItem>
+                  <SelectItem value="card">Carte bancaire</SelectItem>
+                  <SelectItem value="mobile">Paiement mobile</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="border rounded-lg p-4 bg-muted/50">
               <h4 className="font-medium mb-3">Résumé de la commande</h4>
               {cart.map((item) => {
@@ -913,14 +1112,24 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               {completedSale && (
-                <Button 
-                  onClick={printReceipt}
-                  variant="outline" 
-                  className="gap-2 w-full sm:w-auto"
-                >
-                  <Printer className="w-4 h-4" />
-                  Imprimer Reçu
-                </Button>
+                <>
+                  <Button 
+                    onClick={printReceipt}
+                    variant="outline" 
+                    className="gap-2 w-full sm:w-auto"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Imprimer Reçu Thermique
+                  </Button>
+                  <Button 
+                    onClick={printInvoice}
+                    variant="outline" 
+                    className="gap-2 w-full sm:w-auto"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Imprimer Facture A4
+                  </Button>
+                </>
               )}
               <Button onClick={resetWorkflow} className="gap-2 w-full sm:w-auto">
                 <Plus className="w-4 h-4" />

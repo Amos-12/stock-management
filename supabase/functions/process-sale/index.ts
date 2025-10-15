@@ -143,23 +143,29 @@ Deno.serve(async (req) => {
       let previousQuantity: number
       let newQuantity: number
       let updateData: any = {}
+      let stockField: string // Track which field we're updating
 
       if (currentProduct.category === 'ceramique' && currentProduct.stock_boite !== null) {
         // For ceramics, update stock_boite
         previousQuantity = currentProduct.stock_boite
         newQuantity = previousQuantity - item.quantity
         updateData = { stock_boite: newQuantity }
+        stockField = 'stock_boite'
       } else if (currentProduct.category === 'fer_a_beton' && currentProduct.stock_barre !== null) {
         // For iron bars, update stock_barre
         previousQuantity = currentProduct.stock_barre
         newQuantity = previousQuantity - item.quantity
         updateData = { stock_barre: newQuantity }
+        stockField = 'stock_barre'
       } else {
         // For all other products, update quantity
         previousQuantity = currentProduct.quantity
         newQuantity = previousQuantity - item.quantity
         updateData = { quantity: newQuantity }
+        stockField = 'quantity'
       }
+
+      console.log(`Updating ${stockField} for ${item.product_name}: ${previousQuantity} -> ${newQuantity}`)
 
       // Update product stock
       const { error: updateError } = await supabaseClient
