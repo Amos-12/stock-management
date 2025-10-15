@@ -36,6 +36,12 @@ interface Product {
   prix_par_barre?: number;
   stock_barre?: number;
   decimal_autorise?: boolean;
+  // Energy-specific fields
+  puissance?: number;
+  voltage?: number;
+  capacite?: number;
+  type_energie?: string;
+  specifications_techniques?: any;
 }
 
 type ProductCategory = 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres' | 'ceramique' | 'fer' | 'materiaux_de_construction' | 'energie';
@@ -70,6 +76,10 @@ export const ProductManagement = () => {
     prix_par_barre: string;
     stock_barre: string;
     decimal_autorise: boolean;
+    puissance: string;
+    voltage: string;
+    capacite: string;
+    type_energie: string;
   }>({
     name: '',
     category: 'alimentaires',
@@ -89,7 +99,11 @@ export const ProductManagement = () => {
     prix_par_metre: '',
     prix_par_barre: '',
     stock_barre: '',
-    decimal_autorise: true
+    decimal_autorise: true,
+    puissance: '',
+    voltage: '',
+    capacite: '',
+    type_energie: ''
   });
 
   const categories = [
@@ -157,7 +171,11 @@ export const ProductManagement = () => {
       prix_par_metre: '',
       prix_par_barre: '',
       stock_barre: '',
-      decimal_autorise: true
+      decimal_autorise: true,
+      puissance: '',
+      voltage: '',
+      capacite: '',
+      type_energie: ''
     });
     setEditingProduct(null);
   };
@@ -192,7 +210,11 @@ export const ProductManagement = () => {
       prix_par_metre: product.prix_par_metre?.toString() || '',
       prix_par_barre: product.prix_par_barre?.toString() || '',
       stock_barre: product.stock_barre?.toString() || '',
-      decimal_autorise: product.decimal_autorise !== false
+      decimal_autorise: product.decimal_autorise !== false,
+      puissance: product.puissance?.toString() || '',
+      voltage: product.voltage?.toString() || '',
+      capacite: product.capacite?.toString() || '',
+      type_energie: product.type_energie || ''
     });
     setIsDialogOpen(true);
   };
@@ -257,7 +279,11 @@ export const ProductManagement = () => {
         is_active: formData.is_active,
         sale_type: formData.sale_type,
         created_by: user.id,
-        decimal_autorise: formData.decimal_autorise
+        decimal_autorise: formData.decimal_autorise,
+        puissance: formData.puissance ? parseFloat(formData.puissance) : null,
+        voltage: formData.voltage ? parseFloat(formData.voltage) : null,
+        capacite: formData.capacite ? parseFloat(formData.capacite) : null,
+        type_energie: formData.type_energie || null
       };
 
       // Map values based on category
@@ -480,7 +506,14 @@ export const ProductManagement = () => {
                       </Badge>
                     </div>
                   )}
-                  {formData.category !== 'ceramique' && formData.category !== 'fer' && (
+                  {formData.category === 'energie' && (
+                    <div className="col-span-1 sm:col-span-2">
+                      <Badge variant="outline" className="text-xs">
+                        ⚡ Énergie : Ajoutez les spécifications techniques (puissance, voltage, capacité, etc.)
+                      </Badge>
+                    </div>
+                  )}
+                  {formData.category !== 'ceramique' && formData.category !== 'fer' && formData.category !== 'energie' && (
                     <div className="col-span-1 sm:col-span-2">
                       <Badge variant="outline" className="text-xs">
                         📦 Produit standard : Remplissez le prix unitaire et la quantité en stock
@@ -708,6 +741,72 @@ export const ProductManagement = () => {
                         onChange={(e) => setFormData({...formData, stock_barre: e.target.value})}
                         placeholder="50"
                       />
+                    </div>
+                  </div>
+                )}
+
+                {/* Energy-specific fields */}
+                {formData.category === 'energie' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
+                    <div className="col-span-1 sm:col-span-2">
+                      <h3 className="font-semibold text-sm mb-2">⚡ Configuration Énergie / Solaire</h3>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="type_energie">Type d'énergie</Label>
+                      <Select
+                        value={formData.type_energie}
+                        onValueChange={(value) => setFormData({...formData, type_energie: value})}
+                      >
+                        <SelectTrigger className="pointer-events-auto">
+                          <SelectValue placeholder="Sélectionner le type" />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto z-[150]">
+                          <SelectItem value="solaire">Solaire</SelectItem>
+                          <SelectItem value="batterie">Batterie</SelectItem>
+                          <SelectItem value="generateur">Générateur</SelectItem>
+                          <SelectItem value="gaz">Gaz</SelectItem>
+                          <SelectItem value="essence">Essence</SelectItem>
+                          <SelectItem value="diesel">Diesel</SelectItem>
+                          <SelectItem value="petrole">Pétrole lampant</SelectItem>
+                          <SelectItem value="charbon">Charbon de bois</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="puissance">Puissance (W ou kW)</Label>
+                      <Input
+                        id="puissance"
+                        type="number"
+                        step="0.01"
+                        value={formData.puissance}
+                        onChange={(e) => setFormData({...formData, puissance: e.target.value})}
+                        placeholder="Ex: 300 (pour panneaux solaires)"
+                      />
+                      <p className="text-xs text-muted-foreground">Pour panneaux solaires, générateurs</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="voltage">Voltage (V)</Label>
+                      <Input
+                        id="voltage"
+                        type="number"
+                        step="0.1"
+                        value={formData.voltage}
+                        onChange={(e) => setFormData({...formData, voltage: e.target.value})}
+                        placeholder="Ex: 12, 24, 220"
+                      />
+                      <p className="text-xs text-muted-foreground">Pour batteries, équipements électriques</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="capacite">Capacité</Label>
+                      <Input
+                        id="capacite"
+                        type="number"
+                        step="0.01"
+                        value={formData.capacite}
+                        onChange={(e) => setFormData({...formData, capacite: e.target.value})}
+                        placeholder="Ex: 100 (Ah pour batteries, kg pour gaz)"
+                      />
+                      <p className="text-xs text-muted-foreground">Ah pour batteries, kg pour bonbonnes, litres pour carburants</p>
                     </div>
                   </div>
                 )}
