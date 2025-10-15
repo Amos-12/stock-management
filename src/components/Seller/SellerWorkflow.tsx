@@ -16,12 +16,14 @@ import {
   CheckCircle,
   ArrowRight,
   AlertCircle,
-  FileText
+  FileText,
+  Printer
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { InvoiceGenerator } from '@/components/Invoice/InvoiceGenerator';
+import jsPDF from 'jspdf';
 
 interface Product {
   id: string;
@@ -68,6 +70,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [saleTypeFilter, setSaleTypeFilter] = useState<'all' | 'retail' | 'wholesale'>('all');
   const [customerName, setCustomerName] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [discountType, setDiscountType] = useState<'none' | 'percentage' | 'amount'>('none');
   const [discountValue, setDiscountValue] = useState('0');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -75,6 +78,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [customQuantityDialog, setCustomQuantityDialog] = useState<{open: boolean, product: Product | null}>({open: false, product: null});
   const [customQuantityValue, setCustomQuantityValue] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'espece' | 'cheque' | 'virement'>('espece');
 
   useEffect(() => {
     fetchProducts();
@@ -288,7 +292,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       // Prepare sale data for Edge Function
       const saleRequest = {
         customer_name: customerName.trim() || null,
-        payment_method: 'cash',
+        customer_address: customerAddress.trim() ? customerAddress.trim() : null,
+        payment_method: paymentMethod,
         subtotal: subtotal,
         discount_type: discountType,
         discount_value: parseFloat(discountValue) || 0,
@@ -323,12 +328,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       setCurrentStep('success');
       setCompletedSale({
         ...data.sale,
+        payment_method: paymentMethod,
+        customer_address: customerAddress.trim() || null,
         items: cart.map(item => {
           const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
           const unitPrice = item.actualPrice !== undefined ? (item.actualPrice / item.cartQuantity) : item.price;
           return {
             name: item.name,
             quantity: item.cartQuantity,
+            unit: item.displayUnit || item.unit,
+            dimension: item.dimension,
+            diametre: item.diametre,
             unit_price: unitPrice,
             total: itemTotal
           };
@@ -358,12 +368,438 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     setCurrentStep('products');
     setCart([]);
     setCustomerName('');
+    setCustomerAddress('');
     setSearchTerm('');
     setSaleTypeFilter('all');
     setDiscountType('none');
     setDiscountValue('0');
+    setPaymentMethod('espece');
     setCompletedSale(null);
     onSaleComplete?.();
+  };
+
+  const printReceipt = async () => {
+    if (!completedSale) return;
+    
+    try {
+      // Format 58mm largeur pour imprimante thermique
+      const receiptWidth = 58;
+      
+      const items = completedSale.items || [];
+      const headerHeight = 28;
+      const itemsHeight = Math.max(items.length * 8, 10);
+      const footerHeight = 22;
+      const dynamicHeight = headerHeight + itemsHeight + footerHeight;
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [receiptWidth, dynamicHeight]
+      });
+
+      const margin = 3;
+      const contentWidth = receiptWidth - (margin * 2);
+      let currentY = margin;
+
+      // Logo
+      currentY += 5;
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('GF', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Company Header
+      currentY += 4;
+      pdf.setFontSize(8);
+      pdf.text('GF DISTRIBUTION & MULTI-SERVICES', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2;
+      pdf.setFontSize(6);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Aux Cayes, Sud, Haïti', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2.5;
+      pdf.text('Tel: +509 3134-3213', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2.5;
+      pdf.text('contact@gfdistribution.com', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Invoice Info
+      currentY += 4;
+      pdf.setFontSize(7);
+      const createdAt = new Date(completedSale.created_at || Date.now());
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
+      const receiptCode = `REC-${codeStamp}`;
+      pdf.text(`No: ${receiptCode}`, margin, currentY);
+      currentY += 3;
+      const dateStr = `${pad(createdAt.getDate())}/${pad(createdAt.getMonth()+1)}/${createdAt.getFullYear()} ${pad(createdAt.getHours())}:${pad(createdAt.getMinutes())}`;
+      pdf.text(`Date: ${dateStr}`, margin, currentY);
+      
+      // Space before customer info
+      currentY += 4;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Customer Info Section
+      currentY += 4;
+      if (completedSale.customer_name) {
+        pdf.text(`Client: ${completedSale.customer_name.substring(0, 30)}`, margin, currentY);
+        currentY += 3;
+      }
+      if (completedSale.customer_address) {
+        pdf.text(`Adresse: ${String(completedSale.customer_address).substring(0, 38)}`, margin, currentY);
+        currentY += 3;
+      }
+      
+      
+      // Items Header
+      currentY += 4;
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Article', margin, currentY);
+      pdf.text('Qte', contentWidth - 30, currentY);
+      pdf.text('Prix', contentWidth - 20, currentY);
+      pdf.text('Total', contentWidth - 1, currentY, { align: 'right' });
+      
+      currentY += 2;
+      pdf.setFont('helvetica', 'normal');
+      
+      // Items - Dynamic with all product details
+      items.forEach((item: any) => {
+        currentY += 3;
+        
+        // Product name
+        let itemName = item.name;
+        if (itemName.length > 18) {
+          itemName = itemName.substring(0, 18) + '...';
+        }
+        pdf.setFontSize(6);
+        pdf.text(itemName, margin, currentY);
+        
+        // Add dimension or diameter on next line if available
+        if (item.dimension || item.diametre) {
+          currentY += 2.5;
+          pdf.setFontSize(5);
+          const detail = item.dimension ? `(${item.dimension})` : `(Ø ${item.diametre})`;
+          pdf.text(detail, margin + 1, currentY);
+          pdf.setFontSize(6);
+          currentY += 0.5;
+        }
+        
+        // Quantity, Price, Total on the product name line
+        const baseY = item.dimension || item.diametre ? currentY - 3 : currentY;
+        pdf.text(item.quantity.toString(), contentWidth - 30, baseY);
+        pdf.text(`${item.unit_price.toFixed(2)}`, contentWidth - 20, baseY);
+        pdf.text(`${item.total.toFixed(2)}`, contentWidth - 2 + margin, baseY, { align: 'right' });
+      });
+      
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Subtotal
+      currentY += 4;
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Sous-total:', margin, currentY);
+      pdf.text(`${completedSale.subtotal.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      
+      // Discount (if applicable)
+      if (completedSale.discount_amount && completedSale.discount_amount > 0) {
+        currentY += 3;
+        pdf.text(`Remise (${completedSale.discount_type === 'percentage' ? completedSale.discount_value + '%' : 'fixe'}):`, margin, currentY);
+        pdf.text(`-${completedSale.discount_amount.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      }
+      
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Total
+      currentY += 4;
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('TOTAL:', margin, currentY);
+      pdf.text(`${completedSale.total_amount.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      
+      currentY += 4;
+      pdf.setFontSize(6);
+      pdf.setFont('helvetica', 'normal');
+      const paymentLabel = completedSale.payment_method === 'espece' ? 'Espèce' : completedSale.payment_method === 'cheque' ? 'Chèque' : completedSale.payment_method === 'virement' ? 'Virement' : String(completedSale.payment_method);
+      pdf.text(`Paiement: ${paymentLabel}`, margin, currentY);
+      
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Footer
+      currentY += 3;
+      pdf.setFontSize(5);
+      pdf.text('Merci de votre visite!', contentWidth / 2 + margin, currentY, { align: 'center'});
+
+      // Save and auto-print
+      const fileName = `recu_${receiptCode}.pdf`;
+      pdf.save(fileName);
+
+      setTimeout(() => {
+        window.print();
+      }, 500);
+
+      toast({
+        title: "Reçu imprimé",
+        description: "Le reçu a été généré et envoyé à l'impression"
+      });
+
+    } catch (error) {
+      console.error('Error printing receipt:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'imprimer le reçu",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const printInvoice = async () => {
+    if (!completedSale) return;
+    
+    try {
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+      let currentY = margin;
+
+      // Header Box with Company Info
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.rect(margin, currentY, contentWidth, 35);
+      
+      currentY += 8;
+      pdf.setFontSize(22);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('GF DISTRIBUTION', margin + 5, currentY);
+      
+      currentY += 7;
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('& MULTI-SERVICES', margin + 5, currentY);
+      
+      currentY += 6;
+      pdf.setFontSize(9);
+      pdf.text('Aux Cayes, Sud, Haïti', margin + 5, currentY);
+      currentY += 5;
+      pdf.text('Tel: +509 3134-3213 | Email: contact@gfdistribution.com', margin + 5, currentY);
+
+      // Invoice Title and Number Box
+      currentY = margin + 40;
+      pdf.setFillColor(240, 240, 240);
+      pdf.rect(margin, currentY, contentWidth, 25, 'F');
+      pdf.rect(margin, currentY, contentWidth, 25);
+      
+      currentY += 8;
+      pdf.setFontSize(18);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('FACTURE', pageWidth / 2, currentY, { align: 'center' });
+
+      // Invoice Info
+      currentY += 10;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const createdAt = new Date(completedSale.created_at || Date.now());
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
+      const factCode = `FACT-${codeStamp}`;
+      pdf.text(`No: ${factCode}`, pageWidth / 2, currentY, { align: 'center' });
+
+      // Date and Customer Info Box
+      currentY += 12;
+      pdf.setDrawColor(200, 200, 200);
+      pdf.setLineWidth(0.3);
+      pdf.rect(margin, currentY, contentWidth / 2 - 5, 30);
+      
+      currentY += 7;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.text('Date:', margin + 5, currentY);
+      pdf.setFont('helvetica', 'normal');
+      const dateStr = `${pad(createdAt.getDate())} ${createdAt.toLocaleString('fr-FR', { month: 'long' })} ${createdAt.getFullYear()} à ${pad(createdAt.getHours())}h${pad(createdAt.getMinutes())}`;
+      pdf.text(dateStr, margin + 5, currentY + 5);
+
+      // Customer Info Box
+      const customerBoxX = margin + contentWidth / 2 + 5;
+      currentY -= 7;
+      pdf.rect(customerBoxX, currentY, contentWidth / 2 - 5, 30);
+      
+      currentY += 7;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Client:', customerBoxX + 5, currentY);
+      pdf.setFont('helvetica', 'normal');
+      
+      if (completedSale.customer_name) {
+        currentY += 5;
+        pdf.text(completedSale.customer_name, customerBoxX + 5, currentY);
+      }
+      
+      if (completedSale.customer_address) {
+        currentY += 5;
+        pdf.setFontSize(9);
+        pdf.text(completedSale.customer_address.substring(0, 40), customerBoxX + 5, currentY);
+        pdf.setFontSize(10);
+      }
+
+      // Items Table
+      currentY += 20;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      
+      // Table header with background
+      pdf.setFillColor(230, 230, 230);
+      pdf.rect(margin, currentY, contentWidth, 8, 'F');
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.rect(margin, currentY, contentWidth, 8);
+      
+      const colX = {
+        description: margin + 2,
+        quantity: margin + 100,
+        unitPrice: margin + 130,
+        total: margin + 160
+      };
+      
+      currentY += 6;
+      pdf.text('Description', colX.description, currentY);
+      pdf.text('Qté', colX.quantity, currentY);
+      pdf.text('Prix Unit.', colX.unitPrice, currentY);
+      pdf.text('Total (HTG)', colX.total, currentY);
+      
+      // Items with alternating row colors
+      currentY += 2;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      
+      const items = completedSale.items || [];
+      items.forEach((item: any, index: number) => {
+        const rowHeight = 7;
+        currentY += rowHeight;
+        
+        // Alternating row background
+        if (index % 2 === 0) {
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, currentY - 5, contentWidth, rowHeight, 'F');
+        }
+        
+        pdf.setDrawColor(220, 220, 220);
+        pdf.setLineWidth(0.1);
+        pdf.line(margin, currentY + 2, pageWidth - margin, currentY + 2);
+        
+        // Build description with all available product details
+        let description = item.name;
+        const details = [];
+        
+        if (item.dimension) details.push(item.dimension);
+        if (item.diametre) details.push(`Ø ${item.diametre}`);
+        if (item.unit && item.unit !== 'unité') details.push(item.unit);
+        
+        if (details.length > 0) {
+          description += ` (${details.join(', ')})`;
+        }
+        
+        // Wrap long descriptions
+        if (description.length > 50) {
+          description = description.substring(0, 47) + '...';
+        }
+        
+        pdf.text(description, colX.description, currentY);
+        pdf.text(item.quantity.toString(), colX.quantity, currentY);
+        pdf.text(item.unit_price.toFixed(2), colX.unitPrice, currentY);
+        pdf.text(item.total.toFixed(2), colX.total, currentY);
+      });
+
+      // Line before totals
+      currentY += 5;
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, currentY, pageWidth - margin, currentY);
+
+      // Totals Box
+      currentY += 10;
+      const totalsBoxY = currentY;
+      const totalsBoxHeight = completedSale.discount_amount > 0 ? 35 : 25;
+      
+      pdf.setFillColor(245, 245, 245);
+      pdf.rect(margin + 100, totalsBoxY, contentWidth - 100, totalsBoxHeight, 'F');
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.rect(margin + 100, totalsBoxY, contentWidth - 100, totalsBoxHeight);
+      
+      currentY += 7;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      pdf.text('Sous-total:', colX.unitPrice, currentY);
+      pdf.text(`${completedSale.subtotal.toFixed(2)} HTG`, colX.total, currentY);
+
+      // Discount
+      if (completedSale.discount_amount && completedSale.discount_amount > 0) {
+        currentY += 7;
+        const discountLabel = completedSale.discount_type === 'percentage' 
+          ? `Remise (${completedSale.discount_value}%):` 
+          : 'Remise:';
+        pdf.text(discountLabel, colX.unitPrice, currentY);
+        pdf.setTextColor(200, 0, 0);
+        pdf.text(`-${completedSale.discount_amount.toFixed(2)} HTG`, colX.total, currentY);
+        pdf.setTextColor(0, 0, 0);
+      }
+
+      // Total line
+      currentY += 3;
+      pdf.setLineWidth(0.3);
+      pdf.line(margin + 100, currentY, pageWidth - margin, currentY);
+      
+      // Total
+      currentY += 8;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(13);
+      pdf.text('TOTAL:', colX.unitPrice, currentY);
+      pdf.text(`${completedSale.total_amount.toFixed(2)} HTG`, colX.total, currentY);
+
+      // Payment method
+      currentY += 12;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      const paymentMethodLabel = {
+        espece: 'Espèce',
+        cheque: 'Chèque',
+        virement: 'Virement'
+      }[completedSale.payment_method] || completedSale.payment_method;
+      pdf.text(`Méthode de paiement: ${paymentMethodLabel}`, margin, currentY);
+
+      // Footer
+      currentY = pageHeight - 30;
+      pdf.setFontSize(8);
+      pdf.text('Merci pour votre confiance!', pageWidth / 2, currentY, { align: 'center' });
+      currentY += 5;
+      pdf.text('GF Distribution & Multi-Services - Tous droits réservés', pageWidth / 2, currentY, { align: 'center' });
+
+      // Save
+      const fileName = `facture_${factCode}.pdf`;
+      pdf.save(fileName);
+
+      toast({
+        title: "Facture générée",
+        description: "La facture a été téléchargée avec succès"
+      });
+
+    } catch (error) {
+      console.error('Error printing invoice:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer la facture",
+        variant: "destructive"
+      });
+    }
   };
 
   const categories = [
@@ -490,9 +926,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 // For ceramics, show boxes and m²
                 if (product.category === 'ceramique' && product.stock_boite !== undefined) {
                   availableStock = product.stock_boite;
+                  const cartQuantity = cartItem?.cartQuantity || 0;
+                  const remainingBoxes = product.stock_boite - cartQuantity;
                   const surfaceDisponible = product.surface_par_boite ? 
-                    (product.stock_boite * product.surface_par_boite).toFixed(2) : 0;
-                  stockLabel = `boîtes (≈ ${surfaceDisponible} m²)`;
+                    (remainingBoxes * product.surface_par_boite).toFixed(2) : 0;
+                  stockLabel = `boîtes (${surfaceDisponible} m² restants)`;
                 }
                 
                 // For iron bars
@@ -675,6 +1113,33 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="customer-address">Adresse du client (optionnel)</Label>
+              <Input
+                id="customer-address"
+                placeholder="Adresse du client"
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment-method">Méthode de paiement</Label>
+              <Select
+                value={paymentMethod}
+                onValueChange={(value: 'espece' | 'cheque' | 'virement') => setPaymentMethod(value)}
+              >
+                <SelectTrigger id="payment-method">
+                  <SelectValue placeholder="Sélectionner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="espece">Espèce</SelectItem>
+                  <SelectItem value="cheque">Chèque</SelectItem>
+                  <SelectItem value="virement">Virement</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="border rounded-lg p-4 bg-muted/50">
               <h4 className="font-medium mb-3">Résumé de la commande</h4>
               {cart.map((item) => {
@@ -779,26 +1244,33 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               {completedSale && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="gap-2 w-full sm:w-auto">
-                      <FileText className="w-4 h-4" />
-                      Imprimer Reçu
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <InvoiceGenerator saleData={completedSale} />
-                  </DialogContent>
-                </Dialog>
-               )}
-               <Button onClick={resetWorkflow} className="gap-2 w-full sm:w-auto">
-                 <Plus className="w-4 h-4" />
-                 Nouvelle vente
-               </Button>
-             </div>
-           </CardContent>
-         </Card>
-       )}
+                <>
+                  <Button 
+                    onClick={printReceipt}
+                    variant="outline" 
+                    className="gap-2 w-full sm:w-auto"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Imprimer Reçu Thermique
+                  </Button>
+                  <Button 
+                    onClick={printInvoice}
+                    variant="outline" 
+                    className="gap-2 w-full sm:w-auto"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Imprimer Facture A4
+                  </Button>
+                </>
+              )}
+              <Button onClick={resetWorkflow} className="gap-2 w-full sm:w-auto">
+                <Plus className="w-4 h-4" />
+                Nouvelle vente
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Custom Quantity Dialog */}
       <Dialog open={customQuantityDialog.open} onOpenChange={(open) => {
