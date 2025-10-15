@@ -17,6 +17,7 @@ interface CompanySettings {
   phone: string;
   email: string;
   tva_rate: number;
+  payment_terms: string;
   logo_url?: string;
 }
 
@@ -66,6 +67,7 @@ export const CompanySettings = () => {
           phone: settings.phone,
           email: settings.email,
           tva_rate: settings.tva_rate,
+          payment_terms: settings.payment_terms,
         })
         .eq('id', settings.id);
 
@@ -199,6 +201,20 @@ export const CompanySettings = () => {
               Taux de TVA appliqué sur les factures (ex: 10.0 pour 10%)
             </p>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="payment_terms">Conditions de paiement</Label>
+          <Textarea
+            id="payment_terms"
+            value={settings.payment_terms}
+            onChange={(e) => setSettings({ ...settings, payment_terms: e.target.value })}
+            placeholder="Paiement comptant ou à crédit selon accord"
+            rows={3}
+          />
+          <p className="text-xs text-muted-foreground">
+            Conditions de paiement affichées sur les factures
+          </p>
         </div>
 
         <div className="flex justify-end gap-2 pt-4">

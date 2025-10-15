@@ -87,12 +87,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [paymentMethod, setPaymentMethod] = useState<'espece' | 'cheque' | 'virement'>('espece');
   const [companySettings, setCompanySettings] = useState<any>(null);
 
-  // Utility function to format amounts with thousands separator
+  // Utility function to format amounts with space as thousands separator
   const formatAmount = (amount: number, currency = true): string => {
     const formatted = amount.toLocaleString('fr-FR', {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
+      maximumFractionDigits: 2,
+      useGrouping: true
+    }).replace(/\s/g, ' '); // Ensure space separator
     return currency ? `${formatted} HTG` : formatted;
   };
 
@@ -707,8 +708,28 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         }
       }
 
-      // Thank you message - Dynamic
+      // Customer information (if provided)
       currentY = margin + 60;
+      if (completedSale.customer_name || completedSale.customer_address) {
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('CLIENT:', margin, currentY);
+        
+        currentY += 5;
+        pdf.setFont('helvetica', 'normal');
+        if (completedSale.customer_name) {
+          pdf.text(completedSale.customer_name, margin, currentY);
+          currentY += 4;
+        }
+        if (completedSale.customer_address) {
+          pdf.text(completedSale.customer_address, margin, currentY);
+          currentY += 4;
+        }
+        currentY += 6;
+      }
+
+      // Thank you message - Dynamic
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'italic');
       pdf.setTextColor(80, 80, 80);
@@ -799,7 +820,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const tvaAmount = totalHT * tvaRate;
       const totalTTC = totalHT + tvaAmount;
       
-      pdf.setFont('helvetica', 'bold');
+      pdf.setFont('courier', 'bold');
       pdf.setFontSize(10);
       
       const totalsX = colX.unitPrice;
@@ -857,13 +878,20 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       }[completedSale.payment_method] || completedSale.payment_method || 'Espèces';
       pdf.text(paymentMethodLabel, margin + 50, currentY);
       
-      currentY += 8;
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Conditions de paiement:', margin, currentY);
-      
-      currentY += 5;
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('30 jours', margin + 50, currentY);
+      // Payment terms from company settings
+      if (companySettings.payment_terms) {
+        currentY += 8;
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Conditions de paiement:', margin, currentY);
+        
+        currentY += 5;
+        pdf.setFont('helvetica', 'normal');
+        const termsLines = pdf.splitTextToSize(companySettings.payment_terms, pageWidth - margin * 2 - 50);
+        termsLines.forEach((line: string) => {
+          pdf.text(line, margin + 50, currentY);
+          currentY += 4;
+        });
+      }
 
       // Footer - Dynamic from settings
       currentY = pageHeight - 20;

@@ -24,6 +24,7 @@ export type Database = {
           email: string
           id: string
           logo_url: string | null
+          payment_terms: string | null
           phone: string
           tva_rate: number
           updated_at: string | null
@@ -37,6 +38,7 @@ export type Database = {
           email?: string
           id?: string
           logo_url?: string | null
+          payment_terms?: string | null
           phone?: string
           tva_rate?: number
           updated_at?: string | null
@@ -50,6 +52,7 @@ export type Database = {
           email?: string
           id?: string
           logo_url?: string | null
+          payment_terms?: string | null
           phone?: string
           tva_rate?: number
           updated_at?: string | null
