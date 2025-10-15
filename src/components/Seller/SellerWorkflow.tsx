@@ -87,6 +87,15 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [paymentMethod, setPaymentMethod] = useState<'espece' | 'cheque' | 'virement'>('espece');
   const [companySettings, setCompanySettings] = useState<any>(null);
 
+  // Utility function to format amounts with thousands separator
+  const formatAmount = (amount: number, currency = true): string => {
+    const formatted = amount.toLocaleString('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return currency ? `${formatted} HTG` : formatted;
+  };
+
   useEffect(() => {
     fetchProducts();
     fetchCompanySettings();
@@ -344,7 +353,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       toast({
         title: "Vente enregistrée",
-        description: `Vente de ${totalAmount.toFixed(2)} HTG enregistrée avec succès`,
+        description: `Vente de ${formatAmount(totalAmount)} enregistrée avec succès`,
       });
 
       setCurrentStep('success');
@@ -518,8 +527,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         // Quantity, Price, Total on the product name line
         const baseY = item.dimension || item.diametre ? currentY - 3 : currentY;
         pdf.text(item.quantity.toString(), contentWidth - 30, baseY);
-        pdf.text(`${item.unit_price.toFixed(2)}`, contentWidth - 20, baseY);
-        pdf.text(`${item.total.toFixed(2)}`, contentWidth - 2 + margin, baseY, { align: 'right' });
+        pdf.text(`${formatAmount(item.unit_price, false)}`, contentWidth - 20, baseY);
+        pdf.text(`${formatAmount(item.total, false)}`, contentWidth - 2 + margin, baseY, { align: 'right' });
       });
       
       currentY += 3;
@@ -530,13 +539,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.setFontSize(7);
       pdf.setFont('helvetica', 'normal');
       pdf.text('Sous-total:', margin, currentY);
-      pdf.text(`${completedSale.subtotal.toFixed(2)} FCFA`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      pdf.text(`${formatAmount(completedSale.subtotal, false)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
       
       // Discount (if applicable)
       if (completedSale.discount_amount && completedSale.discount_amount > 0) {
         currentY += 3;
         pdf.text(`Remise (${completedSale.discount_type === 'percentage' ? completedSale.discount_value + '%' : 'fixe'}):`, margin, currentY);
-        pdf.text(`-${completedSale.discount_amount.toFixed(2)} FCFA`, contentWidth - 2 + margin, currentY, { align: 'right' });
+        pdf.text(`-${formatAmount(completedSale.discount_amount, false)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
       }
       
       currentY += 3;
@@ -547,7 +556,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'bold');
       pdf.text('TOTAL:', margin, currentY);
-      pdf.text(`${completedSale.total_amount.toFixed(2)} FCFA`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      pdf.text(`${formatAmount(completedSale.total_amount, false)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
       
       currentY += 4;
       pdf.setFontSize(6);
@@ -774,8 +783,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         pdf.text(description, colX.description, currentY);
         pdf.text(item.quantity.toString(), colX.quantity, currentY);
         pdf.text(item.unit || 'pce', colX.unit, currentY);
-        pdf.text(`${item.unit_price.toFixed(2)} FCFA`, colX.unitPrice, currentY);
-        pdf.text(`${item.total.toFixed(2)} FCFA`, colX.total, currentY);
+        pdf.text(`${formatAmount(item.unit_price, false)} HTG`, colX.unitPrice, currentY);
+        pdf.text(`${formatAmount(item.total, false)} HTG`, colX.total, currentY);
       });
 
       // Totals section
@@ -797,7 +806,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       
       // Total HT (before discount)
       pdf.text('Total HT', totalsX, currentY, { align: 'right' });
-      pdf.text(`${subtotalBeforeDiscount.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
+      pdf.text(`${formatAmount(subtotalBeforeDiscount, false)} HTG`, pageWidth - margin, currentY, { align: 'right' });
       
       // Discount (if applicable)
       if (discountAmount > 0) {
@@ -807,19 +816,19 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           : 'Remise';
         pdf.setTextColor(220, 38, 38); // Red for discount
         pdf.text(discountLabel, totalsX, currentY, { align: 'right' });
-        pdf.text(`-${discountAmount.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
+        pdf.text(`-${formatAmount(discountAmount, false)} HTG`, pageWidth - margin, currentY, { align: 'right' });
         pdf.setTextColor(0, 0, 0); // Reset color
         
         // Total after discount
         currentY += 6;
         pdf.text('Total après remise', totalsX, currentY, { align: 'right' });
-        pdf.text(`${totalHT.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
+        pdf.text(`${formatAmount(totalHT, false)} HTG`, pageWidth - margin, currentY, { align: 'right' });
       }
       
       currentY += 6;
       // TVA with dynamic rate
       pdf.text(`TVA ${companySettings.tva_rate.toFixed(1)} %`, totalsX, currentY, { align: 'right' });
-      pdf.text(`${tvaAmount.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
+      pdf.text(`${formatAmount(tvaAmount, false)} HTG`, pageWidth - margin, currentY, { align: 'right' });
       
       // Line before Total TTC
       currentY += 2;
@@ -831,7 +840,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       // Total TTC
       pdf.setFontSize(12);
       pdf.text('Total TTC', totalsX, currentY, { align: 'right' });
-      pdf.text(`${totalTTC.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
+      pdf.text(`${formatAmount(totalTTC, false)} HTG`, pageWidth - margin, currentY, { align: 'right' });
 
       // Payment information
       currentY += 15;
@@ -1091,11 +1100,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                           {/* Pricing */}
                           <div className="mt-2">
                             {product.category === 'ceramique' && product.prix_m2 ? (
-                              <div className="text-success font-bold text-lg">{product.prix_m2.toFixed(2)} HTG/m²</div>
+                              <div className="text-success font-bold text-lg">{formatAmount(product.prix_m2)}/m²</div>
                             ) : product.category === 'fer' && product.prix_par_barre ? (
-                              <div className="text-success font-bold text-lg">{product.prix_par_barre.toFixed(2)} HTG/barre</div>
+                              <div className="text-success font-bold text-lg">{formatAmount(product.prix_par_barre)}/barre</div>
                             ) : (
-                              <div className="text-success font-bold text-lg">{product.price.toFixed(2)} HTG</div>
+                              <div className="text-success font-bold text-lg">{formatAmount(product.price)}</div>
                             )}
                           </div>
                           
@@ -1177,7 +1186,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                         <div className="flex-1">
                           <h5 className="font-medium">{item.name}</h5>
                           <p className="text-sm text-muted-foreground">
-                            {item.cartQuantity} {item.displayUnit || item.unit} = {itemTotal.toFixed(2)} HTG
+                            {item.cartQuantity} {item.displayUnit || item.unit} = {formatAmount(itemTotal)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1210,7 +1219,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-lg font-semibold">Total:</span>
                     <span className="text-xl font-bold text-success">
-                      {getTotalAmount().toFixed(2)} HTG
+                      {formatAmount(getTotalAmount())}
                     </span>
                   </div>
                   
@@ -1291,14 +1300,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 return (
                   <div key={item.id} className="flex justify-between text-sm mb-2">
                     <span>{item.name} × {item.cartQuantity} {displayUnit}</span>
-                    <span>{itemTotal.toFixed(2)} HTG</span>
+                    <span>{formatAmount(itemTotal)}</span>
                   </div>
                 );
               })}
               <div className="border-t mt-3 pt-3 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Sous-total</span>
-                  <span>{getSubtotal().toFixed(2)} HTG</span>
+                  <span>{formatAmount(getSubtotal())}</span>
                 </div>
                 
                 {/* Discount Section */}
@@ -1339,14 +1348,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   {discountType !== 'none' && getDiscountAmount() > 0 && (
                     <div className="flex justify-between text-sm text-warning">
                       <span>Remise appliquée</span>
-                      <span>-{getDiscountAmount().toFixed(2)} HTG</span>
+                      <span>-{formatAmount(getDiscountAmount())}</span>
                     </div>
                   )}
                 </div>
                 
                 <div className="border-t pt-2 flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span className="text-success">{getFinalTotal().toFixed(2)} HTG</span>
+                  <span className="text-success">{formatAmount(getFinalTotal())}</span>
                 </div>
               </div>
             </div>
