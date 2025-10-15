@@ -490,9 +490,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 // For ceramics, show boxes and m²
                 if (product.category === 'ceramique' && product.stock_boite !== undefined) {
                   availableStock = product.stock_boite;
+                  const cartQuantity = cartItem?.cartQuantity || 0;
+                  const remainingBoxes = product.stock_boite - cartQuantity;
                   const surfaceDisponible = product.surface_par_boite ? 
-                    (product.stock_boite * product.surface_par_boite).toFixed(2) : 0;
-                  stockLabel = `boîtes (≈ ${surfaceDisponible} m²)`;
+                    (remainingBoxes * product.surface_par_boite).toFixed(2) : 0;
+                  stockLabel = `boîtes (${surfaceDisponible} m² restants)`;
                 }
                 
                 // For iron bars
