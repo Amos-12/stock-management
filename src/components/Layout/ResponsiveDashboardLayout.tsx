@@ -46,7 +46,8 @@ export const ResponsiveDashboardLayout = ({
     { icon: Users, label: 'Utilisateurs', value: 'users' },
     { icon: PackagePlus, label: 'Réapprovisionnement', value: 'restock', route: '/restock' },
     { icon: TrendingUp, label: 'Rapports', value: 'reports' },
-    { icon: Bell, label: 'Notifications', value: 'notifications' }
+    { icon: Bell, label: 'Notifications', value: 'notifications' },
+    { icon: Settings, label: 'Paramètres', value: 'settings' }
   ];
 
   const sellerNavItems = [

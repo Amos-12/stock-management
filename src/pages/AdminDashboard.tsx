@@ -7,6 +7,7 @@ import { AdvancedReports } from '@/components/Reports/AdvancedReports';
 import { StockAlerts } from '@/components/Notifications/StockAlerts';
 import { ProductManagement } from '@/components/Products/ProductManagement';
 import { SalesManagement } from '@/components/Sales/SalesManagement';
+import { CompanySettings } from '@/components/Settings/CompanySettings';
 
 const AdminDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -25,6 +26,8 @@ const AdminDashboard = () => {
         return <AdvancedReports />;
       case 'notifications':
         return <StockAlerts />;
+      case 'settings':
+        return <CompanySettings />;
       default:
         return <AdminDashboardCharts />;
     }

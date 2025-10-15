@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      company_settings: {
+        Row: {
+          address: string
+          city: string
+          company_description: string | null
+          company_name: string
+          created_at: string | null
+          email: string
+          id: string
+          logo_url: string | null
+          phone: string
+          tva_rate: number
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string
+          city?: string
+          company_description?: string | null
+          company_name?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          logo_url?: string | null
+          phone?: string
+          tva_rate?: number
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string
+          city?: string
+          company_description?: string | null
+          company_name?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          logo_url?: string | null
+          phone?: string
+          tva_rate?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           alert_threshold: number
@@ -188,6 +230,7 @@ export type Database = {
       sales: {
         Row: {
           created_at: string
+          customer_address: string | null
           customer_name: string | null
           discount_amount: number | null
           discount_type: string | null
@@ -201,6 +244,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_address?: string | null
           customer_name?: string | null
           discount_amount?: number | null
           discount_type?: string | null
@@ -214,6 +258,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_address?: string | null
           customer_name?: string | null
           discount_amount?: number | null
           discount_type?: string | null

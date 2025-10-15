@@ -24,6 +24,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { InvoiceGenerator } from '@/components/Invoice/InvoiceGenerator';
 import jsPDF from 'jspdf';
+import logo from '@/assets/logo.png';
 
 interface Product {
   id: string;
@@ -79,10 +80,26 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [customQuantityDialog, setCustomQuantityDialog] = useState<{open: boolean, product: Product | null}>({open: false, product: null});
   const [customQuantityValue, setCustomQuantityValue] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'espece' | 'cheque' | 'virement'>('espece');
+  const [companySettings, setCompanySettings] = useState<any>(null);
 
   useEffect(() => {
     fetchProducts();
+    fetchCompanySettings();
   }, []);
+
+  const fetchCompanySettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .select('*')
+        .limit(1)
+        .single();
+      
+      if (data) setCompanySettings(data);
+    } catch (error) {
+      console.error('Error fetching company settings:', error);
+    }
+  };
 
   useEffect(() => {
     const filtered = products.filter(product => {
@@ -379,14 +396,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   };
 
   const printReceipt = async () => {
-    if (!completedSale) return;
+    if (!completedSale || !companySettings) return;
     
     try {
       // Format 58mm largeur pour imprimante thermique
       const receiptWidth = 58;
       
       const items = completedSale.items || [];
-      const headerHeight = 28;
+      const headerHeight = 35;
       const itemsHeight = Math.max(items.length * 8, 10);
       const footerHeight = 22;
       const dynamicHeight = headerHeight + itemsHeight + footerHeight;
@@ -401,24 +418,32 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const contentWidth = receiptWidth - (margin * 2);
       let currentY = margin;
 
-      // Logo
-      currentY += 5;
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('GF', contentWidth / 2 + margin, currentY, { align: 'center' });
+      // Add logo image
+      try {
+        const logoWidth = 12;
+        const logoHeight = 12;
+        const logoX = (receiptWidth - logoWidth) / 2;
+        pdf.addImage(logo, 'PNG', logoX, currentY, logoWidth, logoHeight);
+        currentY += logoHeight + 2;
+      } catch (e) {
+        console.error('Error adding logo:', e);
+        currentY += 3;
+      }
       
-      // Company Header
-      currentY += 4;
+      // Company Header - Dynamic from settings
       pdf.setFontSize(8);
-      pdf.text('GF DISTRIBUTION & MULTI-SERVICES', contentWidth / 2 + margin, currentY, { align: 'center' });
-      currentY += 2;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(companySettings.company_name, contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 3;
       pdf.setFontSize(6);
       pdf.setFont('helvetica', 'normal');
-      pdf.text('Aux Cayes, Sud, Haïti', contentWidth / 2 + margin, currentY, { align: 'center' });
+      pdf.text(companySettings.address, contentWidth / 2 + margin, currentY, { align: 'center' });
       currentY += 2.5;
-      pdf.text('Tel: +509 3134-3213', contentWidth / 2 + margin, currentY, { align: 'center' });
+      pdf.text(companySettings.city, contentWidth / 2 + margin, currentY, { align: 'center' });
       currentY += 2.5;
-      pdf.text('contact@gfdistribution.com', contentWidth / 2 + margin, currentY, { align: 'center' });
+      pdf.text(`Tel: ${companySettings.phone}`, contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2.5;
+      pdf.text(companySettings.email, contentWidth / 2 + margin, currentY, { align: 'center' });
       currentY += 3;
       pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
       
@@ -494,29 +519,29 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       currentY += 3;
       pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
       
-      // Subtotal
+      // Subtotal (no TVA on receipt)
       currentY += 4;
       pdf.setFontSize(7);
       pdf.setFont('helvetica', 'normal');
       pdf.text('Sous-total:', margin, currentY);
-      pdf.text(`${completedSale.subtotal.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      pdf.text(`${completedSale.subtotal.toFixed(2)} FCFA`, contentWidth - 2 + margin, currentY, { align: 'right' });
       
       // Discount (if applicable)
       if (completedSale.discount_amount && completedSale.discount_amount > 0) {
         currentY += 3;
         pdf.text(`Remise (${completedSale.discount_type === 'percentage' ? completedSale.discount_value + '%' : 'fixe'}):`, margin, currentY);
-        pdf.text(`-${completedSale.discount_amount.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+        pdf.text(`-${completedSale.discount_amount.toFixed(2)} FCFA`, contentWidth - 2 + margin, currentY, { align: 'right' });
       }
       
       currentY += 3;
       pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
       
-      // Total
+      // Total (no TVA displayed on receipt)
       currentY += 4;
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'bold');
       pdf.text('TOTAL:', margin, currentY);
-      pdf.text(`${completedSale.total_amount.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      pdf.text(`${completedSale.total_amount.toFixed(2)} FCFA`, contentWidth - 2 + margin, currentY, { align: 'right' });
       
       currentY += 4;
       pdf.setFontSize(6);
@@ -556,7 +581,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   };
 
   const printInvoice = async () => {
-    if (!completedSale) return;
+    if (!completedSale || !companySettings) return;
     
     try {
       const pdf = new jsPDF({
@@ -571,11 +596,19 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const contentWidth = pageWidth - (margin * 2);
       let currentY = margin;
 
-      // Company name/logo on the left (in blue like reference)
+      // Add logo image
+      try {
+        const logoSize = 20;
+        pdf.addImage(logo, 'PNG', margin, currentY, logoSize, logoSize);
+      } catch (e) {
+        console.error('Error adding logo to invoice:', e);
+      }
+
+      // Company name on the left (in blue)
       pdf.setFontSize(20);
       pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(41, 98, 255); // Blue color like RÉNOV' PRO
-      pdf.text('QUINCAILLERIE PRO', margin, currentY);
+      pdf.setTextColor(41, 98, 255);
+      pdf.text(companySettings.company_name, margin + 25, currentY + 7);
 
       // Invoice number and dates on the right
       const createdAt = new Date(completedSale.created_at || Date.now());
@@ -600,27 +633,27 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       dueDate.setDate(dueDate.getDate() + 30);
       pdf.text(`Échéance: ${pad(dueDate.getDate())}/${pad(dueDate.getMonth()+1)}/${dueDate.getFullYear()}`, pageWidth - margin, currentY, { align: 'right' });
 
-      // Company information on the left
-      currentY = margin + 10;
+      // Company information on the left - Dynamic from settings
+      currentY = margin + 25;
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
-      pdf.text('Quincaillerie Pro - Commerce de détail', margin, currentY);
+      pdf.text(`${companySettings.company_name} - ${companySettings.company_description}`, margin, currentY);
       
       currentY += 5;
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
       pdf.setTextColor(80, 80, 80);
-      pdf.text('123 Rue Principale', margin, currentY);
+      pdf.text(companySettings.address, margin, currentY);
       
       currentY += 4;
-      pdf.text('Dakar 10000', margin, currentY);
+      pdf.text(companySettings.city, margin, currentY);
       
       currentY += 4;
-      pdf.text('+221 XX XXX XX XX', margin, currentY);
+      pdf.text(companySettings.phone, margin, currentY);
       
       currentY += 4;
-      pdf.text('contact@quincaillerie.sn', margin, currentY);
+      pdf.text(companySettings.email, margin, currentY);
 
       // Customer information on the right
       if (completedSale.customer_name || completedSale.customer_address) {
@@ -654,12 +687,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         }
       }
 
-      // Thank you message
-      currentY = margin + 50;
+      // Thank you message - Dynamic
+      currentY = margin + 60;
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'italic');
       pdf.setTextColor(80, 80, 80);
-      pdf.text('Merci d\'avoir choisi Quincaillerie Pro !', margin, currentY);
+      pdf.text(`Merci d'avoir choisi ${companySettings.company_name} !`, margin, currentY);
       
       currentY += 10;
 
@@ -678,11 +711,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const colX = {
         description: margin + 2,
         date: margin + 70,
-        quantity: margin + 100,
-        unit: margin + 115,
-        unitPrice: margin + 135,
-        tva: margin + 155,
-        total: margin + 165
+        quantity: margin + 105,
+        unit: margin + 125,
+        unitPrice: margin + 145,
+        total: margin + 170
       };
 
       currentY += 5.5;
@@ -691,7 +723,6 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.text('Qté', colX.quantity, currentY);
       pdf.text('Unité', colX.unit, currentY);
       pdf.text('Prix unitaire', colX.unitPrice, currentY);
-      pdf.text('TVA', colX.tva, currentY);
       pdf.text('Montant', colX.total, currentY);
 
       currentY += 2.5;
@@ -726,43 +757,45 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         pdf.text(dateStr, colX.date, currentY);
         pdf.text(item.quantity.toString(), colX.quantity, currentY);
         pdf.text(item.unit || 'pce', colX.unit, currentY);
-        pdf.text(`${item.unit_price.toFixed(2)} €`, colX.unitPrice, currentY);
-        pdf.text('10,0 %', colX.tva, currentY);
-        pdf.text(`${item.total.toFixed(2)} €`, colX.total, currentY);
+        pdf.text(`${item.unit_price.toFixed(2)} FCFA`, colX.unitPrice, currentY);
+        pdf.text(`${item.total.toFixed(2)} FCFA`, colX.total, currentY);
       });
 
       // Totals section
       currentY += 10;
       const totalStartY = currentY;
       
-      // Calculate totals
+      // Calculate totals - Dynamic TVA from settings
       const totalHT = completedSale.subtotal || completedSale.total_amount;
-      const tvaAmount = totalHT * 0.10;
+      const tvaRate = companySettings.tva_rate / 100;
+      const tvaAmount = totalHT * tvaRate;
       const totalTTC = totalHT + tvaAmount;
       
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       
+      const totalsX = colX.unitPrice;
+      
       // Total HT
-      pdf.text('Total HT', colX.tva - 10, currentY, { align: 'right' });
-      pdf.text(`${totalHT.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
+      pdf.text('Total HT', totalsX, currentY, { align: 'right' });
+      pdf.text(`${totalHT.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
       
       currentY += 6;
-      // TVA 10%
-      pdf.text('TVA 10,0 %', colX.tva - 10, currentY, { align: 'right' });
-      pdf.text(`${tvaAmount.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
+      // TVA with dynamic rate
+      pdf.text(`TVA ${companySettings.tva_rate.toFixed(1)} %`, totalsX, currentY, { align: 'right' });
+      pdf.text(`${tvaAmount.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
       
       // Line before Total TTC
       currentY += 2;
       pdf.setDrawColor(0, 0, 0);
       pdf.setLineWidth(0.5);
-      pdf.line(colX.tva - 10, currentY, pageWidth - margin, currentY);
+      pdf.line(totalsX, currentY, pageWidth - margin, currentY);
       
       currentY += 6;
       // Total TTC
       pdf.setFontSize(12);
-      pdf.text('Total TTC', colX.tva - 10, currentY, { align: 'right' });
-      pdf.text(`${totalTTC.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
+      pdf.text('Total TTC', totalsX, currentY, { align: 'right' });
+      pdf.text(`${totalTTC.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
 
       // Payment information
       currentY += 15;
@@ -787,7 +820,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.setFont('helvetica', 'normal');
       pdf.text('30 jours', margin + 50, currentY);
 
-      // Footer
+      // Footer - Dynamic from settings
       currentY = pageHeight - 20;
       pdf.setDrawColor(180, 180, 180);
       pdf.setLineWidth(0.3);
@@ -796,10 +829,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.setFontSize(8);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 100, 100);
-      pdf.text('Quincaillerie Pro - Commerce de détail', pageWidth / 2, currentY, { align: 'center' });
+      pdf.text(`${companySettings.company_name} - ${companySettings.company_description}`, pageWidth / 2, currentY, { align: 'center' });
       
       currentY += 4;
-      pdf.text('123 Rue Principale, Dakar 10000', pageWidth / 2, currentY, { align: 'center' });
+      pdf.text(`${companySettings.address}, ${companySettings.city}`, pageWidth / 2, currentY, { align: 'center' });
 
       // Save
       const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
