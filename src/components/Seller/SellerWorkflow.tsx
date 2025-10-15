@@ -16,12 +16,14 @@ import {
   CheckCircle,
   ArrowRight,
   AlertCircle,
-  FileText
+  FileText,
+  Printer
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { InvoiceGenerator } from '@/components/Invoice/InvoiceGenerator';
+import jsPDF from 'jspdf';
 
 interface Product {
   id: string;
@@ -364,6 +366,136 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     setDiscountValue('0');
     setCompletedSale(null);
     onSaleComplete?.();
+  };
+
+  const printReceipt = async () => {
+    if (!completedSale) return;
+    
+    try {
+      // Format 58mm largeur pour imprimante thermique
+      const receiptWidth = 58;
+      
+      const items = completedSale.items || [];
+      const headerHeight = 28;
+      const itemsHeight = Math.max(items.length * 8, 10);
+      const footerHeight = 22;
+      const dynamicHeight = headerHeight + itemsHeight + footerHeight;
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [receiptWidth, dynamicHeight]
+      });
+
+      const margin = 3;
+      const contentWidth = receiptWidth - (margin * 2);
+      let currentY = margin;
+
+      // Logo
+      currentY += 5;
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('GF', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Company Header
+      currentY += 4;
+      pdf.setFontSize(8);
+      pdf.text('GF DISTRIBUTION & MULTI-SERVICES', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2;
+      pdf.setFontSize(6);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Aux Cayes, Sud, Haïti', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2.5;
+      pdf.text('Tel: +509 3134-3213', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2.5;
+      pdf.text('contact@gfdistribution.com', contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Invoice Info
+      currentY += 4;
+      pdf.setFontSize(7);
+      const invoiceNumber = `INV-${completedSale.id.substring(0, 8)}`;
+      pdf.text(`No: ${invoiceNumber}`, margin, currentY);
+      currentY += 3;
+      const date = new Date(completedSale.created_at).toLocaleDateString('fr-FR');
+      pdf.text(`Date: ${date}`, margin, currentY);
+      
+      if (completedSale.customer_name) {
+        currentY += 3;
+        pdf.text(`Client: ${completedSale.customer_name.substring(0, 20)}`, margin, currentY);
+      }
+      
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Items Header
+      currentY += 4;
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Article', margin, currentY);
+      pdf.text('Qte', contentWidth - 30, currentY);
+      pdf.text('Prix', contentWidth - 20, currentY);
+      pdf.text('Total', contentWidth - 1, currentY, { align: 'right' });
+      
+      currentY += 2;
+      pdf.setFont('helvetica', 'normal');
+      
+      // Items
+      items.forEach((item: any) => {
+        currentY += 3;
+        const itemName = item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name;
+        pdf.setFontSize(6);
+        pdf.text(itemName, margin, currentY);
+        pdf.text(item.quantity.toString(), contentWidth - 30, currentY);
+        pdf.text(`${item.unit_price.toFixed(2)}`, contentWidth - 20, currentY);
+        pdf.text(`${item.total.toFixed(2)}`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      });
+      
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Total
+      currentY += 4;
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('TOTAL:', margin, currentY);
+      pdf.text(`${completedSale.total_amount.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      
+      currentY += 4;
+      pdf.setFontSize(6);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Paiement: ${completedSale.payment_method.toUpperCase()}`, margin, currentY);
+      
+      currentY += 3;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Footer
+      currentY += 3;
+      pdf.setFontSize(5);
+      pdf.text('Merci de votre visite!', contentWidth / 2 + margin, currentY, { align: 'center'});
+
+      // Save and auto-print
+      const fileName = `recu_${invoiceNumber}.pdf`;
+      pdf.save(fileName);
+
+      setTimeout(() => {
+        window.print();
+      }, 500);
+
+      toast({
+        title: "Reçu imprimé",
+        description: "Le reçu a été généré et envoyé à l'impression"
+      });
+
+    } catch (error) {
+      console.error('Error printing receipt:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'imprimer le reçu",
+        variant: "destructive"
+      });
+    }
   };
 
   const categories = [
@@ -781,26 +913,23 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               {completedSale && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="gap-2 w-full sm:w-auto">
-                      <FileText className="w-4 h-4" />
-                      Imprimer Reçu
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <InvoiceGenerator saleData={completedSale} />
-                  </DialogContent>
-                </Dialog>
-               )}
-               <Button onClick={resetWorkflow} className="gap-2 w-full sm:w-auto">
-                 <Plus className="w-4 h-4" />
-                 Nouvelle vente
-               </Button>
-             </div>
-           </CardContent>
-         </Card>
-       )}
+                <Button 
+                  onClick={printReceipt}
+                  variant="outline" 
+                  className="gap-2 w-full sm:w-auto"
+                >
+                  <Printer className="w-4 h-4" />
+                  Imprimer Reçu
+                </Button>
+              )}
+              <Button onClick={resetWorkflow} className="gap-2 w-full sm:w-auto">
+                <Plus className="w-4 h-4" />
+                Nouvelle vente
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Custom Quantity Dialog */}
       <Dialog open={customQuantityDialog.open} onOpenChange={(open) => {

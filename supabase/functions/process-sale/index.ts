@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
     for (const item of saleData.items) {
       const { data: product, error: productError } = await supabaseClient
         .from('products')
-        .select('quantity')
+        .select('quantity, stock_boite, stock_barre, category')
         .eq('id', item.product_id)
         .single()
 
@@ -71,8 +71,18 @@ Deno.serve(async (req) => {
         throw new Error(`Product ${item.product_name} not found`)
       }
 
-      if (product.quantity < item.quantity) {
-        throw new Error(`Stock insuffisant pour ${item.product_name}. Disponible: ${product.quantity}`)
+      // Check the appropriate stock field based on product category
+      let availableStock: number
+      if (product.category === 'ceramique' && product.stock_boite !== null) {
+        availableStock = product.stock_boite
+      } else if (product.category === 'fer_a_beton' && product.stock_barre !== null) {
+        availableStock = product.stock_barre
+      } else {
+        availableStock = product.quantity
+      }
+
+      if (availableStock < item.quantity) {
+        throw new Error(`Stock insuffisant pour ${item.product_name}. Disponible: ${availableStock}`)
       }
     }
 
@@ -118,10 +128,10 @@ Deno.serve(async (req) => {
         throw new Error(`Failed to create sale item for ${item.product_name}`)
       }
 
-      // Get current product quantity
+      // Get current product with all stock fields and category
       const { data: currentProduct, error: fetchError } = await supabaseClient
         .from('products')
-        .select('quantity')
+        .select('quantity, stock_boite, stock_barre, category')
         .eq('id', item.product_id)
         .single()
 
@@ -129,13 +139,32 @@ Deno.serve(async (req) => {
         throw new Error(`Failed to fetch product ${item.product_name}`)
       }
 
-      const previousQuantity = currentProduct.quantity
-      const newQuantity = previousQuantity - item.quantity
+      // Determine which stock field to update based on category
+      let previousQuantity: number
+      let newQuantity: number
+      let updateData: any = {}
 
-      // Update product quantity
+      if (currentProduct.category === 'ceramique' && currentProduct.stock_boite !== null) {
+        // For ceramics, update stock_boite
+        previousQuantity = currentProduct.stock_boite
+        newQuantity = previousQuantity - item.quantity
+        updateData = { stock_boite: newQuantity }
+      } else if (currentProduct.category === 'fer_a_beton' && currentProduct.stock_barre !== null) {
+        // For iron bars, update stock_barre
+        previousQuantity = currentProduct.stock_barre
+        newQuantity = previousQuantity - item.quantity
+        updateData = { stock_barre: newQuantity }
+      } else {
+        // For all other products, update quantity
+        previousQuantity = currentProduct.quantity
+        newQuantity = previousQuantity - item.quantity
+        updateData = { quantity: newQuantity }
+      }
+
+      // Update product stock
       const { error: updateError } = await supabaseClient
         .from('products')
-        .update({ quantity: newQuantity })
+        .update(updateData)
         .eq('id', item.product_id)
 
       if (updateError) {
