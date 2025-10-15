@@ -571,220 +571,239 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const contentWidth = pageWidth - (margin * 2);
       let currentY = margin;
 
-      // Header Box with Company Info
-      pdf.setDrawColor(0, 0, 0);
-      pdf.setLineWidth(0.5);
-      pdf.rect(margin, currentY, contentWidth, 35);
-      
-      currentY += 8;
-      pdf.setFontSize(22);
+      // Company name/logo on the left (in blue like reference)
+      pdf.setFontSize(20);
       pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(0, 0, 0);
-      pdf.text('GF DISTRIBUTION', margin + 5, currentY);
-      
-      currentY += 7;
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('& MULTI-SERVICES', margin + 5, currentY);
-      
-      currentY += 6;
-      pdf.setFontSize(9);
-      pdf.text('Aux Cayes, Sud, Haïti', margin + 5, currentY);
-      currentY += 5;
-      pdf.text('Tel: +509 3134-3213 | Email: contact@gfdistribution.com', margin + 5, currentY);
+      pdf.setTextColor(41, 98, 255); // Blue color like RÉNOV' PRO
+      pdf.text('QUINCAILLERIE PRO', margin, currentY);
 
-      // Invoice Title and Number Box
-      currentY = margin + 40;
-      pdf.setFillColor(240, 240, 240);
-      pdf.rect(margin, currentY, contentWidth, 25, 'F');
-      pdf.rect(margin, currentY, contentWidth, 25);
-      
-      currentY += 8;
-      pdf.setFontSize(18);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('FACTURE', pageWidth / 2, currentY, { align: 'center' });
-
-      // Invoice Info
-      currentY += 10;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
+      // Invoice number and dates on the right
       const createdAt = new Date(completedSale.created_at || Date.now());
       const pad = (n: number) => n.toString().padStart(2, '0');
-      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
-      const factCode = `FACT-${codeStamp}`;
-      pdf.text(`No: ${factCode}`, pageWidth / 2, currentY, { align: 'center' });
-
-      // Date and Customer Info Box
-      currentY += 12;
-      pdf.setDrawColor(200, 200, 200);
-      pdf.setLineWidth(0.3);
-      pdf.rect(margin, currentY, contentWidth / 2 - 5, 30);
+      const invoiceYear = createdAt.getFullYear();
+      const invoiceSeq = `${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}`;
+      const invoiceNumber = `FACTURE - ${invoiceYear}-${invoiceSeq}`;
       
-      currentY += 7;
+      pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(10);
-      pdf.text('Date:', margin + 5, currentY);
-      pdf.setFont('helvetica', 'normal');
-      const dateStr = `${pad(createdAt.getDate())} ${createdAt.toLocaleString('fr-FR', { month: 'long' })} ${createdAt.getFullYear()} à ${pad(createdAt.getHours())}h${pad(createdAt.getMinutes())}`;
-      pdf.text(dateStr, margin + 5, currentY + 5);
-
-      // Customer Info Box
-      const customerBoxX = margin + contentWidth / 2 + 5;
-      currentY -= 7;
-      pdf.rect(customerBoxX, currentY, contentWidth / 2 - 5, 30);
-      
-      currentY += 7;
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Client:', customerBoxX + 5, currentY);
-      pdf.setFont('helvetica', 'normal');
-      
-      if (completedSale.customer_name) {
-        currentY += 5;
-        pdf.text(completedSale.customer_name, customerBoxX + 5, currentY);
-      }
-      
-      if (completedSale.customer_address) {
-        currentY += 5;
-        pdf.setFontSize(9);
-        pdf.text(completedSale.customer_address.substring(0, 40), customerBoxX + 5, currentY);
-        pdf.setFontSize(10);
-      }
-
-      // Items Table
-      currentY += 20;
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(10);
-      
-      // Table header with background
-      pdf.setFillColor(230, 230, 230);
-      pdf.rect(margin, currentY, contentWidth, 8, 'F');
-      pdf.setDrawColor(0, 0, 0);
-      pdf.setLineWidth(0.5);
-      pdf.rect(margin, currentY, contentWidth, 8);
-      
-      const colX = {
-        description: margin + 2,
-        quantity: margin + 100,
-        unitPrice: margin + 130,
-        total: margin + 160
-      };
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(invoiceNumber, pageWidth - margin, currentY, { align: 'right' });
       
       currentY += 6;
-      pdf.text('Description', colX.description, currentY);
-      pdf.text('Qté', colX.quantity, currentY);
-      pdf.text('Prix Unit.', colX.unitPrice, currentY);
-      pdf.text('Total (HTG)', colX.total, currentY);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      const dateStr = `${pad(createdAt.getDate())}/${pad(createdAt.getMonth()+1)}/${createdAt.getFullYear()}`;
+      pdf.text(`Date de facturation: ${dateStr}`, pageWidth - margin, currentY, { align: 'right' });
       
-      // Items with alternating row colors
-      currentY += 2;
+      currentY += 4;
+      const dueDate = new Date(createdAt);
+      dueDate.setDate(dueDate.getDate() + 30);
+      pdf.text(`Échéance: ${pad(dueDate.getDate())}/${pad(dueDate.getMonth()+1)}/${dueDate.getFullYear()}`, pageWidth - margin, currentY, { align: 'right' });
+
+      // Company information on the left
+      currentY = margin + 10;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Quincaillerie Pro - Commerce de détail', margin, currentY);
+      
+      currentY += 5;
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
+      pdf.setTextColor(80, 80, 80);
+      pdf.text('123 Rue Principale', margin, currentY);
       
-      const items = completedSale.items || [];
-      items.forEach((item: any, index: number) => {
-        const rowHeight = 7;
-        currentY += rowHeight;
+      currentY += 4;
+      pdf.text('Dakar 10000', margin, currentY);
+      
+      currentY += 4;
+      pdf.text('+221 XX XXX XX XX', margin, currentY);
+      
+      currentY += 4;
+      pdf.text('contact@quincaillerie.sn', margin, currentY);
+
+      // Customer information on the right
+      if (completedSale.customer_name || completedSale.customer_address) {
+        currentY = margin + 10;
         
-        // Alternating row background
-        if (index % 2 === 0) {
-          pdf.setFillColor(250, 250, 250);
-          pdf.rect(margin, currentY - 5, contentWidth, rowHeight, 'F');
+        if (completedSale.customer_name) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(10);
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(completedSale.customer_name, pageWidth - margin, currentY, { align: 'right' });
+          currentY += 5;
         }
         
-        pdf.setDrawColor(220, 220, 220);
-        pdf.setLineWidth(0.1);
-        pdf.line(margin, currentY + 2, pageWidth - margin, currentY + 2);
+        if (completedSale.customer_address) {
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(9);
+          pdf.setTextColor(80, 80, 80);
+          const address = String(completedSale.customer_address);
+          
+          // Split address into lines if too long
+          const maxLength = 40;
+          const addressLines = [];
+          for (let i = 0; i < address.length; i += maxLength) {
+            addressLines.push(address.substring(i, i + maxLength));
+          }
+          
+          addressLines.forEach(line => {
+            pdf.text(line, pageWidth - margin, currentY, { align: 'right' });
+            currentY += 4;
+          });
+        }
+      }
+
+      // Thank you message
+      currentY = margin + 50;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'italic');
+      pdf.setTextColor(80, 80, 80);
+      pdf.text('Merci d\'avoir choisi Quincaillerie Pro !', margin, currentY);
+      
+      currentY += 10;
+
+      // Table header with gray background
+      pdf.setFillColor(220, 220, 220);
+      pdf.rect(margin, currentY, contentWidth, 8, 'F');
+      
+      pdf.setDrawColor(180, 180, 180);
+      pdf.setLineWidth(0.3);
+      pdf.rect(margin, currentY, contentWidth, 8);
+
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0);
+
+      const colX = {
+        description: margin + 2,
+        date: margin + 70,
+        quantity: margin + 100,
+        unit: margin + 115,
+        unitPrice: margin + 135,
+        tva: margin + 155,
+        total: margin + 165
+      };
+
+      currentY += 5.5;
+      pdf.text('Description', colX.description, currentY);
+      pdf.text('Date', colX.date, currentY);
+      pdf.text('Qté', colX.quantity, currentY);
+      pdf.text('Unité', colX.unit, currentY);
+      pdf.text('Prix unitaire', colX.unitPrice, currentY);
+      pdf.text('TVA', colX.tva, currentY);
+      pdf.text('Montant', colX.total, currentY);
+
+      currentY += 2.5;
+      
+      // Items
+      const items = completedSale.items || [];
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      
+      items.forEach((item: any) => {
+        const rowHeight = 6;
+        currentY += rowHeight;
         
-        // Build description with all available product details
+        // Build description
         let description = item.name;
         const details = [];
         
         if (item.dimension) details.push(item.dimension);
         if (item.diametre) details.push(`Ø ${item.diametre}`);
-        if (item.unit && item.unit !== 'unité') details.push(item.unit);
         
         if (details.length > 0) {
           description += ` (${details.join(', ')})`;
         }
         
         // Wrap long descriptions
-        if (description.length > 50) {
-          description = description.substring(0, 47) + '...';
+        if (description.length > 32) {
+          description = description.substring(0, 29) + '...';
         }
         
+        pdf.setTextColor(0, 0, 0);
         pdf.text(description, colX.description, currentY);
+        pdf.text(dateStr, colX.date, currentY);
         pdf.text(item.quantity.toString(), colX.quantity, currentY);
-        pdf.text(item.unit_price.toFixed(2), colX.unitPrice, currentY);
-        pdf.text(item.total.toFixed(2), colX.total, currentY);
+        pdf.text(item.unit || 'pce', colX.unit, currentY);
+        pdf.text(`${item.unit_price.toFixed(2)} €`, colX.unitPrice, currentY);
+        pdf.text('10,0 %', colX.tva, currentY);
+        pdf.text(`${item.total.toFixed(2)} €`, colX.total, currentY);
       });
 
-      // Line before totals
-      currentY += 5;
-      pdf.setDrawColor(0, 0, 0);
-      pdf.setLineWidth(0.5);
-      pdf.line(margin, currentY, pageWidth - margin, currentY);
-
-      // Totals Box
+      // Totals section
       currentY += 10;
-      const totalsBoxY = currentY;
-      const totalsBoxHeight = completedSale.discount_amount > 0 ? 35 : 25;
+      const totalStartY = currentY;
       
-      pdf.setFillColor(245, 245, 245);
-      pdf.rect(margin + 100, totalsBoxY, contentWidth - 100, totalsBoxHeight, 'F');
+      // Calculate totals
+      const totalHT = completedSale.subtotal || completedSale.total_amount;
+      const tvaAmount = totalHT * 0.10;
+      const totalTTC = totalHT + tvaAmount;
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      
+      // Total HT
+      pdf.text('Total HT', colX.tva - 10, currentY, { align: 'right' });
+      pdf.text(`${totalHT.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
+      
+      currentY += 6;
+      // TVA 10%
+      pdf.text('TVA 10,0 %', colX.tva - 10, currentY, { align: 'right' });
+      pdf.text(`${tvaAmount.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
+      
+      // Line before Total TTC
+      currentY += 2;
       pdf.setDrawColor(0, 0, 0);
       pdf.setLineWidth(0.5);
-      pdf.rect(margin + 100, totalsBoxY, contentWidth - 100, totalsBoxHeight);
+      pdf.line(colX.tva - 10, currentY, pageWidth - margin, currentY);
       
-      currentY += 7;
+      currentY += 6;
+      // Total TTC
+      pdf.setFontSize(12);
+      pdf.text('Total TTC', colX.tva - 10, currentY, { align: 'right' });
+      pdf.text(`${totalTTC.toFixed(2)} €`, pageWidth - margin, currentY, { align: 'right' });
+
+      // Payment information
+      currentY += 15;
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Moyens de paiement:', margin, currentY);
+      
+      currentY += 5;
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
-      pdf.text('Sous-total:', colX.unitPrice, currentY);
-      pdf.text(`${completedSale.subtotal.toFixed(2)} HTG`, colX.total, currentY);
-
-      // Discount
-      if (completedSale.discount_amount && completedSale.discount_amount > 0) {
-        currentY += 7;
-        const discountLabel = completedSale.discount_type === 'percentage' 
-          ? `Remise (${completedSale.discount_value}%):` 
-          : 'Remise:';
-        pdf.text(discountLabel, colX.unitPrice, currentY);
-        pdf.setTextColor(200, 0, 0);
-        pdf.text(`-${completedSale.discount_amount.toFixed(2)} HTG`, colX.total, currentY);
-        pdf.setTextColor(0, 0, 0);
-      }
-
-      // Total line
-      currentY += 3;
-      pdf.setLineWidth(0.3);
-      pdf.line(margin + 100, currentY, pageWidth - margin, currentY);
+      const paymentMethodLabel = {
+        espece: 'Espèces',
+        cheque: 'Chèque',
+        virement: 'Virement bancaire'
+      }[completedSale.payment_method] || completedSale.payment_method || 'Espèces';
+      pdf.text(paymentMethodLabel, margin + 50, currentY);
       
-      // Total
       currentY += 8;
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(13);
-      pdf.text('TOTAL:', colX.unitPrice, currentY);
-      pdf.text(`${completedSale.total_amount.toFixed(2)} HTG`, colX.total, currentY);
-
-      // Payment method
-      currentY += 12;
+      pdf.text('Conditions de paiement:', margin, currentY);
+      
+      currentY += 5;
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
-      const paymentMethodLabel = {
-        espece: 'Espèce',
-        cheque: 'Chèque',
-        virement: 'Virement'
-      }[completedSale.payment_method] || completedSale.payment_method;
-      pdf.text(`Méthode de paiement: ${paymentMethodLabel}`, margin, currentY);
+      pdf.text('30 jours', margin + 50, currentY);
 
       // Footer
-      currentY = pageHeight - 30;
+      currentY = pageHeight - 20;
+      pdf.setDrawColor(180, 180, 180);
+      pdf.setLineWidth(0.3);
+      pdf.line(margin, currentY - 5, pageWidth - margin, currentY - 5);
+      
       pdf.setFontSize(8);
-      pdf.text('Merci pour votre confiance!', pageWidth / 2, currentY, { align: 'center' });
-      currentY += 5;
-      pdf.text('GF Distribution & Multi-Services - Tous droits réservés', pageWidth / 2, currentY, { align: 'center' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(100, 100, 100);
+      pdf.text('Quincaillerie Pro - Commerce de détail', pageWidth / 2, currentY, { align: 'center' });
+      
+      currentY += 4;
+      pdf.text('123 Rue Principale, Dakar 10000', pageWidth / 2, currentY, { align: 'center' });
 
       // Save
-      const fileName = `facture_${factCode}.pdf`;
+      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
+      const fileName = `facture_FACT-${codeStamp}.pdf`;
       pdf.save(fileName);
 
       toast({
