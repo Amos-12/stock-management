@@ -48,6 +48,11 @@ interface Product {
   prix_par_barre?: number;
   stock_barre?: number;
   decimal_autorise?: boolean;
+  // Energy-specific fields
+  type_energie?: any;
+  puissance?: any;
+  voltage?: any;
+  capacite?: any;
 }
 
 interface CartItem extends Product {
@@ -121,7 +126,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         .order('name');
 
       if (error) throw error;
-      setProducts(data || []);
+      setProducts((data || []) as Product[]);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -606,8 +611,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         console.error('Error adding logo to invoice:', e);
       }
 
-      // Company name on the left (in blue)
-      pdf.setFontSize(20);
+      // Company name on the left (in blue) - reduced size
+      pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(41, 98, 255);
       pdf.text(companySettings.company_name, margin + 25, currentY + 7);
@@ -640,12 +645,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
-      pdf.text(`${companySettings.company_name} - ${companySettings.company_description}`, margin, currentY);
+      pdf.text(companySettings.company_name, margin, currentY);
+      
+      currentY += 4;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.setTextColor(80, 80, 80);
+      pdf.text(companySettings.company_description, margin, currentY);
       
       currentY += 5;
-      pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
-      pdf.setTextColor(80, 80, 80);
       pdf.text(companySettings.address, margin, currentY);
       
       currentY += 4;
@@ -712,10 +721,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       const colX = {
         description: margin + 2,
-        quantity: margin + 90,
-        unit: margin + 115,
-        unitPrice: margin + 140,
-        total: margin + 170
+        quantity: margin + 70,
+        unit: margin + 95,
+        unitPrice: margin + 120,
+        total: margin + 155
       };
 
       currentY += 5.5;
@@ -743,13 +752,22 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         if (item.dimension) details.push(item.dimension);
         if (item.diametre) details.push(`Ø ${item.diametre}`);
         
+        // For energy category, add specific fields
+        const product = cart.find(p => p.name === item.name);
+        if (product?.category === 'energie') {
+          if (product.type_energie) details.push(`Type: ${product.type_energie}`);
+          if (product.puissance) details.push(`${product.puissance}W`);
+          if (product.voltage) details.push(`${product.voltage}V`);
+          if (product.capacite) details.push(`${product.capacite}`);
+        }
+        
         if (details.length > 0) {
           description += ` (${details.join(', ')})`;
         }
         
-        // Wrap long descriptions
-        if (description.length > 32) {
-          description = description.substring(0, 29) + '...';
+        // Wrap long descriptions - reduced length due to narrower column
+        if (description.length > 26) {
+          description = description.substring(0, 23) + '...';
         }
         
         pdf.setTextColor(0, 0, 0);
@@ -765,7 +783,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const totalStartY = currentY;
       
       // Calculate totals - Dynamic TVA from settings
-      const totalHT = completedSale.subtotal || completedSale.total_amount;
+      const subtotalBeforeDiscount = completedSale.subtotal || completedSale.total_amount;
+      const discountAmount = completedSale.discount_amount || 0;
+      const totalHT = subtotalBeforeDiscount - discountAmount;
       const tvaRate = companySettings.tva_rate / 100;
       const tvaAmount = totalHT * tvaRate;
       const totalTTC = totalHT + tvaAmount;
@@ -775,9 +795,26 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       
       const totalsX = colX.unitPrice;
       
-      // Total HT
+      // Total HT (before discount)
       pdf.text('Total HT', totalsX, currentY, { align: 'right' });
-      pdf.text(`${totalHT.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
+      pdf.text(`${subtotalBeforeDiscount.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
+      
+      // Discount (if applicable)
+      if (discountAmount > 0) {
+        currentY += 6;
+        const discountLabel = completedSale.discount_type === 'percentage' 
+          ? `Remise (${completedSale.discount_value}%)` 
+          : 'Remise';
+        pdf.setTextColor(220, 38, 38); // Red for discount
+        pdf.text(discountLabel, totalsX, currentY, { align: 'right' });
+        pdf.text(`-${discountAmount.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
+        pdf.setTextColor(0, 0, 0); // Reset color
+        
+        // Total after discount
+        currentY += 6;
+        pdf.text('Total après remise', totalsX, currentY, { align: 'right' });
+        pdf.text(`${totalHT.toFixed(2)} FCFA`, pageWidth - margin, currentY, { align: 'right' });
+      }
       
       currentY += 6;
       // TVA with dynamic rate
@@ -1079,42 +1116,46 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
-                {cart.map((item) => {
-                  const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
-                  return (
-                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <h5 className="font-medium">{item.name}</h5>
-                        <p className="text-sm text-muted-foreground">
-                          {item.cartQuantity} {item.displayUnit || item.unit} = {itemTotal.toFixed(2)} HTG
-                        </p>
+              <div className="flex flex-col h-[calc(100vh-400px)] max-h-[600px]">
+                {/* Scrollable products list */}
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                  {cart.map((item) => {
+                    const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex-1">
+                          <h5 className="font-medium">{item.name}</h5>
+                          <p className="text-sm text-muted-foreground">
+                            {item.cartQuantity} {item.displayUnit || item.unit} = {itemTotal.toFixed(2)} HTG
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateQuantity(item.id, -1)}
+                          >
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <span className="text-sm font-medium w-8 text-center">
+                            {item.cartQuantity}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateQuantity(item.id, 1)}
+                            disabled={item.cartQuantity >= item.quantity}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(item.id, -1)}
-                        >
-                          <Minus className="w-3 h-3" />
-                        </Button>
-                        <span className="text-sm font-medium w-8 text-center">
-                          {item.cartQuantity}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(item.id, 1)}
-                          disabled={item.cartQuantity >= item.quantity}
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
 
-                <div className="border-t pt-4">
+                {/* Fixed footer with total and buttons */}
+                <div className="border-t pt-4 mt-4 bg-background sticky bottom-0">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-lg font-semibold">Total:</span>
                     <span className="text-xl font-bold text-success">

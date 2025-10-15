@@ -41,6 +41,7 @@ export const ResponsiveDashboardLayout = ({
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [companySettings, setCompanySettings] = useState<any>(null);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     const fetchCompanySettings = async () => {
@@ -55,6 +56,39 @@ export const ResponsiveDashboardLayout = ({
     
     fetchCompanySettings();
   }, []);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (role !== 'admin') return;
+      
+      try {
+        // Count low stock products
+        const { data: products } = await supabase
+          .from('products')
+          .select('id, quantity, alert_threshold')
+          .eq('is_active', true);
+        
+        const lowStockCount = products?.filter(p => p.quantity <= p.alert_threshold).length || 0;
+        
+        // Count sales from last 24 hours
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { count: salesCount } = await supabase
+          .from('sales')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', oneDayAgo);
+        
+        setNotificationCount(lowStockCount + (salesCount || 0));
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+    
+    fetchNotifications();
+    
+    // Refresh notifications every minute
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, [role]);
 
   const adminNavItems = [
     { icon: Home, label: 'Dashboard', value: 'dashboard' },
@@ -208,9 +242,14 @@ export const ResponsiveDashboardLayout = ({
                   }}
                 >
                   <Bell className="w-4 h-4" />
-                  <span className="absolute -top-1 -right-1 bg-warning text-warning-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                    3
-                  </span>
+                  {notificationCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {notificationCount > 99 ? '99+' : notificationCount}
+                    </Badge>
+                  )}
                 </Button>
               )}
 
