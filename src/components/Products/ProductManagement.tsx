@@ -188,13 +188,47 @@ export const ProductManagement = () => {
     
     if (!user) return;
 
+    // Validation for ceramic products
+    if (formData.category === 'ceramique') {
+      if (!formData.dimension || !formData.surface_par_boite || !formData.prix_m2 || !formData.stock_boite) {
+        toast({
+          title: "Erreur de validation",
+          description: "Veuillez remplir tous les champs obligatoires pour la céramique",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    // Validation for iron products
+    if (formData.category === 'fer') {
+      if (!formData.diametre || !formData.longueur_barre || !formData.prix_par_metre || !formData.stock_barre) {
+        toast({
+          title: "Erreur de validation",
+          description: "Veuillez remplir tous les champs obligatoires pour le fer",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    // Validation for standard products
+    if (formData.category !== 'ceramique' && formData.category !== 'fer') {
+      if (!formData.price || !formData.quantity) {
+        toast({
+          title: "Erreur de validation",
+          description: "Veuillez remplir le prix et la quantité",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     try {
       const productData: any = {
         name: formData.name,
         category: formData.category,
         unit: formData.unit,
-        price: parseFloat(formData.price),
-        quantity: parseInt(formData.quantity),
         alert_threshold: parseInt(formData.alert_threshold),
         description: formData.description || null,
         is_active: formData.is_active,
@@ -203,21 +237,28 @@ export const ProductManagement = () => {
         decimal_autorise: formData.decimal_autorise
       };
 
-      // Add ceramic-specific fields
+      // Map values based on category
       if (formData.category === 'ceramique') {
-        productData.dimension = formData.dimension || null;
-        productData.surface_par_boite = formData.surface_par_boite ? parseFloat(formData.surface_par_boite) : null;
-        productData.prix_m2 = formData.prix_m2 ? parseFloat(formData.prix_m2) : null;
-        productData.stock_boite = formData.stock_boite ? parseInt(formData.stock_boite) : 0;
-      }
-
-      // Add iron bar-specific fields
-      if (formData.category === 'fer') {
-        productData.diametre = formData.diametre || null;
-        productData.longueur_barre = formData.longueur_barre ? parseFloat(formData.longueur_barre) : 12;
-        productData.prix_par_metre = formData.prix_par_metre ? parseFloat(formData.prix_par_metre) : null;
-        productData.prix_par_barre = formData.prix_par_barre ? parseFloat(formData.prix_par_barre) : null;
-        productData.stock_barre = formData.stock_barre ? parseInt(formData.stock_barre) : 0;
+        // Use ceramic-specific values
+        productData.price = parseFloat(formData.prix_m2);
+        productData.quantity = parseInt(formData.stock_boite);
+        productData.dimension = formData.dimension;
+        productData.surface_par_boite = parseFloat(formData.surface_par_boite);
+        productData.prix_m2 = parseFloat(formData.prix_m2);
+        productData.stock_boite = parseInt(formData.stock_boite);
+      } else if (formData.category === 'fer') {
+        // Use iron bar-specific values
+        productData.price = parseFloat(formData.prix_par_barre);
+        productData.quantity = parseInt(formData.stock_barre);
+        productData.diametre = formData.diametre;
+        productData.longueur_barre = parseFloat(formData.longueur_barre);
+        productData.prix_par_metre = parseFloat(formData.prix_par_metre);
+        productData.prix_par_barre = parseFloat(formData.prix_par_barre);
+        productData.stock_barre = parseInt(formData.stock_barre);
+      } else {
+        // Use standard values
+        productData.price = parseFloat(formData.price);
+        productData.quantity = parseInt(formData.quantity);
       }
 
       if (editingProduct) {
@@ -314,14 +355,14 @@ export const ProductManagement = () => {
                 Nouveau produit
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingProduct ? 'Modifier le produit' : 'Nouveau produit'}
                 </DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="space-y-6 pb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nom du produit *</Label>
                     <Input
@@ -336,7 +377,15 @@ export const ProductManagement = () => {
                     <Label htmlFor="category">Catégorie *</Label>
                     <Select
                       value={formData.category}
-                      onValueChange={(value: 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres') => setFormData({...formData, category: value})}
+                      onValueChange={(value: 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres' | 'ceramique' | 'fer') => {
+                        // Auto-set unit based on category
+                        let newUnit = formData.unit;
+                        if (value === 'ceramique') newUnit = 'm²';
+                        else if (value === 'fer') newUnit = 'barre';
+                        else if (formData.category === 'ceramique' || formData.category === 'fer') newUnit = 'unité';
+                        
+                        setFormData({...formData, category: value, unit: newUnit});
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -350,6 +399,30 @@ export const ProductManagement = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Info badge based on category */}
+                  {formData.category === 'ceramique' && (
+                    <div className="col-span-1 sm:col-span-2">
+                      <Badge variant="outline" className="text-xs">
+                        🏺 Céramique : Le prix et le stock seront basés sur les m² et les boîtes
+                      </Badge>
+                    </div>
+                  )}
+                  {formData.category === 'fer' && (
+                    <div className="col-span-1 sm:col-span-2">
+                      <Badge variant="outline" className="text-xs">
+                        🔩 Fer : Le prix par barre sera calculé automatiquement (prix/m × longueur)
+                      </Badge>
+                    </div>
+                  )}
+                  {formData.category !== 'ceramique' && formData.category !== 'fer' && (
+                    <div className="col-span-1 sm:col-span-2">
+                      <Badge variant="outline" className="text-xs">
+                        📦 Produit standard : Remplissez le prix unitaire et la quantité en stock
+                      </Badge>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="unit">Unité de mesure *</Label>
                     <Input
@@ -358,31 +431,40 @@ export const ProductManagement = () => {
                       value={formData.unit}
                       onChange={(e) => setFormData({...formData, unit: e.target.value})}
                       placeholder="Ex: m², barre, sac, livre..."
+                      disabled={formData.category === 'ceramique' || formData.category === 'fer'}
+                      className={formData.category === 'ceramique' || formData.category === 'fer' ? 'bg-muted' : ''}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Prix (HTG) *</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      required
-                      value={formData.price}
-                      onChange={(e) => setFormData({...formData, price: e.target.value})}
-                      placeholder="0.00 HTG"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantité *</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      required
-                      value={formData.quantity}
-                      onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                      placeholder="0"
-                    />
-                  </div>
+
+                  {/* Show these fields only for non-ceramic and non-iron products */}
+                  {formData.category !== 'ceramique' && formData.category !== 'fer' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="price">Prix (HTG) *</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          step="0.01"
+                          required
+                          value={formData.price}
+                          onChange={(e) => setFormData({...formData, price: e.target.value})}
+                          placeholder="0.00 HTG"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="quantity">Quantité *</Label>
+                        <Input
+                          id="quantity"
+                          type="number"
+                          required
+                          value={formData.quantity}
+                          onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                          placeholder="0"
+                        />
+                      </div>
+                    </>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="alert_threshold">Seuil d'alerte *</Label>
                     <Input
@@ -428,14 +510,15 @@ export const ProductManagement = () => {
 
                 {/* Ceramic-specific fields */}
                 {formData.category === 'ceramique' && (
-                  <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
-                    <div className="col-span-2">
-                      <h3 className="font-semibold text-sm mb-2">Configuration Céramique</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
+                    <div className="col-span-1 sm:col-span-2">
+                      <h3 className="font-semibold text-sm mb-2">🏺 Configuration Céramique</h3>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="dimension">Dimension *</Label>
                       <Input
                         id="dimension"
+                        required
                         value={formData.dimension}
                         onChange={(e) => setFormData({...formData, dimension: e.target.value})}
                         placeholder="Ex: 60x60, 40x40"
@@ -447,6 +530,7 @@ export const ProductManagement = () => {
                         id="surface_par_boite"
                         type="number"
                         step="0.01"
+                        required
                         value={formData.surface_par_boite}
                         onChange={(e) => setFormData({...formData, surface_par_boite: e.target.value})}
                         placeholder="1.44"
@@ -458,6 +542,7 @@ export const ProductManagement = () => {
                         id="prix_m2"
                         type="number"
                         step="0.01"
+                        required
                         value={formData.prix_m2}
                         onChange={(e) => setFormData({...formData, prix_m2: e.target.value})}
                         placeholder="1200.00"
@@ -468,6 +553,7 @@ export const ProductManagement = () => {
                       <Input
                         id="stock_boite"
                         type="number"
+                        required
                         value={formData.stock_boite}
                         onChange={(e) => setFormData({...formData, stock_boite: e.target.value})}
                         placeholder="24"
@@ -478,14 +564,15 @@ export const ProductManagement = () => {
 
                 {/* Iron bar-specific fields */}
                 {formData.category === 'fer' && (
-                  <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
-                    <div className="col-span-2">
-                      <h3 className="font-semibold text-sm mb-2">Configuration Fer / Acier</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
+                    <div className="col-span-1 sm:col-span-2">
+                      <h3 className="font-semibold text-sm mb-2">🔩 Configuration Fer / Acier</h3>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="diametre">Diamètre *</Label>
                       <Input
                         id="diametre"
+                        required
                         value={formData.diametre}
                         onChange={(e) => setFormData({...formData, diametre: e.target.value})}
                         placeholder="Ex: Ø 3/8&quot;, Ø 1/2&quot;"
@@ -497,8 +584,18 @@ export const ProductManagement = () => {
                         id="longueur_barre"
                         type="number"
                         step="0.01"
+                        required
                         value={formData.longueur_barre}
-                        onChange={(e) => setFormData({...formData, longueur_barre: e.target.value})}
+                        onChange={(e) => {
+                          const longueur = e.target.value;
+                          const prixMetre = parseFloat(formData.prix_par_metre) || 0;
+                          const prixBarre = prixMetre && longueur ? (prixMetre * parseFloat(longueur)).toFixed(2) : '';
+                          setFormData({
+                            ...formData, 
+                            longueur_barre: longueur,
+                            prix_par_barre: prixBarre
+                          });
+                        }}
                         placeholder="12"
                       />
                     </div>
@@ -508,6 +605,7 @@ export const ProductManagement = () => {
                         id="prix_par_metre"
                         type="number"
                         step="0.01"
+                        required
                         value={formData.prix_par_metre}
                         onChange={(e) => {
                           const prixMetre = e.target.value;
@@ -523,22 +621,24 @@ export const ProductManagement = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="prix_par_barre">Prix par barre (HTG)</Label>
+                      <Label htmlFor="prix_par_barre">Prix par barre (HTG) 🔢</Label>
                       <Input
                         id="prix_par_barre"
                         type="number"
                         step="0.01"
                         value={formData.prix_par_barre}
                         readOnly
-                        className="bg-muted"
+                        className="bg-muted cursor-not-allowed"
                         placeholder="Calculé automatiquement"
                       />
+                      <p className="text-xs text-muted-foreground">Calculé: Prix/m × Longueur</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="stock_barre">Stock (barres) *</Label>
                       <Input
                         id="stock_barre"
                         type="number"
+                        required
                         value={formData.stock_barre}
                         onChange={(e) => setFormData({...formData, stock_barre: e.target.value})}
                         placeholder="50"
@@ -549,19 +649,20 @@ export const ProductManagement = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
-                  <Input
+                  <textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Description du produit"
+                    placeholder="Description du produit (optionnel)"
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
-                <div className="flex justify-end gap-2 pt-4">
+                <div className="flex justify-end gap-3 pt-4 border-t">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Annuler
                   </Button>
-                  <Button type="submit">
-                    {editingProduct ? 'Mettre à jour' : 'Créer'}
+                  <Button type="submit" className="min-w-[120px]">
+                    {editingProduct ? 'Mettre à jour' : 'Créer le produit'}
                   </Button>
                 </div>
               </form>
