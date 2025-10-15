@@ -452,10 +452,10 @@ export const ProductManagement = () => {
                         setFormData({...formData, category: value, unit: newUnit});
                       }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="pointer-events-auto">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="pointer-events-auto z-[150]">
                         {categories.map(cat => (
                           <SelectItem key={cat.value} value={cat.value}>
                             {cat.label}
@@ -547,10 +547,10 @@ export const ProductManagement = () => {
                       value={formData.is_active ? 'true' : 'false'}
                       onValueChange={(value) => setFormData({...formData, is_active: value === 'true'})}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="pointer-events-auto">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="pointer-events-auto z-[150]">
                         <SelectItem value="true">Actif</SelectItem>
                         <SelectItem value="false">Inactif</SelectItem>
                       </SelectContent>
@@ -562,10 +562,10 @@ export const ProductManagement = () => {
                       value={formData.sale_type}
                       onValueChange={(value: 'retail' | 'wholesale') => setFormData({...formData, sale_type: value})}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="pointer-events-auto">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="pointer-events-auto z-[150]">
                         <SelectItem value="retail">Détail</SelectItem>
                         <SelectItem value="wholesale">Gros</SelectItem>
                       </SelectContent>

@@ -70,14 +70,14 @@ const Index = () => {
 
   // Redirect based on user role using navigate instead of window.location
   useEffect(() => {
-    if (profile?.role && mountedRef.current) {
+    if (profile?.role && isActive && mountedRef.current) {
       if (profile.role === 'admin') {
         navigate('/admin', { replace: true });
       } else if (profile.role === 'seller') {
         navigate('/seller', { replace: true });
       }
     }
-  }, [profile?.role, navigate]);
+  }, [profile?.role, isActive, navigate]);
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background">
