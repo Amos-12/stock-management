@@ -418,12 +418,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const contentWidth = receiptWidth - (margin * 2);
       let currentY = margin;
 
-      // Add logo image
+      // Add logo image - use company logo if available, otherwise default
       try {
         const logoWidth = 12;
         const logoHeight = 12;
         const logoX = (receiptWidth - logoWidth) / 2;
-        pdf.addImage(logo, 'PNG', logoX, currentY, logoWidth, logoHeight);
+        const logoToUse = companySettings.logo_url || logo;
+        pdf.addImage(logoToUse, 'PNG', logoX, currentY, logoWidth, logoHeight);
         currentY += logoHeight + 2;
       } catch (e) {
         console.error('Error adding logo:', e);
@@ -596,10 +597,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const contentWidth = pageWidth - (margin * 2);
       let currentY = margin;
 
-      // Add logo image
+      // Add logo image - use company logo if available, otherwise default
       try {
         const logoSize = 20;
-        pdf.addImage(logo, 'PNG', margin, currentY, logoSize, logoSize);
+        const logoToUse = companySettings.logo_url || logo;
+        pdf.addImage(logoToUse, 'PNG', margin, currentY, logoSize, logoSize);
       } catch (e) {
         console.error('Error adding logo to invoice:', e);
       }
@@ -710,16 +712,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       const colX = {
         description: margin + 2,
-        date: margin + 70,
-        quantity: margin + 105,
-        unit: margin + 125,
-        unitPrice: margin + 145,
+        quantity: margin + 90,
+        unit: margin + 115,
+        unitPrice: margin + 140,
         total: margin + 170
       };
 
       currentY += 5.5;
       pdf.text('Description', colX.description, currentY);
-      pdf.text('Date', colX.date, currentY);
       pdf.text('Qté', colX.quantity, currentY);
       pdf.text('Unité', colX.unit, currentY);
       pdf.text('Prix unitaire', colX.unitPrice, currentY);
@@ -754,7 +754,6 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         
         pdf.setTextColor(0, 0, 0);
         pdf.text(description, colX.description, currentY);
-        pdf.text(dateStr, colX.date, currentY);
         pdf.text(item.quantity.toString(), colX.quantity, currentY);
         pdf.text(item.unit || 'pce', colX.unit, currentY);
         pdf.text(`${item.unit_price.toFixed(2)} FCFA`, colX.unitPrice, currentY);
