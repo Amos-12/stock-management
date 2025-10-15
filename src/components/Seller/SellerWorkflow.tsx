@@ -434,17 +434,21 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const dateStr = `${pad(createdAt.getDate())}/${pad(createdAt.getMonth()+1)}/${createdAt.getFullYear()} ${pad(createdAt.getHours())}:${pad(createdAt.getMinutes())}`;
       pdf.text(`Date: ${dateStr}`, margin, currentY);
       
+      // Space before customer info
+      currentY += 4;
+      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
+      
+      // Customer Info Section
+      currentY += 4;
       if (completedSale.customer_name) {
-        currentY += 3;
         pdf.text(`Client: ${completedSale.customer_name.substring(0, 30)}`, margin, currentY);
+        currentY += 3;
       }
       if (completedSale.customer_address) {
-        currentY += 3;
         pdf.text(`Adresse: ${String(completedSale.customer_address).substring(0, 38)}`, margin, currentY);
+        currentY += 3;
       }
       
-      currentY += 3;
-      pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
       
       // Items Header
       currentY += 4;
@@ -458,15 +462,33 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       currentY += 2;
       pdf.setFont('helvetica', 'normal');
       
-      // Items
+      // Items - Dynamic with all product details
       items.forEach((item: any) => {
         currentY += 3;
-        const itemName = item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name;
+        
+        // Product name
+        let itemName = item.name;
+        if (itemName.length > 18) {
+          itemName = itemName.substring(0, 18) + '...';
+        }
         pdf.setFontSize(6);
         pdf.text(itemName, margin, currentY);
-        pdf.text(item.quantity.toString(), contentWidth - 30, currentY);
-        pdf.text(`${item.unit_price.toFixed(2)}`, contentWidth - 20, currentY);
-        pdf.text(`${item.total.toFixed(2)}`, contentWidth - 2 + margin, currentY, { align: 'right' });
+        
+        // Add dimension or diameter on next line if available
+        if (item.dimension || item.diametre) {
+          currentY += 2.5;
+          pdf.setFontSize(5);
+          const detail = item.dimension ? `(${item.dimension})` : `(Ø ${item.diametre})`;
+          pdf.text(detail, margin + 1, currentY);
+          pdf.setFontSize(6);
+          currentY += 0.5;
+        }
+        
+        // Quantity, Price, Total on the product name line
+        const baseY = item.dimension || item.diametre ? currentY - 3 : currentY;
+        pdf.text(item.quantity.toString(), contentWidth - 30, baseY);
+        pdf.text(`${item.unit_price.toFixed(2)}`, contentWidth - 20, baseY);
+        pdf.text(`${item.total.toFixed(2)}`, contentWidth - 2 + margin, baseY, { align: 'right' });
       });
       
       currentY += 3;
@@ -660,21 +682,36 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       
       const items = completedSale.items || [];
       items.forEach((item: any, index: number) => {
-        currentY += 7;
+        const rowHeight = 7;
+        currentY += rowHeight;
         
         // Alternating row background
         if (index % 2 === 0) {
           pdf.setFillColor(250, 250, 250);
-          pdf.rect(margin, currentY - 5, contentWidth, 7, 'F');
+          pdf.rect(margin, currentY - 5, contentWidth, rowHeight, 'F');
         }
         
         pdf.setDrawColor(220, 220, 220);
         pdf.setLineWidth(0.1);
         pdf.line(margin, currentY + 2, pageWidth - margin, currentY + 2);
         
-        const description = item.dimension 
-          ? `${item.name} (${item.dimension})` 
-          : (item.diametre ? `${item.name} (Ø ${item.diametre})` : item.name);
+        // Build description with all available product details
+        let description = item.name;
+        const details = [];
+        
+        if (item.dimension) details.push(item.dimension);
+        if (item.diametre) details.push(`Ø ${item.diametre}`);
+        if (item.unit && item.unit !== 'unité') details.push(item.unit);
+        
+        if (details.length > 0) {
+          description += ` (${details.join(', ')})`;
+        }
+        
+        // Wrap long descriptions
+        if (description.length > 50) {
+          description = description.substring(0, 47) + '...';
+        }
+        
         pdf.text(description, colX.description, currentY);
         pdf.text(item.quantity.toString(), colX.quantity, currentY);
         pdf.text(item.unit_price.toFixed(2), colX.unitPrice, currentY);
