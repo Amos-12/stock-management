@@ -70,14 +70,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [saleTypeFilter, setSaleTypeFilter] = useState<'all' | 'retail' | 'wholesale'>('all');
   const [customerName, setCustomerName] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [discountType, setDiscountType] = useState<'none' | 'percentage' | 'amount'>('none');
   const [discountValue, setDiscountValue] = useState('0');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [customQuantityDialog, setCustomQuantityDialog] = useState<{open: boolean, product: Product | null}>({open: false, product: null});
   const [customQuantityValue, setCustomQuantityValue] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'espece' | 'cheque' | 'virement'>('espece');
 
   useEffect(() => {
     fetchProducts();
@@ -291,7 +291,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       // Prepare sale data for Edge Function
       const saleRequest = {
         customer_name: customerName.trim() || null,
-        payment_method: 'cash',
+        customer_address: customerAddress.trim() ? customerAddress.trim() : null,
+        payment_method: paymentMethod,
         subtotal: subtotal,
         discount_type: discountType,
         discount_value: parseFloat(discountValue) || 0,
@@ -326,12 +327,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       setCurrentStep('success');
       setCompletedSale({
         ...data.sale,
+        payment_method: paymentMethod,
+        customer_address: customerAddress.trim() || null,
         items: cart.map(item => {
           const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
           const unitPrice = item.actualPrice !== undefined ? (item.actualPrice / item.cartQuantity) : item.price;
           return {
             name: item.name,
             quantity: item.cartQuantity,
+            unit: item.displayUnit || item.unit,
+            dimension: item.dimension,
+            diametre: item.diametre,
             unit_price: unitPrice,
             total: itemTotal
           };
@@ -361,11 +367,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     setCurrentStep('products');
     setCart([]);
     setCustomerName('');
+    setCustomerAddress('');
     setSearchTerm('');
     setSaleTypeFilter('all');
     setDiscountType('none');
     setDiscountValue('0');
-    setPaymentMethod('cash');
+    setPaymentMethod('espece');
     setCompletedSale(null);
     onSaleComplete?.();
   };
@@ -417,15 +424,22 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       // Invoice Info
       currentY += 4;
       pdf.setFontSize(7);
-      const invoiceNumber = `INV-${completedSale.id.substring(0, 8)}`;
-      pdf.text(`No: ${invoiceNumber}`, margin, currentY);
+      const createdAt = new Date(completedSale.created_at || Date.now());
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}-${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
+      const receiptCode = `REC-${codeStamp}`;
+      pdf.text(`No: ${receiptCode}`, margin, currentY);
       currentY += 3;
-      const date = new Date(completedSale.created_at).toLocaleDateString('fr-FR');
-      pdf.text(`Date: ${date}`, margin, currentY);
+      const dateStr = `${pad(createdAt.getDate())}/${pad(createdAt.getMonth()+1)}/${createdAt.getFullYear()} ${pad(createdAt.getHours())}:${pad(createdAt.getMinutes())}`;
+      pdf.text(`Date: ${dateStr}`, margin, currentY);
       
       if (completedSale.customer_name) {
         currentY += 3;
-        pdf.text(`Client: ${completedSale.customer_name.substring(0, 20)}`, margin, currentY);
+        pdf.text(`Client: ${completedSale.customer_name.substring(0, 30)}`, margin, currentY);
+      }
+      if (completedSale.customer_address) {
+        currentY += 3;
+        pdf.text(`Adresse: ${String(completedSale.customer_address).substring(0, 38)}`, margin, currentY);
       }
       
       currentY += 3;
@@ -484,7 +498,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       currentY += 4;
       pdf.setFontSize(6);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Paiement: ${completedSale.payment_method.toUpperCase()}`, margin, currentY);
+      const paymentLabel = completedSale.payment_method === 'espece' ? 'Espèce' : completedSale.payment_method === 'cheque' ? 'Chèque' : completedSale.payment_method === 'virement' ? 'Virement' : String(completedSale.payment_method);
+      pdf.text(`Paiement: ${paymentLabel}`, margin, currentY);
       
       currentY += 3;
       pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
@@ -495,7 +510,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.text('Merci de votre visite!', contentWidth / 2 + margin, currentY, { align: 'center'});
 
       // Save and auto-print
-      const fileName = `recu_${invoiceNumber}.pdf`;
+      const fileName = `recu_${receiptCode}.pdf`;
       pdf.save(fileName);
 
       setTimeout(() => {
@@ -561,15 +576,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       currentY += 10;
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      const invoiceNumber = `INV-${completedSale.id.substring(0, 8).toUpperCase()}`;
-      pdf.text(`Numéro: ${invoiceNumber}`, margin, currentY);
+      const createdAt = new Date(completedSale.created_at || Date.now());
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}-${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
+      const factCode = `FACT-${codeStamp}`;
+      pdf.text(`Numéro: ${factCode}`, margin, currentY);
       currentY += 6;
-      const date = new Date(completedSale.created_at).toLocaleDateString('fr-FR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-      pdf.text(`Date: ${date}`, margin, currentY);
+      const dateStr = `${pad(createdAt.getDate())} ${createdAt.toLocaleString('fr-FR', { month: 'long' })} ${createdAt.getFullYear()} ${pad(createdAt.getHours())}:${pad(createdAt.getMinutes())}`;
+      pdf.text(`Date: ${dateStr}`, margin, currentY);
 
       // Customer Info
       if (completedSale.customer_name) {
@@ -609,7 +623,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       
       const items = completedSale.items || [];
       items.forEach((item: any) => {
-        pdf.text(item.name, colX.description, currentY);
+        const description = item.dimension ? `${item.name} (${item.dimension})` : (item.diametre ? `${item.name} (Ø ${item.diametre})` : item.name);
+        pdf.text(description, colX.description, currentY);
         pdf.text(item.quantity.toString(), colX.quantity, currentY);
         pdf.text(`${item.unit_price.toFixed(2)} HTG`, colX.unitPrice, currentY);
         pdf.text(`${item.total.toFixed(2)} HTG`, colX.total, currentY);
@@ -648,9 +663,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
       const paymentMethodLabel = {
-        cash: 'Espèces',
-        card: 'Carte bancaire',
-        mobile: 'Paiement mobile'
+        espece: 'Espèce',
+        cheque: 'Chèque',
+        virement: 'Virement'
       }[completedSale.payment_method] || completedSale.payment_method;
       pdf.text(`Méthode de paiement: ${paymentMethodLabel}`, margin, currentY);
 
@@ -662,7 +677,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.text('GF Distribution & Multi-Services - Tous droits réservés', pageWidth / 2, currentY, { align: 'center' });
 
       // Save
-      const fileName = `facture_${invoiceNumber}.pdf`;
+      const fileName = `facture_${factCode}.pdf`;
       pdf.save(fileName);
 
       toast({
@@ -992,18 +1007,28 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="customer-address">Adresse du client (optionnel)</Label>
+              <Input
+                id="customer-address"
+                placeholder="Adresse du client"
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="payment-method">Méthode de paiement</Label>
               <Select
                 value={paymentMethod}
-                onValueChange={(value: 'cash' | 'card' | 'mobile') => setPaymentMethod(value)}
+                onValueChange={(value: 'espece' | 'cheque' | 'virement') => setPaymentMethod(value)}
               >
                 <SelectTrigger id="payment-method">
-                  <SelectValue />
+                  <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">Espèces</SelectItem>
-                  <SelectItem value="card">Carte bancaire</SelectItem>
-                  <SelectItem value="mobile">Paiement mobile</SelectItem>
+                  <SelectItem value="espece">Espèce</SelectItem>
+                  <SelectItem value="cheque">Chèque</SelectItem>
+                  <SelectItem value="virement">Virement</SelectItem>
                 </SelectContent>
               </Select>
             </div>

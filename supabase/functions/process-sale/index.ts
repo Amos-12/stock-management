@@ -21,6 +21,7 @@ interface SaleRequest {
   discount_type: 'percentage' | 'amount' | 'none'
   discount_value: number
   discount_amount: number
+  customer_address?: string | null
   items: SaleItem[]
 }
 
@@ -75,7 +76,10 @@ Deno.serve(async (req) => {
       let availableStock: number
       if (product.category === 'ceramique' && product.stock_boite !== null) {
         availableStock = product.stock_boite
-      } else if (product.category === 'fer_a_beton' && product.stock_barre !== null) {
+      } else if (product.category === 'fer' && product.stock_barre !== null) {
+        availableStock = product.stock_barre
+      } else if (product.stock_barre !== null && product.stock_barre > 0) {
+        // Fallback: if stock_barre is present and positive, treat as iron bars
         availableStock = product.stock_barre
       } else {
         availableStock = product.quantity
@@ -97,6 +101,7 @@ Deno.serve(async (req) => {
         discount_type: saleData.discount_type,
         discount_value: saleData.discount_value,
         discount_amount: saleData.discount_amount,
+        notes: saleData.customer_address,
         payment_method: saleData.payment_method,
       }])
       .select()
@@ -151,8 +156,14 @@ Deno.serve(async (req) => {
         newQuantity = previousQuantity - item.quantity
         updateData = { stock_boite: newQuantity }
         stockField = 'stock_boite'
-      } else if (currentProduct.category === 'fer_a_beton' && currentProduct.stock_barre !== null) {
+      } else if (currentProduct.category === 'fer' && currentProduct.stock_barre !== null) {
         // For iron bars, update stock_barre
+        previousQuantity = currentProduct.stock_barre
+        newQuantity = previousQuantity - item.quantity
+        updateData = { stock_barre: newQuantity }
+        stockField = 'stock_barre'
+      } else if (currentProduct.stock_barre !== null && currentProduct.stock_barre > 0) {
+        // Fallback: treat as iron bars if stock_barre is present and positive
         previousQuantity = currentProduct.stock_barre
         newQuantity = previousQuantity - item.quantity
         updateData = { stock_barre: newQuantity }
