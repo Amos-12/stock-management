@@ -17,6 +17,7 @@ export type Database = {
       products: {
         Row: {
           alert_threshold: number
+          capacite: number | null
           category: Database["public"]["Enums"]["product_category"]
           created_at: string
           created_by: string | null
@@ -32,16 +33,21 @@ export type Database = {
           prix_m2: number | null
           prix_par_barre: number | null
           prix_par_metre: number | null
+          puissance: number | null
           quantity: number
           sale_type: Database["public"]["Enums"]["sale_type"]
+          specifications_techniques: Json | null
           stock_barre: number | null
           stock_boite: number | null
           surface_par_boite: number | null
+          type_energie: string | null
           unit: string
           updated_at: string
+          voltage: number | null
         }
         Insert: {
           alert_threshold?: number
+          capacite?: number | null
           category: Database["public"]["Enums"]["product_category"]
           created_at?: string
           created_by?: string | null
@@ -57,16 +63,21 @@ export type Database = {
           prix_m2?: number | null
           prix_par_barre?: number | null
           prix_par_metre?: number | null
+          puissance?: number | null
           quantity?: number
           sale_type?: Database["public"]["Enums"]["sale_type"]
+          specifications_techniques?: Json | null
           stock_barre?: number | null
           stock_boite?: number | null
           surface_par_boite?: number | null
+          type_energie?: string | null
           unit?: string
           updated_at?: string
+          voltage?: number | null
         }
         Update: {
           alert_threshold?: number
+          capacite?: number | null
           category?: Database["public"]["Enums"]["product_category"]
           created_at?: string
           created_by?: string | null
@@ -82,13 +93,17 @@ export type Database = {
           prix_m2?: number | null
           prix_par_barre?: number | null
           prix_par_metre?: number | null
+          puissance?: number | null
           quantity?: number
           sale_type?: Database["public"]["Enums"]["sale_type"]
+          specifications_techniques?: Json | null
           stock_barre?: number | null
           stock_boite?: number | null
           surface_par_boite?: number | null
+          type_energie?: string | null
           unit?: string
           updated_at?: string
+          voltage?: number | null
         }
         Relationships: []
       }
