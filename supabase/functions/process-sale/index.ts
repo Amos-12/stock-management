@@ -17,6 +17,10 @@ interface SaleRequest {
   customer_name: string | null
   payment_method: string
   total_amount: number
+  subtotal: number
+  discount_type: 'percentage' | 'amount' | 'none'
+  discount_value: number
+  discount_amount: number
   items: SaleItem[]
 }
 
@@ -79,6 +83,10 @@ Deno.serve(async (req) => {
         customer_name: saleData.customer_name,
         seller_id: user.id,
         total_amount: saleData.total_amount,
+        subtotal: saleData.subtotal,
+        discount_type: saleData.discount_type,
+        discount_value: saleData.discount_value,
+        discount_amount: saleData.discount_amount,
         payment_method: saleData.payment_method,
       }])
       .select()

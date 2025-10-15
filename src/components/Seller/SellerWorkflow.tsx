@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ShoppingCart, 
   Package, 
@@ -26,6 +27,7 @@ interface Product {
   id: string;
   name: string;
   category: string;
+  unit: string;
   price: number;
   quantity: number;
   alert_threshold: number;
@@ -52,6 +54,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [saleTypeFilter, setSaleTypeFilter] = useState<'all' | 'retail' | 'wholesale'>('all');
   const [customerName, setCustomerName] = useState('');
+  const [discountType, setDiscountType] = useState<'none' | 'percentage' | 'amount'>('none');
+  const [discountValue, setDiscountValue] = useState('0');
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [completedSale, setCompletedSale] = useState<any>(null);
@@ -145,18 +149,44 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     return cart.reduce((total, item) => total + (item.price * item.cartQuantity), 0);
   };
 
+  const getSubtotal = () => {
+    return getTotalAmount();
+  };
+
+  const getDiscountAmount = () => {
+    const subtotal = getSubtotal();
+    const discVal = parseFloat(discountValue) || 0;
+    
+    if (discountType === 'percentage') {
+      return Math.min(subtotal * (discVal / 100), subtotal);
+    } else if (discountType === 'amount') {
+      return Math.min(discVal, subtotal);
+    }
+    return 0;
+  };
+
+  const getFinalTotal = () => {
+    return Math.max(0, getSubtotal() - getDiscountAmount());
+  };
+
   const processSale = async () => {
     if (!user || cart.length === 0) return;
 
     setIsProcessing(true);
 
     try {
-      const totalAmount = getTotalAmount();
+      const subtotal = getSubtotal();
+      const discountAmount = getDiscountAmount();
+      const totalAmount = getFinalTotal();
 
       // Prepare sale data for Edge Function
       const saleRequest = {
         customer_name: customerName.trim() || null,
         payment_method: 'cash',
+        subtotal: subtotal,
+        discount_type: discountType,
+        discount_value: parseFloat(discountValue) || 0,
+        discount_amount: discountAmount,
         total_amount: totalAmount,
         items: cart.map(item => ({
           product_id: item.id,
@@ -219,6 +249,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     setCustomerName('');
     setSearchTerm('');
     setSaleTypeFilter('all');
+    setDiscountType('none');
+    setDiscountValue('0');
     setCompletedSale(null);
     onSaleComplete?.();
   };
@@ -498,13 +530,63 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               <h4 className="font-medium mb-3">Résumé de la commande</h4>
               {cart.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm mb-2">
-                  <span>{item.name} × {item.cartQuantity}</span>
+                  <span>{item.name} × {item.cartQuantity} {item.unit}</span>
                   <span>{(item.price * item.cartQuantity).toFixed(2)} HTG</span>
                 </div>
               ))}
-              <div className="border-t mt-3 pt-3 flex justify-between font-semibold text-lg">
-                <span>Total</span>
-                <span className="text-success">{getTotalAmount().toFixed(2)} HTG</span>
+              <div className="border-t mt-3 pt-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Sous-total</span>
+                  <span>{getSubtotal().toFixed(2)} HTG</span>
+                </div>
+                
+                {/* Discount Section */}
+                <div className="space-y-2 border-t pt-2">
+                  <Label htmlFor="discount-type" className="text-sm">Type de remise</Label>
+                  <Select
+                    value={discountType}
+                    onValueChange={(value: 'none' | 'percentage' | 'amount') => setDiscountType(value)}
+                  >
+                    <SelectTrigger id="discount-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucune remise</SelectItem>
+                      <SelectItem value="percentage">Pourcentage (%)</SelectItem>
+                      <SelectItem value="amount">Montant fixe (HTG)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {discountType !== 'none' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="discount-value" className="text-sm">
+                        Valeur de la remise {discountType === 'percentage' ? '(%)' : '(HTG)'}
+                      </Label>
+                      <Input
+                        id="discount-value"
+                        type="number"
+                        min="0"
+                        max={discountType === 'percentage' ? '100' : getSubtotal().toString()}
+                        step={discountType === 'percentage' ? '1' : '0.01'}
+                        value={discountValue}
+                        onChange={(e) => setDiscountValue(e.target.value)}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                  
+                  {discountType !== 'none' && getDiscountAmount() > 0 && (
+                    <div className="flex justify-between text-sm text-warning">
+                      <span>Remise appliquée</span>
+                      <span>-{getDiscountAmount().toFixed(2)} HTG</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="border-t pt-2 flex justify-between font-semibold text-lg">
+                  <span>Total</span>
+                  <span className="text-success">{getFinalTotal().toFixed(2)} HTG</span>
+                </div>
               </div>
             </div>
 
@@ -540,7 +622,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             <CheckCircle className="w-16 h-16 text-success mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">Vente confirmée !</h3>
             <p className="text-muted-foreground mb-6">
-              La vente de {getTotalAmount().toFixed(2)} HTG a été enregistrée avec succès.
+              La vente de {getFinalTotal().toFixed(2)} HTG a été enregistrée avec succès.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               {completedSale && (

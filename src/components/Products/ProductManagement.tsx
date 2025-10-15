@@ -16,6 +16,7 @@ interface Product {
   id: string;
   name: string;
   category: string;
+  unit: string;
   price: number;
   quantity: number;
   alert_threshold: number;
@@ -37,6 +38,7 @@ export const ProductManagement = () => {
   const [formData, setFormData] = useState<{
     name: string;
     category: 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres';
+    unit: string;
     price: string;
     quantity: string;
     alert_threshold: string;
@@ -46,6 +48,7 @@ export const ProductManagement = () => {
   }>({
     name: '',
     category: 'alimentaires',
+    unit: 'unité',
     price: '',
     quantity: '',
     alert_threshold: '10',
@@ -99,6 +102,7 @@ export const ProductManagement = () => {
     setFormData({
       name: '',
       category: 'alimentaires' as const,
+      unit: 'unité',
       price: '',
       quantity: '',
       alert_threshold: '10',
@@ -114,6 +118,7 @@ export const ProductManagement = () => {
     setFormData({
       name: product.name,
       category: product.category as 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres',
+      unit: product.unit || 'unité',
       price: product.price.toString(),
       quantity: product.quantity.toString(),
       alert_threshold: product.alert_threshold.toString(),
@@ -133,6 +138,7 @@ export const ProductManagement = () => {
       const productData = {
         name: formData.name,
         category: formData.category,
+        unit: formData.unit,
         price: parseFloat(formData.price),
         quantity: parseInt(formData.quantity),
         alert_threshold: parseInt(formData.alert_threshold),
@@ -273,6 +279,16 @@ export const ProductManagement = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="unit">Unité de mesure *</Label>
+                    <Input
+                      id="unit"
+                      required
+                      value={formData.unit}
+                      onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                      placeholder="Ex: m², barre, sac, livre..."
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="price">Prix (HTG) *</Label>
                     <Input
                       id="price"
@@ -375,6 +391,7 @@ export const ProductManagement = () => {
               <TableRow>
                 <TableHead>Nom</TableHead>
                 <TableHead>Catégorie</TableHead>
+                <TableHead>Unité</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Prix</TableHead>
                 <TableHead>Stock</TableHead>
@@ -385,7 +402,7 @@ export const ProductManagement = () => {
             <TableBody>
               {filteredProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Aucun produit trouvé
                   </TableCell>
                 </TableRow>
@@ -397,6 +414,9 @@ export const ProductManagement = () => {
                       <Badge variant="outline">
                         {categories.find(c => c.value === product.category)?.label}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">{product.unit}</span>
                     </TableCell>
                     <TableCell>
                       <Badge variant={product.sale_type === 'retail' ? "default" : "secondary"}>

@@ -27,6 +27,7 @@ export type Database = {
           price: number
           quantity: number
           sale_type: Database["public"]["Enums"]["sale_type"]
+          unit: string
           updated_at: string
         }
         Insert: {
@@ -41,6 +42,7 @@ export type Database = {
           price: number
           quantity?: number
           sale_type?: Database["public"]["Enums"]["sale_type"]
+          unit?: string
           updated_at?: string
         }
         Update: {
@@ -55,6 +57,7 @@ export type Database = {
           price?: number
           quantity?: number
           sale_type?: Database["public"]["Enums"]["sale_type"]
+          unit?: string
           updated_at?: string
         }
         Relationships: []
@@ -97,6 +100,7 @@ export type Database = {
           quantity: number
           sale_id: string
           subtotal: number
+          unit: string | null
           unit_price: number
         }
         Insert: {
@@ -106,6 +110,7 @@ export type Database = {
           quantity: number
           sale_id: string
           subtotal: number
+          unit?: string | null
           unit_price: number
         }
         Update: {
@@ -115,6 +120,7 @@ export type Database = {
           quantity?: number
           sale_id?: string
           subtotal?: number
+          unit?: string | null
           unit_price?: number
         }
         Relationships: [
@@ -138,28 +144,40 @@ export type Database = {
         Row: {
           created_at: string
           customer_name: string | null
+          discount_amount: number | null
+          discount_type: string | null
+          discount_value: number | null
           id: string
           notes: string | null
           payment_method: string | null
           seller_id: string
+          subtotal: number
           total_amount: number
         }
         Insert: {
           created_at?: string
           customer_name?: string | null
+          discount_amount?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: string
           notes?: string | null
           payment_method?: string | null
           seller_id: string
+          subtotal?: number
           total_amount: number
         }
         Update: {
           created_at?: string
           customer_name?: string | null
+          discount_amount?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: string
           notes?: string | null
           payment_method?: string | null
           seller_id?: string
+          subtotal?: number
           total_amount?: number
         }
         Relationships: []
