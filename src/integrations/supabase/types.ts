@@ -20,13 +20,23 @@ export type Database = {
           category: Database["public"]["Enums"]["product_category"]
           created_at: string
           created_by: string | null
+          decimal_autorise: boolean | null
           description: string | null
+          diametre: string | null
+          dimension: string | null
           id: string
           is_active: boolean
+          longueur_barre: number | null
           name: string
           price: number
+          prix_m2: number | null
+          prix_par_barre: number | null
+          prix_par_metre: number | null
           quantity: number
           sale_type: Database["public"]["Enums"]["sale_type"]
+          stock_barre: number | null
+          stock_boite: number | null
+          surface_par_boite: number | null
           unit: string
           updated_at: string
         }
@@ -35,13 +45,23 @@ export type Database = {
           category: Database["public"]["Enums"]["product_category"]
           created_at?: string
           created_by?: string | null
+          decimal_autorise?: boolean | null
           description?: string | null
+          diametre?: string | null
+          dimension?: string | null
           id?: string
           is_active?: boolean
+          longueur_barre?: number | null
           name: string
           price: number
+          prix_m2?: number | null
+          prix_par_barre?: number | null
+          prix_par_metre?: number | null
           quantity?: number
           sale_type?: Database["public"]["Enums"]["sale_type"]
+          stock_barre?: number | null
+          stock_boite?: number | null
+          surface_par_boite?: number | null
           unit?: string
           updated_at?: string
         }
@@ -50,13 +70,23 @@ export type Database = {
           category?: Database["public"]["Enums"]["product_category"]
           created_at?: string
           created_by?: string | null
+          decimal_autorise?: boolean | null
           description?: string | null
+          diametre?: string | null
+          dimension?: string | null
           id?: string
           is_active?: boolean
+          longueur_barre?: number | null
           name?: string
           price?: number
+          prix_m2?: number | null
+          prix_par_barre?: number | null
+          prix_par_metre?: number | null
           quantity?: number
           sale_type?: Database["public"]["Enums"]["sale_type"]
+          stock_barre?: number | null
+          stock_boite?: number | null
+          surface_par_boite?: number | null
           unit?: string
           updated_at?: string
         }
