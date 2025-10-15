@@ -38,8 +38,11 @@ interface Product {
   decimal_autorise?: boolean;
 }
 
+type ProductCategory = 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres' | 'ceramique' | 'fer' | 'materiaux_de_construction' | 'energie';
+
 export const ProductManagement = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === 'admin';
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,7 +52,7 @@ export const ProductManagement = () => {
   
   const [formData, setFormData] = useState<{
     name: string;
-    category: 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres' | 'ceramique' | 'fer';
+    category: ProductCategory;
     unit: string;
     price: string;
     quantity: string;
@@ -96,6 +99,8 @@ export const ProductManagement = () => {
     { value: 'electronique', label: 'Électronique' },
     { value: 'ceramique', label: 'Céramique' },
     { value: 'fer', label: 'Fer / Acier' },
+    { value: 'materiaux_de_construction', label: 'Matériaux de construction' },
+    { value: 'energie', label: 'Énergie' },
     { value: 'autres', label: 'Autres' }
   ];
 
@@ -158,10 +163,19 @@ export const ProductManagement = () => {
   };
 
   const handleEdit = (product: Product) => {
+    if (!isAdmin) {
+      toast({
+        title: "Action non autorisée",
+        description: "Seuls les administrateurs peuvent modifier les produits",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setEditingProduct(product);
     setFormData({
       name: product.name,
-      category: product.category as 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres' | 'ceramique' | 'fer',
+      category: product.category as ProductCategory,
       unit: product.unit || 'unité',
       price: product.price.toString(),
       quantity: product.quantity.toString(),
@@ -187,6 +201,15 @@ export const ProductManagement = () => {
     e.preventDefault();
     
     if (!user) return;
+
+    if (!isAdmin) {
+      toast({
+        title: "Action non autorisée",
+        description: "Seuls les administrateurs peuvent gérer les produits",
+        variant: "destructive"
+      });
+      return;
+    }
 
     // Validation for ceramic products
     if (formData.category === 'ceramique') {
@@ -291,17 +314,36 @@ export const ProductManagement = () => {
       setIsDialogOpen(false);
       resetForm();
       fetchProducts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving product:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder le produit",
-        variant: "destructive"
-      });
+      
+      // Check for RLS policy violation
+      if (error?.message?.includes('row-level security') || error?.message?.includes('policy')) {
+        toast({
+          title: "Action réservée aux administrateurs",
+          description: "Seuls les administrateurs peuvent gérer les produits",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder le produit",
+          variant: "destructive"
+        });
+      }
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (!isAdmin) {
+      toast({
+        title: "Action non autorisée",
+        description: "Seuls les administrateurs peuvent supprimer les produits",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
 
     try {
@@ -318,13 +360,23 @@ export const ProductManagement = () => {
       });
 
       fetchProducts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting product:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le produit",
-        variant: "destructive"
-      });
+      
+      // Check for RLS policy violation
+      if (error?.message?.includes('row-level security') || error?.message?.includes('policy')) {
+        toast({
+          title: "Action réservée aux administrateurs",
+          description: "Seuls les administrateurs peuvent supprimer les produits",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de supprimer le produit",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -340,6 +392,14 @@ export const ProductManagement = () => {
   return (
     <Card className="shadow-lg">
       <CardHeader>
+        {!isAdmin && (
+          <div className="mb-4 p-3 bg-muted border border-border rounded-lg flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Seuls les administrateurs peuvent ajouter, modifier ou supprimer des produits.
+            </p>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Package className="w-5 h-5" />
@@ -350,7 +410,11 @@ export const ProductManagement = () => {
             if (!open) resetForm();
           }}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button 
+                className="gap-2" 
+                disabled={!isAdmin}
+                title={!isAdmin ? "Réservé aux administrateurs" : "Ajouter un nouveau produit"}
+              >
                 <Plus className="w-4 h-4" />
                 Nouveau produit
               </Button>
@@ -368,6 +432,7 @@ export const ProductManagement = () => {
                     <Input
                       id="name"
                       required
+                      autoFocus
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                       placeholder="Nom du produit"
@@ -377,7 +442,7 @@ export const ProductManagement = () => {
                     <Label htmlFor="category">Catégorie *</Label>
                     <Select
                       value={formData.category}
-                      onValueChange={(value: 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres' | 'ceramique' | 'fer') => {
+                      onValueChange={(value: ProductCategory) => {
                         // Auto-set unit based on category
                         let newUnit = formData.unit;
                         if (value === 'ceramique') newUnit = 'm²';
@@ -735,23 +800,29 @@ export const ProductManagement = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEdit(product)}
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(product.id)}
-                          className="hover:bg-destructive hover:text-destructive-foreground"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEdit(product)}
+                            title="Modifier"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(product.id)}
+                            className="hover:bg-destructive hover:text-destructive-foreground"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Admin seulement</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

@@ -345,7 +345,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     { value: 'electronique', label: 'Électronique' },
     { value: 'ceramique', label: 'Céramique' },
     { value: 'fer', label: 'Fer / Acier' },
-    { value: 'energie', label: 'Energie' },
+    { value: 'materiaux_de_construction', label: 'Matériaux de construction' },
+    { value: 'energie', label: 'Énergie' },
     { value: 'autres', label: 'Autres' }
   ];
 

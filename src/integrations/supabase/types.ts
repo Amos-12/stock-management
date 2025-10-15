@@ -320,6 +320,9 @@ export type Database = {
         | "electronique"
         | "autres"
         | "energie"
+        | "ceramique"
+        | "fer"
+        | "materiaux_de_construction"
       sale_type: "retail" | "wholesale"
     }
     CompositeTypes: {
@@ -456,6 +459,9 @@ export const Constants = {
         "electronique",
         "autres",
         "energie",
+        "ceramique",
+        "fer",
+        "materiaux_de_construction",
       ],
       sale_type: ["retail", "wholesale"],
     },
