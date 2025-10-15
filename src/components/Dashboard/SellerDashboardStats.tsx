@@ -159,78 +159,76 @@ export const SellerDashboardStats = () => {
 
   return (
     <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Grid - matching Admin style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Ventes Aujourd'hui"
           value={stats.todaySales.toString()}
           icon={Receipt}
+          variant="success"
+          change={{
+            value: stats.weekSales > 0 ? ((stats.todaySales / stats.weekSales) * 100) : 0,
+            isPositive: stats.todaySales > 0,
+            label: "cette semaine"
+          }}
         />
         <StatsCard
           title="Revenu Aujourd'hui"
           value={`${stats.todayRevenue.toFixed(2)} HTG`}
           icon={DollarSign}
+          variant="default"
+          change={{
+            value: stats.weekRevenue > 0 ? ((stats.todayRevenue / stats.weekRevenue) * 100) : 0,
+            isPositive: stats.todayRevenue > 0,
+            label: "cette semaine"
+          }}
         />
         <StatsCard
           title="Total Ventes"
           value={stats.totalSales.toString()}
           icon={TrendingUp}
+          variant="default"
         />
         <StatsCard
           title="Revenu Total"
           value={`${stats.totalRevenue.toFixed(2)} HTG`}
           icon={DollarSign}
+          variant="success"
         />
       </div>
 
-      {/* Additional Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Cette Semaine
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <p className="text-2xl font-bold">{stats.weekSales}</p>
-              <p className="text-xs text-muted-foreground">Ventes</p>
-              <p className="text-sm font-semibold text-primary">{stats.weekRevenue.toFixed(2)} HTG</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Ce Mois
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <p className="text-2xl font-bold">{stats.monthSales}</p>
-              <p className="text-xs text-muted-foreground">Ventes</p>
-              <p className="text-sm font-semibold text-primary">{stats.monthRevenue.toFixed(2)} HTG</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4" />
-              Moyenne par Vente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <p className="text-2xl font-bold">{stats.averageSale.toFixed(2)} HTG</p>
-              <p className="text-xs text-muted-foreground">Valeur moyenne</p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Additional Stats - Enhanced with icons and variants */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <StatsCard
+          title="Ventes cette Semaine"
+          value={`${stats.weekRevenue.toFixed(2)} HTG`}
+          icon={Calendar}
+          variant="default"
+          change={{
+            value: stats.weekSales,
+            isPositive: stats.weekSales > 0,
+            label: `${stats.weekSales} vente${stats.weekSales > 1 ? 's' : ''}`
+          }}
+        />
+        
+        <StatsCard
+          title="Ventes ce Mois"
+          value={`${stats.monthRevenue.toFixed(2)} HTG`}
+          icon={Calendar}
+          variant="success"
+          change={{
+            value: stats.monthSales,
+            isPositive: stats.monthSales > 0,
+            label: `${stats.monthSales} vente${stats.monthSales > 1 ? 's' : ''}`
+          }}
+        />
+        
+        <StatsCard
+          title="Moyenne par Vente"
+          value={`${stats.averageSale.toFixed(2)} HTG`}
+          icon={ShoppingCart}
+          variant="default"
+        />
       </div>
 
       {/* Top Products & Recent Sales - Side by Side */}

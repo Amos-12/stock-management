@@ -1035,32 +1035,83 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div>
-                          <h4 className="font-medium">{product.name}</h4>
-                          {product.category === 'ceramique' && product.dimension && (
-                            <p className="text-xs text-muted-foreground">Dimension: {product.dimension}</p>
+                          <h4 className="font-semibold text-base">{product.name}</h4>
+                          
+                          {/* Ceramic product details */}
+                          {product.category === 'ceramique' && (
+                            <div className="space-y-1 mt-1">
+                              {product.dimension && (
+                                <p className="text-xs text-muted-foreground">📐 Dimension: {product.dimension}</p>
+                              )}
+                              {product.surface_par_boite && (
+                                <p className="text-xs text-muted-foreground">📦 Surface/boîte: {product.surface_par_boite} m²</p>
+                              )}
+                            </div>
                           )}
-                          {product.category === 'fer' && product.diametre && (
-                            <p className="text-xs text-muted-foreground">Diamètre: {product.diametre}</p>
+                          
+                          {/* Iron bar details */}
+                          {product.category === 'fer' && (
+                            <div className="space-y-1 mt-1">
+                              {product.diametre && (
+                                <p className="text-xs text-muted-foreground">⭕ Diamètre: {product.diametre}</p>
+                              )}
+                              {product.longueur_barre && (
+                                <p className="text-xs text-muted-foreground">📏 Longueur: {product.longueur_barre}m</p>
+                              )}
+                            </div>
                           )}
-                          <div className="flex items-center gap-2 text-sm flex-wrap mt-1">
+                          
+                          {/* Energy product details */}
+                          {product.category === 'energie' && (
+                            <div className="space-y-1 mt-1">
+                              {product.type_energie && (
+                                <p className="text-xs text-muted-foreground">⚡ Type: {product.type_energie}</p>
+                              )}
+                              {product.puissance && (
+                                <p className="text-xs text-muted-foreground">💪 Puissance: {product.puissance}W</p>
+                              )}
+                              {product.voltage && (
+                                <p className="text-xs text-muted-foreground">🔌 Voltage: {product.voltage}V</p>
+                              )}
+                              {product.capacite && (
+                                <p className="text-xs text-muted-foreground">🔋 Capacité: {product.capacite}Ah</p>
+                              )}
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center gap-2 text-sm flex-wrap mt-2">
                             <Badge variant="outline" className="text-xs">
                               {categories.find(c => c.value === product.category)?.label}
                             </Badge>
                             <Badge variant={product.sale_type === 'retail' ? 'default' : 'secondary'} className="text-xs">
                               {product.sale_type === 'retail' ? 'Détail' : 'Gros'}
                             </Badge>
+                          </div>
+                          
+                          {/* Pricing */}
+                          <div className="mt-2">
                             {product.category === 'ceramique' && product.prix_m2 ? (
-                              <span className="text-success font-medium">{product.prix_m2.toFixed(2)} HTG/m²</span>
+                              <div className="text-success font-bold text-lg">{product.prix_m2.toFixed(2)} HTG/m²</div>
                             ) : product.category === 'fer' && product.prix_par_barre ? (
-                              <span className="text-success font-medium">{product.prix_par_barre.toFixed(2)} HTG/barre</span>
+                              <div className="text-success font-bold text-lg">{product.prix_par_barre.toFixed(2)} HTG/barre</div>
                             ) : (
-                              <span className="text-success font-medium">{product.price.toFixed(2)} HTG</span>
+                              <div className="text-success font-bold text-lg">{product.price.toFixed(2)} HTG</div>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                            <span>Disponible: {remainingStock} {stockLabel} {cartQuantity > 0 ? `(${cartQuantity} au panier)` : ''}</span>
+                          
+                          {/* Stock info */}
+                          <div className="flex items-center gap-2 text-sm mt-2">
+                            <Package className="w-4 h-4 text-muted-foreground" />
+                            <span className={remainingStock <= product.alert_threshold ? 'text-warning font-medium' : 'text-muted-foreground'}>
+                              {remainingStock} {stockLabel}
+                            </span>
+                            {cartQuantity > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {cartQuantity} au panier
+                              </Badge>
+                            )}
                             {remainingStock <= product.alert_threshold && (
-                              <AlertCircle className="w-3 h-3 text-warning" />
+                              <AlertCircle className="w-4 h-4 text-warning" />
                             )}
                           </div>
                         </div>
