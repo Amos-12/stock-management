@@ -209,15 +209,39 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           if (newQuantity === 0) {
             return null; // Will be filtered out
           }
-          if (newQuantity > item.quantity) {
+          
+          // Check stock availability based on category
+          const availableStock = item.category === 'ceramique' ? (item.stock_boite || 0) : 
+                                item.category === 'fer' ? (item.stock_barre || 0) : 
+                                item.quantity;
+          
+          if (newQuantity > availableStock) {
             toast({
               title: "Stock insuffisant",
-              description: `Stock disponible : ${item.quantity}`,
+              description: `Stock disponible : ${availableStock}`,
               variant: "destructive"
             });
             return item;
           }
-          return { ...item, cartQuantity: newQuantity };
+          
+          // Recalculate price and display unit for special categories
+          let actualPrice = item.price * newQuantity;
+          let displayUnit = item.unit;
+          
+          // Recalculate for ceramics
+          if (item.category === 'ceramique' && item.surface_par_boite && item.prix_m2) {
+            const actualSurface = newQuantity * item.surface_par_boite;
+            actualPrice = actualSurface * item.prix_m2;
+            displayUnit = `m² (${newQuantity} boîtes)`;
+          }
+          
+          // Recalculate for iron bars
+          if (item.category === 'fer' && item.prix_par_barre) {
+            actualPrice = item.prix_par_barre * newQuantity;
+            displayUnit = 'barre';
+          }
+          
+          return { ...item, cartQuantity: newQuantity, actualPrice, displayUnit };
         }
         return item;
       }).filter(Boolean) as CartItem[];
