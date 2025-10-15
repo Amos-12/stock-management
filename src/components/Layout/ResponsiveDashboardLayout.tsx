@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -18,7 +18,9 @@ import {
   PackagePlus
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import logo from '@/assets/logo.png';
 
 interface ResponsiveDashboardLayoutProps {
   children: ReactNode;
@@ -38,6 +40,55 @@ export const ResponsiveDashboardLayout = ({
   const { signOut, profile } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [companySettings, setCompanySettings] = useState<any>(null);
+  const [notificationCount, setNotificationCount] = useState(0);
+
+  useEffect(() => {
+    const fetchCompanySettings = async () => {
+      const { data } = await supabase
+        .from('company_settings')
+        .select('*')
+        .single();
+      if (data) {
+        setCompanySettings(data);
+      }
+    };
+    
+    fetchCompanySettings();
+  }, []);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (role !== 'admin') return;
+      
+      try {
+        // Count low stock products
+        const { data: products } = await supabase
+          .from('products')
+          .select('id, quantity, alert_threshold')
+          .eq('is_active', true);
+        
+        const lowStockCount = products?.filter(p => p.quantity <= p.alert_threshold).length || 0;
+        
+        // Count sales from last 24 hours
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { count: salesCount } = await supabase
+          .from('sales')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', oneDayAgo);
+        
+        setNotificationCount(lowStockCount + (salesCount || 0));
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+    
+    fetchNotifications();
+    
+    // Refresh notifications every minute
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, [role]);
 
   const adminNavItems = [
     { icon: Home, label: 'Dashboard', value: 'dashboard' },
@@ -46,7 +97,8 @@ export const ResponsiveDashboardLayout = ({
     { icon: Users, label: 'Utilisateurs', value: 'users' },
     { icon: PackagePlus, label: 'Réapprovisionnement', value: 'restock', route: '/restock' },
     { icon: TrendingUp, label: 'Rapports', value: 'reports' },
-    { icon: Bell, label: 'Notifications', value: 'notifications' }
+    { icon: Bell, label: 'Notifications', value: 'notifications' },
+    { icon: Settings, label: 'Paramètres', value: 'settings' }
   ];
 
   const sellerNavItems = [
@@ -77,8 +129,25 @@ export const ResponsiveDashboardLayout = ({
   const SidebarContent = () => (
     <div className="p-6 space-y-6">
       <div className="text-center border-b border-border pb-4">
-        <Package className="w-8 h-8 text-primary mx-auto mb-2" />
-        <h2 className="font-semibold text-foreground">{title}</h2>
+        {companySettings?.logo_url ? (
+          <img 
+            src={companySettings.logo_url} 
+            alt="Logo" 
+            className="w-16 h-16 object-contain mx-auto mb-2" 
+          />
+        ) : (
+          <img 
+            src={logo} 
+            alt="Logo" 
+            className="w-16 h-16 object-contain mx-auto mb-2" 
+          />
+        )}
+        <h2 className={cn(
+          "font-semibold text-foreground",
+          (companySettings?.company_name || title).length > 30 ? "text-sm" : "text-base"
+        )}>
+          {companySettings?.company_name || title}
+        </h2>
         <Badge variant={role === 'admin' ? 'default' : 'secondary'} className="mt-2">
           {role === 'admin' ? 'Administrateur' : 'Vendeur'}
         </Badge>
@@ -128,8 +197,27 @@ export const ResponsiveDashboardLayout = ({
               </Sheet>
               
               <div className="flex items-center">
-                <Package className="w-8 h-8 text-primary mr-3" />
-                <h1 className="text-xl font-bold text-primary hidden sm:block">GF Distribution & Multi-Services</h1>
+                {companySettings?.logo_url ? (
+                  <img 
+                    src={companySettings.logo_url} 
+                    alt="Logo" 
+                    className="w-10 h-10 object-contain mr-3" 
+                  />
+                ) : (
+                  <img 
+                    src={logo} 
+                    alt="Logo" 
+                    className="w-10 h-10 object-contain mr-3" 
+                  />
+                )}
+                <h1 className={cn(
+                  "font-bold text-primary hidden sm:block",
+                  (companySettings?.company_name || 'GF Distribution & Multi-Services').length > 30 
+                    ? "text-lg" 
+                    : "text-xl"
+                )}>
+                  {companySettings?.company_name || 'GF Distribution & Multi-Services'}
+                </h1>
               </div>
             </div>
 
@@ -140,23 +228,30 @@ export const ResponsiveDashboardLayout = ({
                 <span className="font-medium">{profile?.full_name}</span>
               </div>
 
-               <Button 
-                variant="ghost" 
-                size="icon"
-                className="hover:bg-primary/10 relative"
-                onClick={() => {
-                  if (onSectionChange) {
-                    onSectionChange('notifications');
-                  } else {
-                    navigate('/admin?section=notifications');
-                  }
-                }}
-              >
-                <Bell className="w-4 h-4" />
-                <span className="absolute -top-1 -right-1 bg-warning text-warning-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  3
-                </span>
-              </Button>
+              {role === 'admin' && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="hover:bg-primary/10 relative"
+                  onClick={() => {
+                    if (onSectionChange) {
+                      onSectionChange('notifications');
+                    } else {
+                      navigate('/admin?section=notifications');
+                    }
+                  }}
+                >
+                  <Bell className="w-4 h-4" />
+                  {notificationCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {notificationCount > 99 ? '99+' : notificationCount}
+                    </Badge>
+                  )}
+                </Button>
+              )}
 
               <Button 
                 variant="ghost" 

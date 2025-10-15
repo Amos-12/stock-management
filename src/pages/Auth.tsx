@@ -7,7 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Package, ShoppingCart, UserCheck, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
+import logo from '@/assets/logo.png';
+import { cn } from '@/lib/utils';
 
 const signInSchema = z.object({
   email: z.string().email('Email invalide').max(255, 'Email trop long'),
@@ -27,6 +30,7 @@ const Auth = () => {
   const [activeTab, setActiveTab] = useState('signin');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [companySettings, setCompanySettings] = useState<any>(null);
 
   // Form states
   const [signInForm, setSignInForm] = useState({
@@ -40,6 +44,20 @@ const Auth = () => {
     fullName: '',
     phone: ''
   });
+
+  useEffect(() => {
+    const fetchCompanySettings = async () => {
+      const { data } = await supabase
+        .from('company_settings')
+        .select('*')
+        .single();
+      if (data) {
+        setCompanySettings(data);
+      }
+    };
+    
+    fetchCompanySettings();
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
@@ -124,11 +142,32 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <Package className="w-12 h-12 text-primary mr-3" />
-            <h1 className="text-3xl font-bold text-primary">GF Distribution & Multi-Services</h1>
+          <div className="flex flex-col items-center justify-center mb-4">
+            {companySettings?.logo_url ? (
+              <img 
+                src={companySettings.logo_url} 
+                alt="Logo" 
+                className="w-24 h-24 object-contain mb-3" 
+              />
+            ) : (
+              <img 
+                src={logo} 
+                alt="Logo" 
+                className="w-24 h-24 object-contain mb-3" 
+              />
+            )}
+            <h1 className={cn(
+              "font-bold text-primary",
+              (companySettings?.company_name || 'GF Distribution & Multi-Services').length > 30 
+                ? "text-2xl" 
+                : "text-3xl"
+            )}>
+              {companySettings?.company_name || 'GF Distribution & Multi-Services'}
+            </h1>
           </div>
-          <p className="text-muted-foreground">Gestion de stock et ventes professionnelles</p>
+          <p className="text-muted-foreground">
+            {companySettings?.company_description || 'Gestion de stock et ventes professionnelles'}
+          </p>
         </div>
 
         <Card className="shadow-lg">

@@ -24,6 +24,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { InvoiceGenerator } from '@/components/Invoice/InvoiceGenerator';
 import jsPDF from 'jspdf';
+import logo from '@/assets/logo.png';
 
 interface Product {
   id: string;
@@ -47,6 +48,11 @@ interface Product {
   prix_par_barre?: number;
   stock_barre?: number;
   decimal_autorise?: boolean;
+  // Energy-specific fields
+  type_energie?: any;
+  puissance?: any;
+  voltage?: any;
+  capacite?: any;
 }
 
 interface CartItem extends Product {
@@ -79,10 +85,36 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [customQuantityDialog, setCustomQuantityDialog] = useState<{open: boolean, product: Product | null}>({open: false, product: null});
   const [customQuantityValue, setCustomQuantityValue] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'espece' | 'cheque' | 'virement'>('espece');
+  const [companySettings, setCompanySettings] = useState<any>(null);
+
+  // Utility function to format amounts with space as thousands separator
+  const formatAmount = (amount: number, currency = true): string => {
+    const formatted = amount.toLocaleString('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: true
+    }).replace(/\s/g, ' '); // Ensure space separator
+    return currency ? `${formatted} HTG` : formatted;
+  };
 
   useEffect(() => {
     fetchProducts();
+    fetchCompanySettings();
   }, []);
+
+  const fetchCompanySettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .select('*')
+        .limit(1)
+        .single();
+      
+      if (data) setCompanySettings(data);
+    } catch (error) {
+      console.error('Error fetching company settings:', error);
+    }
+  };
 
   useEffect(() => {
     const filtered = products.filter(product => {
@@ -104,7 +136,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         .order('name');
 
       if (error) throw error;
-      setProducts(data || []);
+      setProducts((data || []) as Product[]);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -322,7 +354,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       toast({
         title: "Vente enregistrée",
-        description: `Vente de ${totalAmount.toFixed(2)} HTG enregistrée avec succès`,
+        description: `Vente de ${formatAmount(totalAmount)} enregistrée avec succès`,
       });
 
       setCurrentStep('success');
@@ -379,14 +411,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   };
 
   const printReceipt = async () => {
-    if (!completedSale) return;
+    if (!completedSale || !companySettings) return;
     
     try {
       // Format 58mm largeur pour imprimante thermique
       const receiptWidth = 58;
       
       const items = completedSale.items || [];
-      const headerHeight = 28;
+      const headerHeight = 35;
       const itemsHeight = Math.max(items.length * 8, 10);
       const footerHeight = 22;
       const dynamicHeight = headerHeight + itemsHeight + footerHeight;
@@ -401,24 +433,33 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const contentWidth = receiptWidth - (margin * 2);
       let currentY = margin;
 
-      // Logo
-      currentY += 5;
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('GF', contentWidth / 2 + margin, currentY, { align: 'center' });
+      // Add logo image - use company logo if available, otherwise default
+      try {
+        const logoWidth = 12;
+        const logoHeight = 12;
+        const logoX = (receiptWidth - logoWidth) / 2;
+        const logoToUse = companySettings.logo_url || logo;
+        pdf.addImage(logoToUse, 'PNG', logoX, currentY, logoWidth, logoHeight);
+        currentY += logoHeight + 2;
+      } catch (e) {
+        console.error('Error adding logo:', e);
+        currentY += 3;
+      }
       
-      // Company Header
-      currentY += 4;
+      // Company Header - Dynamic from settings
       pdf.setFontSize(8);
-      pdf.text('GF DISTRIBUTION & MULTI-SERVICES', contentWidth / 2 + margin, currentY, { align: 'center' });
-      currentY += 2;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(companySettings.company_name, contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 3;
       pdf.setFontSize(6);
       pdf.setFont('helvetica', 'normal');
-      pdf.text('Aux Cayes, Sud, Haïti', contentWidth / 2 + margin, currentY, { align: 'center' });
+      pdf.text(companySettings.address, contentWidth / 2 + margin, currentY, { align: 'center' });
       currentY += 2.5;
-      pdf.text('Tel: +509 3134-3213', contentWidth / 2 + margin, currentY, { align: 'center' });
+      pdf.text(companySettings.city, contentWidth / 2 + margin, currentY, { align: 'center' });
       currentY += 2.5;
-      pdf.text('contact@gfdistribution.com', contentWidth / 2 + margin, currentY, { align: 'center' });
+      pdf.text(`Tel: ${companySettings.phone}`, contentWidth / 2 + margin, currentY, { align: 'center' });
+      currentY += 2.5;
+      pdf.text(companySettings.email, contentWidth / 2 + margin, currentY, { align: 'center' });
       currentY += 3;
       pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
       
@@ -487,36 +528,36 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         // Quantity, Price, Total on the product name line
         const baseY = item.dimension || item.diametre ? currentY - 3 : currentY;
         pdf.text(item.quantity.toString(), contentWidth - 30, baseY);
-        pdf.text(`${item.unit_price.toFixed(2)}`, contentWidth - 20, baseY);
-        pdf.text(`${item.total.toFixed(2)}`, contentWidth - 2 + margin, baseY, { align: 'right' });
+        pdf.text(`${formatAmount(item.unit_price, false)}`, contentWidth - 20, baseY);
+        pdf.text(`${formatAmount(item.total, false)}`, contentWidth - 2 + margin, baseY, { align: 'right' });
       });
       
       currentY += 3;
       pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
       
-      // Subtotal
+      // Subtotal (no TVA on receipt)
       currentY += 4;
       pdf.setFontSize(7);
       pdf.setFont('helvetica', 'normal');
       pdf.text('Sous-total:', margin, currentY);
-      pdf.text(`${completedSale.subtotal.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      pdf.text(`${formatAmount(completedSale.subtotal, false)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
       
       // Discount (if applicable)
       if (completedSale.discount_amount && completedSale.discount_amount > 0) {
         currentY += 3;
         pdf.text(`Remise (${completedSale.discount_type === 'percentage' ? completedSale.discount_value + '%' : 'fixe'}):`, margin, currentY);
-        pdf.text(`-${completedSale.discount_amount.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+        pdf.text(`-${formatAmount(completedSale.discount_amount, false)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
       }
       
       currentY += 3;
       pdf.text('-------------------------------', contentWidth / 2 + margin, currentY, { align: 'center' });
       
-      // Total
+      // Total (no TVA displayed on receipt)
       currentY += 4;
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'bold');
       pdf.text('TOTAL:', margin, currentY);
-      pdf.text(`${completedSale.total_amount.toFixed(2)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
+      pdf.text(`${formatAmount(completedSale.total_amount, false)} HTG`, contentWidth - 2 + margin, currentY, { align: 'right' });
       
       currentY += 4;
       pdf.setFontSize(6);
@@ -556,7 +597,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   };
 
   const printInvoice = async () => {
-    if (!completedSale) return;
+    if (!completedSale || !companySettings) return;
     
     try {
       const pdf = new jsPDF({
@@ -571,220 +612,304 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const contentWidth = pageWidth - (margin * 2);
       let currentY = margin;
 
-      // Header Box with Company Info
-      pdf.setDrawColor(0, 0, 0);
-      pdf.setLineWidth(0.5);
-      pdf.rect(margin, currentY, contentWidth, 35);
-      
-      currentY += 8;
-      pdf.setFontSize(22);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(0, 0, 0);
-      pdf.text('GF DISTRIBUTION', margin + 5, currentY);
-      
-      currentY += 7;
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('& MULTI-SERVICES', margin + 5, currentY);
-      
-      currentY += 6;
-      pdf.setFontSize(9);
-      pdf.text('Aux Cayes, Sud, Haïti', margin + 5, currentY);
-      currentY += 5;
-      pdf.text('Tel: +509 3134-3213 | Email: contact@gfdistribution.com', margin + 5, currentY);
+      // Add logo image - use company logo if available, otherwise default
+      try {
+        const logoSize = 20;
+        const logoToUse = companySettings.logo_url || logo;
+        pdf.addImage(logoToUse, 'PNG', margin, currentY, logoSize, logoSize);
+      } catch (e) {
+        console.error('Error adding logo to invoice:', e);
+      }
 
-      // Invoice Title and Number Box
-      currentY = margin + 40;
-      pdf.setFillColor(240, 240, 240);
-      pdf.rect(margin, currentY, contentWidth, 25, 'F');
-      pdf.rect(margin, currentY, contentWidth, 25);
-      
-      currentY += 8;
-      pdf.setFontSize(18);
+      // Company name on the left (in blue) - reduced size
+      pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('FACTURE', pageWidth / 2, currentY, { align: 'center' });
+      pdf.setTextColor(41, 98, 255);
+      pdf.text(companySettings.company_name, margin + 25, currentY + 7);
 
-      // Invoice Info
-      currentY += 10;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
+      // Invoice number and dates on the right
       const createdAt = new Date(completedSale.created_at || Date.now());
       const pad = (n: number) => n.toString().padStart(2, '0');
-      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
-      const factCode = `FACT-${codeStamp}`;
-      pdf.text(`No: ${factCode}`, pageWidth / 2, currentY, { align: 'center' });
-
-      // Date and Customer Info Box
-      currentY += 12;
-      pdf.setDrawColor(200, 200, 200);
-      pdf.setLineWidth(0.3);
-      pdf.rect(margin, currentY, contentWidth / 2 - 5, 30);
+      const invoiceYear = createdAt.getFullYear();
+      const invoiceSeq = `${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}`;
+      const invoiceNumber = `FACTURE - ${invoiceYear}-${invoiceSeq}`;
       
-      currentY += 7;
+      pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(10);
-      pdf.text('Date:', margin + 5, currentY);
-      pdf.setFont('helvetica', 'normal');
-      const dateStr = `${pad(createdAt.getDate())} ${createdAt.toLocaleString('fr-FR', { month: 'long' })} ${createdAt.getFullYear()} à ${pad(createdAt.getHours())}h${pad(createdAt.getMinutes())}`;
-      pdf.text(dateStr, margin + 5, currentY + 5);
-
-      // Customer Info Box
-      const customerBoxX = margin + contentWidth / 2 + 5;
-      currentY -= 7;
-      pdf.rect(customerBoxX, currentY, contentWidth / 2 - 5, 30);
-      
-      currentY += 7;
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Client:', customerBoxX + 5, currentY);
-      pdf.setFont('helvetica', 'normal');
-      
-      if (completedSale.customer_name) {
-        currentY += 5;
-        pdf.text(completedSale.customer_name, customerBoxX + 5, currentY);
-      }
-      
-      if (completedSale.customer_address) {
-        currentY += 5;
-        pdf.setFontSize(9);
-        pdf.text(completedSale.customer_address.substring(0, 40), customerBoxX + 5, currentY);
-        pdf.setFontSize(10);
-      }
-
-      // Items Table
-      currentY += 20;
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(10);
-      
-      // Table header with background
-      pdf.setFillColor(230, 230, 230);
-      pdf.rect(margin, currentY, contentWidth, 8, 'F');
-      pdf.setDrawColor(0, 0, 0);
-      pdf.setLineWidth(0.5);
-      pdf.rect(margin, currentY, contentWidth, 8);
-      
-      const colX = {
-        description: margin + 2,
-        quantity: margin + 100,
-        unitPrice: margin + 130,
-        total: margin + 160
-      };
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(invoiceNumber, pageWidth - margin, currentY, { align: 'right' });
       
       currentY += 6;
-      pdf.text('Description', colX.description, currentY);
-      pdf.text('Qté', colX.quantity, currentY);
-      pdf.text('Prix Unit.', colX.unitPrice, currentY);
-      pdf.text('Total (HTG)', colX.total, currentY);
-      
-      // Items with alternating row colors
-      currentY += 2;
-      pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      const dateStr = `${pad(createdAt.getDate())}/${pad(createdAt.getMonth()+1)}/${createdAt.getFullYear()}`;
+      pdf.text(`Date de facturation: ${dateStr}`, pageWidth - margin, currentY, { align: 'right' });
       
-      const items = completedSale.items || [];
-      items.forEach((item: any, index: number) => {
-        const rowHeight = 7;
-        currentY += rowHeight;
+      currentY += 4;
+      const dueDate = new Date(createdAt);
+      dueDate.setDate(dueDate.getDate() + 30);
+      pdf.text(`Échéance: ${pad(dueDate.getDate())}/${pad(dueDate.getMonth()+1)}/${dueDate.getFullYear()}`, pageWidth - margin, currentY, { align: 'right' });
+
+      // Company information on the left - Dynamic from settings
+      currentY = margin + 25;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(companySettings.company_name, margin, currentY);
+      
+      currentY += 4;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.setTextColor(80, 80, 80);
+      pdf.text(companySettings.company_description, margin, currentY);
+      
+      currentY += 5;
+      pdf.setFontSize(9);
+      pdf.text(companySettings.address, margin, currentY);
+      
+      currentY += 4;
+      pdf.text(companySettings.city, margin, currentY);
+      
+      currentY += 4;
+      pdf.text(companySettings.phone, margin, currentY);
+      
+      currentY += 4;
+      pdf.text(companySettings.email, margin, currentY);
+
+      // Customer information on the right
+      if (completedSale.customer_name || completedSale.customer_address) {
+        currentY = margin + 10;
         
-        // Alternating row background
-        if (index % 2 === 0) {
-          pdf.setFillColor(250, 250, 250);
-          pdf.rect(margin, currentY - 5, contentWidth, rowHeight, 'F');
+        if (completedSale.customer_name) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(10);
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(completedSale.customer_name, pageWidth - margin, currentY, { align: 'right' });
+          currentY += 5;
         }
         
-        pdf.setDrawColor(220, 220, 220);
-        pdf.setLineWidth(0.1);
-        pdf.line(margin, currentY + 2, pageWidth - margin, currentY + 2);
+        if (completedSale.customer_address) {
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(9);
+          pdf.setTextColor(80, 80, 80);
+          const address = String(completedSale.customer_address);
+          
+          // Split address into lines if too long
+          const maxLength = 40;
+          const addressLines = [];
+          for (let i = 0; i < address.length; i += maxLength) {
+            addressLines.push(address.substring(i, i + maxLength));
+          }
+          
+          addressLines.forEach(line => {
+            pdf.text(line, pageWidth - margin, currentY, { align: 'right' });
+            currentY += 4;
+          });
+        }
+      }
+
+      // Customer information (if provided)
+      currentY = margin + 60;
+      if (completedSale.customer_name || completedSale.customer_address) {
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('CLIENT:', margin, currentY);
         
-        // Build description with all available product details
+        currentY += 5;
+        pdf.setFont('helvetica', 'normal');
+        if (completedSale.customer_name) {
+          pdf.text(completedSale.customer_name, margin, currentY);
+          currentY += 4;
+        }
+        if (completedSale.customer_address) {
+          pdf.text(completedSale.customer_address, margin, currentY);
+          currentY += 4;
+        }
+        currentY += 6;
+      }
+
+      // Thank you message - Dynamic
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'italic');
+      pdf.setTextColor(80, 80, 80);
+      pdf.text(`Merci d'avoir choisi ${companySettings.company_name} !`, margin, currentY);
+      
+      currentY += 10;
+
+      // Table header with gray background
+      pdf.setFillColor(220, 220, 220);
+      pdf.rect(margin, currentY, contentWidth, 8, 'F');
+      
+      pdf.setDrawColor(180, 180, 180);
+      pdf.setLineWidth(0.3);
+      pdf.rect(margin, currentY, contentWidth, 8);
+
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0);
+
+      const colX = {
+        description: margin + 2,
+        quantity: margin + 70,
+        unit: margin + 95,
+        unitPrice: margin + 120,
+        total: margin + 155
+      };
+
+      currentY += 5.5;
+      pdf.text('Description', colX.description, currentY);
+      pdf.text('Qté', colX.quantity, currentY);
+      pdf.text('Unité', colX.unit, currentY);
+      pdf.text('Prix unitaire', colX.unitPrice, currentY);
+      pdf.text('Montant', colX.total, currentY);
+
+      currentY += 2.5;
+      
+      // Items
+      const items = completedSale.items || [];
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      
+      items.forEach((item: any) => {
+        const rowHeight = 6;
+        currentY += rowHeight;
+        
+        // Build description
         let description = item.name;
         const details = [];
         
         if (item.dimension) details.push(item.dimension);
         if (item.diametre) details.push(`Ø ${item.diametre}`);
-        if (item.unit && item.unit !== 'unité') details.push(item.unit);
+        
+        // For energy category, add specific fields
+        const product = cart.find(p => p.name === item.name);
+        if (product?.category === 'energie') {
+          if (product.type_energie) details.push(`Type: ${product.type_energie}`);
+          if (product.puissance) details.push(`${product.puissance}W`);
+          if (product.voltage) details.push(`${product.voltage}V`);
+          if (product.capacite) details.push(`${product.capacite}`);
+        }
         
         if (details.length > 0) {
           description += ` (${details.join(', ')})`;
         }
         
-        // Wrap long descriptions
-        if (description.length > 50) {
-          description = description.substring(0, 47) + '...';
+        // Wrap long descriptions - reduced length due to narrower column
+        if (description.length > 26) {
+          description = description.substring(0, 23) + '...';
         }
         
+        pdf.setTextColor(0, 0, 0);
         pdf.text(description, colX.description, currentY);
         pdf.text(item.quantity.toString(), colX.quantity, currentY);
-        pdf.text(item.unit_price.toFixed(2), colX.unitPrice, currentY);
-        pdf.text(item.total.toFixed(2), colX.total, currentY);
+        pdf.text(item.unit || 'pce', colX.unit, currentY);
+        pdf.text(`${formatAmount(item.unit_price, false)} HTG`, colX.unitPrice, currentY);
+        pdf.text(`${formatAmount(item.total, false)} HTG`, colX.total, currentY);
       });
 
-      // Line before totals
-      currentY += 5;
-      pdf.setDrawColor(0, 0, 0);
-      pdf.setLineWidth(0.5);
-      pdf.line(margin, currentY, pageWidth - margin, currentY);
-
-      // Totals Box
+      // Totals section
       currentY += 10;
-      const totalsBoxY = currentY;
-      const totalsBoxHeight = completedSale.discount_amount > 0 ? 35 : 25;
+      const totalStartY = currentY;
       
-      pdf.setFillColor(245, 245, 245);
-      pdf.rect(margin + 100, totalsBoxY, contentWidth - 100, totalsBoxHeight, 'F');
+      // Calculate totals - Dynamic TVA from settings
+      const subtotalBeforeDiscount = completedSale.subtotal || completedSale.total_amount;
+      const discountAmount = completedSale.discount_amount || 0;
+      const totalHT = subtotalBeforeDiscount - discountAmount;
+      const tvaRate = companySettings.tva_rate / 100;
+      const tvaAmount = totalHT * tvaRate;
+      const totalTTC = totalHT + tvaAmount;
+      
+      pdf.setFont('courier', 'bold');
+      pdf.setFontSize(10);
+      
+      const totalsX = colX.unitPrice;
+      
+      // Total HT (before discount)
+      pdf.text('Total HT', totalsX, currentY, { align: 'right' });
+      pdf.text(`${formatAmount(subtotalBeforeDiscount, false)} HTG`, pageWidth - margin, currentY, { align: 'right' });
+      
+      // Discount (if applicable)
+      if (discountAmount > 0) {
+        currentY += 6;
+        const discountLabel = completedSale.discount_type === 'percentage' 
+          ? `Remise (${completedSale.discount_value}%)` 
+          : 'Remise';
+        pdf.setTextColor(220, 38, 38); // Red for discount
+        pdf.text(discountLabel, totalsX, currentY, { align: 'right' });
+        pdf.text(`-${formatAmount(discountAmount, false)} HTG`, pageWidth - margin, currentY, { align: 'right' });
+        pdf.setTextColor(0, 0, 0); // Reset color
+        
+        // Total after discount
+        currentY += 6;
+        pdf.text('Total après remise', totalsX, currentY, { align: 'right' });
+        pdf.text(`${formatAmount(totalHT, false)} HTG`, pageWidth - margin, currentY, { align: 'right' });
+      }
+      
+      currentY += 6;
+      // TVA with dynamic rate
+      pdf.text(`TVA ${companySettings.tva_rate.toFixed(1)} %`, totalsX, currentY, { align: 'right' });
+      pdf.text(`${formatAmount(tvaAmount, false)} HTG`, pageWidth - margin, currentY, { align: 'right' });
+      
+      // Line before Total TTC
+      currentY += 2;
       pdf.setDrawColor(0, 0, 0);
       pdf.setLineWidth(0.5);
-      pdf.rect(margin + 100, totalsBoxY, contentWidth - 100, totalsBoxHeight);
+      pdf.line(totalsX, currentY, pageWidth - margin, currentY);
       
-      currentY += 7;
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
-      pdf.text('Sous-total:', colX.unitPrice, currentY);
-      pdf.text(`${completedSale.subtotal.toFixed(2)} HTG`, colX.total, currentY);
+      currentY += 6;
+      // Total TTC
+      pdf.setFontSize(12);
+      pdf.text('Total TTC', totalsX, currentY, { align: 'right' });
+      pdf.text(`${formatAmount(totalTTC, false)} HTG`, pageWidth - margin, currentY, { align: 'right' });
 
-      // Discount
-      if (completedSale.discount_amount && completedSale.discount_amount > 0) {
-        currentY += 7;
-        const discountLabel = completedSale.discount_type === 'percentage' 
-          ? `Remise (${completedSale.discount_value}%):` 
-          : 'Remise:';
-        pdf.text(discountLabel, colX.unitPrice, currentY);
-        pdf.setTextColor(200, 0, 0);
-        pdf.text(`-${completedSale.discount_amount.toFixed(2)} HTG`, colX.total, currentY);
-        pdf.setTextColor(0, 0, 0);
+      // Payment information
+      currentY += 15;
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Moyens de paiement:', margin, currentY);
+      
+      currentY += 5;
+      pdf.setFont('helvetica', 'normal');
+      const paymentMethodLabel = {
+        espece: 'Espèces',
+        cheque: 'Chèque',
+        virement: 'Virement bancaire'
+      }[completedSale.payment_method] || completedSale.payment_method || 'Espèces';
+      pdf.text(paymentMethodLabel, margin + 50, currentY);
+      
+      // Payment terms from company settings
+      if (companySettings.payment_terms) {
+        currentY += 8;
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Conditions de paiement:', margin, currentY);
+        
+        currentY += 5;
+        pdf.setFont('helvetica', 'normal');
+        const termsLines = pdf.splitTextToSize(companySettings.payment_terms, pageWidth - margin * 2 - 50);
+        termsLines.forEach((line: string) => {
+          pdf.text(line, margin + 50, currentY);
+          currentY += 4;
+        });
       }
 
-      // Total line
-      currentY += 3;
+      // Footer - Dynamic from settings
+      currentY = pageHeight - 20;
+      pdf.setDrawColor(180, 180, 180);
       pdf.setLineWidth(0.3);
-      pdf.line(margin + 100, currentY, pageWidth - margin, currentY);
+      pdf.line(margin, currentY - 5, pageWidth - margin, currentY - 5);
       
-      // Total
-      currentY += 8;
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(13);
-      pdf.text('TOTAL:', colX.unitPrice, currentY);
-      pdf.text(`${completedSale.total_amount.toFixed(2)} HTG`, colX.total, currentY);
-
-      // Payment method
-      currentY += 12;
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
-      const paymentMethodLabel = {
-        espece: 'Espèce',
-        cheque: 'Chèque',
-        virement: 'Virement'
-      }[completedSale.payment_method] || completedSale.payment_method;
-      pdf.text(`Méthode de paiement: ${paymentMethodLabel}`, margin, currentY);
-
-      // Footer
-      currentY = pageHeight - 30;
       pdf.setFontSize(8);
-      pdf.text('Merci pour votre confiance!', pageWidth / 2, currentY, { align: 'center' });
-      currentY += 5;
-      pdf.text('GF Distribution & Multi-Services - Tous droits réservés', pageWidth / 2, currentY, { align: 'center' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`${companySettings.company_name} - ${companySettings.company_description}`, pageWidth / 2, currentY, { align: 'center' });
+      
+      currentY += 4;
+      pdf.text(`${companySettings.address}, ${companySettings.city}`, pageWidth / 2, currentY, { align: 'center' });
 
       // Save
-      const fileName = `facture_${factCode}.pdf`;
+      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
+      const fileName = `facture_FACT-${codeStamp}.pdf`;
       pdf.save(fileName);
 
       toast({
@@ -947,32 +1072,83 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div>
-                          <h4 className="font-medium">{product.name}</h4>
-                          {product.category === 'ceramique' && product.dimension && (
-                            <p className="text-xs text-muted-foreground">Dimension: {product.dimension}</p>
+                          <h4 className="font-semibold text-base">{product.name}</h4>
+                          
+                          {/* Ceramic product details */}
+                          {product.category === 'ceramique' && (
+                            <div className="space-y-1 mt-1">
+                              {product.dimension && (
+                                <p className="text-xs text-muted-foreground">📐 Dimension: {product.dimension}</p>
+                              )}
+                              {product.surface_par_boite && (
+                                <p className="text-xs text-muted-foreground">📦 Surface/boîte: {product.surface_par_boite} m²</p>
+                              )}
+                            </div>
                           )}
-                          {product.category === 'fer' && product.diametre && (
-                            <p className="text-xs text-muted-foreground">Diamètre: {product.diametre}</p>
+                          
+                          {/* Iron bar details */}
+                          {product.category === 'fer' && (
+                            <div className="space-y-1 mt-1">
+                              {product.diametre && (
+                                <p className="text-xs text-muted-foreground">⭕ Diamètre: {product.diametre}</p>
+                              )}
+                              {product.longueur_barre && (
+                                <p className="text-xs text-muted-foreground">📏 Longueur: {product.longueur_barre}m</p>
+                              )}
+                            </div>
                           )}
-                          <div className="flex items-center gap-2 text-sm flex-wrap mt-1">
+                          
+                          {/* Energy product details */}
+                          {product.category === 'energie' && (
+                            <div className="space-y-1 mt-1">
+                              {product.type_energie && (
+                                <p className="text-xs text-muted-foreground">⚡ Type: {product.type_energie}</p>
+                              )}
+                              {product.puissance && (
+                                <p className="text-xs text-muted-foreground">💪 Puissance: {product.puissance}W</p>
+                              )}
+                              {product.voltage && (
+                                <p className="text-xs text-muted-foreground">🔌 Voltage: {product.voltage}V</p>
+                              )}
+                              {product.capacite && (
+                                <p className="text-xs text-muted-foreground">🔋 Capacité: {product.capacite}Ah</p>
+                              )}
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center gap-2 text-sm flex-wrap mt-2">
                             <Badge variant="outline" className="text-xs">
                               {categories.find(c => c.value === product.category)?.label}
                             </Badge>
                             <Badge variant={product.sale_type === 'retail' ? 'default' : 'secondary'} className="text-xs">
                               {product.sale_type === 'retail' ? 'Détail' : 'Gros'}
                             </Badge>
+                          </div>
+                          
+                          {/* Pricing */}
+                          <div className="mt-2">
                             {product.category === 'ceramique' && product.prix_m2 ? (
-                              <span className="text-success font-medium">{product.prix_m2.toFixed(2)} HTG/m²</span>
+                              <div className="text-success font-bold text-lg">{formatAmount(product.prix_m2)}/m²</div>
                             ) : product.category === 'fer' && product.prix_par_barre ? (
-                              <span className="text-success font-medium">{product.prix_par_barre.toFixed(2)} HTG/barre</span>
+                              <div className="text-success font-bold text-lg">{formatAmount(product.prix_par_barre)}/barre</div>
                             ) : (
-                              <span className="text-success font-medium">{product.price.toFixed(2)} HTG</span>
+                              <div className="text-success font-bold text-lg">{formatAmount(product.price)}</div>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                            <span>Disponible: {remainingStock} {stockLabel} {cartQuantity > 0 ? `(${cartQuantity} au panier)` : ''}</span>
+                          
+                          {/* Stock info */}
+                          <div className="flex items-center gap-2 text-sm mt-2">
+                            <Package className="w-4 h-4 text-muted-foreground" />
+                            <span className={remainingStock <= product.alert_threshold ? 'text-warning font-medium' : 'text-muted-foreground'}>
+                              {remainingStock} {stockLabel}
+                            </span>
+                            {cartQuantity > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {cartQuantity} au panier
+                              </Badge>
+                            )}
                             {remainingStock <= product.alert_threshold && (
-                              <AlertCircle className="w-3 h-3 text-warning" />
+                              <AlertCircle className="w-4 h-4 text-warning" />
                             )}
                           </div>
                         </div>
@@ -1028,46 +1204,50 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
-                {cart.map((item) => {
-                  const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
-                  return (
-                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <h5 className="font-medium">{item.name}</h5>
-                        <p className="text-sm text-muted-foreground">
-                          {item.cartQuantity} {item.displayUnit || item.unit} = {itemTotal.toFixed(2)} HTG
-                        </p>
+              <div className="flex flex-col h-[calc(100vh-400px)] max-h-[600px]">
+                {/* Scrollable products list */}
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                  {cart.map((item) => {
+                    const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex-1">
+                          <h5 className="font-medium">{item.name}</h5>
+                          <p className="text-sm text-muted-foreground">
+                            {item.cartQuantity} {item.displayUnit || item.unit} = {formatAmount(itemTotal)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateQuantity(item.id, -1)}
+                          >
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <span className="text-sm font-medium w-8 text-center">
+                            {item.cartQuantity}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateQuantity(item.id, 1)}
+                            disabled={item.cartQuantity >= item.quantity}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(item.id, -1)}
-                        >
-                          <Minus className="w-3 h-3" />
-                        </Button>
-                        <span className="text-sm font-medium w-8 text-center">
-                          {item.cartQuantity}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(item.id, 1)}
-                          disabled={item.cartQuantity >= item.quantity}
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
 
-                <div className="border-t pt-4">
+                {/* Fixed footer with total and buttons */}
+                <div className="border-t pt-4 mt-4 bg-background sticky bottom-0">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-lg font-semibold">Total:</span>
                     <span className="text-xl font-bold text-success">
-                      {getTotalAmount().toFixed(2)} HTG
+                      {formatAmount(getTotalAmount())}
                     </span>
                   </div>
                   
@@ -1148,14 +1328,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 return (
                   <div key={item.id} className="flex justify-between text-sm mb-2">
                     <span>{item.name} × {item.cartQuantity} {displayUnit}</span>
-                    <span>{itemTotal.toFixed(2)} HTG</span>
+                    <span>{formatAmount(itemTotal)}</span>
                   </div>
                 );
               })}
               <div className="border-t mt-3 pt-3 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Sous-total</span>
-                  <span>{getSubtotal().toFixed(2)} HTG</span>
+                  <span>{formatAmount(getSubtotal())}</span>
                 </div>
                 
                 {/* Discount Section */}
@@ -1196,14 +1376,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   {discountType !== 'none' && getDiscountAmount() > 0 && (
                     <div className="flex justify-between text-sm text-warning">
                       <span>Remise appliquée</span>
-                      <span>-{getDiscountAmount().toFixed(2)} HTG</span>
+                      <span>-{formatAmount(getDiscountAmount())}</span>
                     </div>
                   )}
                 </div>
                 
                 <div className="border-t pt-2 flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span className="text-success">{getFinalTotal().toFixed(2)} HTG</span>
+                  <span className="text-success">{formatAmount(getFinalTotal())}</span>
                 </div>
               </div>
             </div>
