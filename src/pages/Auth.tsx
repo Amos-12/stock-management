@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 import logo from '@/assets/logo.png';
+import { cn } from '@/lib/utils';
 
 const signInSchema = z.object({
   email: z.string().email('Email invalide').max(255, 'Email trop long'),
@@ -141,21 +142,26 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
+          <div className="flex flex-col items-center justify-center mb-4">
             {companySettings?.logo_url ? (
               <img 
                 src={companySettings.logo_url} 
                 alt="Logo" 
-                className="w-12 h-12 object-contain mr-3" 
+                className="w-24 h-24 object-contain mb-3" 
               />
             ) : (
               <img 
                 src={logo} 
                 alt="Logo" 
-                className="w-12 h-12 object-contain mr-3" 
+                className="w-24 h-24 object-contain mb-3" 
               />
             )}
-            <h1 className="text-3xl font-bold text-primary">
+            <h1 className={cn(
+              "font-bold text-primary",
+              (companySettings?.company_name || 'GF Distribution & Multi-Services').length > 30 
+                ? "text-2xl" 
+                : "text-3xl"
+            )}>
               {companySettings?.company_name || 'GF Distribution & Multi-Services'}
             </h1>
           </div>

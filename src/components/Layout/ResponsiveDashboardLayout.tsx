@@ -99,16 +99,19 @@ export const ResponsiveDashboardLayout = ({
           <img 
             src={companySettings.logo_url} 
             alt="Logo" 
-            className="w-12 h-12 object-contain mx-auto mb-2" 
+            className="w-16 h-16 object-contain mx-auto mb-2" 
           />
         ) : (
           <img 
             src={logo} 
             alt="Logo" 
-            className="w-12 h-12 object-contain mx-auto mb-2" 
+            className="w-16 h-16 object-contain mx-auto mb-2" 
           />
         )}
-        <h2 className="font-semibold text-foreground">
+        <h2 className={cn(
+          "font-semibold text-foreground",
+          (companySettings?.company_name || title).length > 30 ? "text-sm" : "text-base"
+        )}>
           {companySettings?.company_name || title}
         </h2>
         <Badge variant={role === 'admin' ? 'default' : 'secondary'} className="mt-2">
@@ -164,16 +167,21 @@ export const ResponsiveDashboardLayout = ({
                   <img 
                     src={companySettings.logo_url} 
                     alt="Logo" 
-                    className="w-8 h-8 object-contain mr-3" 
+                    className="w-10 h-10 object-contain mr-3" 
                   />
                 ) : (
                   <img 
                     src={logo} 
                     alt="Logo" 
-                    className="w-8 h-8 object-contain mr-3" 
+                    className="w-10 h-10 object-contain mr-3" 
                   />
                 )}
-                <h1 className="text-xl font-bold text-primary hidden sm:block">
+                <h1 className={cn(
+                  "font-bold text-primary hidden sm:block",
+                  (companySettings?.company_name || 'GF Distribution & Multi-Services').length > 30 
+                    ? "text-lg" 
+                    : "text-xl"
+                )}>
                   {companySettings?.company_name || 'GF Distribution & Multi-Services'}
                 </h1>
               </div>
