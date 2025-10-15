@@ -427,7 +427,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.setFontSize(7);
       const createdAt = new Date(completedSale.created_at || Date.now());
       const pad = (n: number) => n.toString().padStart(2, '0');
-      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}-${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
+      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
       const receiptCode = `REC-${codeStamp}`;
       pdf.text(`No: ${receiptCode}`, margin, currentY);
       currentY += 3;
@@ -549,27 +549,36 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const contentWidth = pageWidth - (margin * 2);
       let currentY = margin;
 
-      // Header - Company Info
-      pdf.setFontSize(20);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('GF DISTRIBUTION', margin, currentY);
+      // Header Box with Company Info
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.rect(margin, currentY, contentWidth, 35);
       
       currentY += 8;
-      pdf.setFontSize(10);
+      pdf.setFontSize(22);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('GF DISTRIBUTION', margin + 5, currentY);
+      
+      currentY += 7;
+      pdf.setFontSize(11);
       pdf.setFont('helvetica', 'normal');
-      pdf.text('& MULTI-SERVICES', margin, currentY);
+      pdf.text('& MULTI-SERVICES', margin + 5, currentY);
       
       currentY += 6;
       pdf.setFontSize(9);
-      pdf.text('Aux Cayes, Sud, Haïti', margin, currentY);
+      pdf.text('Aux Cayes, Sud, Haïti', margin + 5, currentY);
       currentY += 5;
-      pdf.text('Tel: +509 3134-3213', margin, currentY);
-      currentY += 5;
-      pdf.text('Email: contact@gfdistribution.com', margin, currentY);
+      pdf.text('Tel: +509 3134-3213 | Email: contact@gfdistribution.com', margin + 5, currentY);
 
-      // Invoice Title
-      currentY += 15;
-      pdf.setFontSize(16);
+      // Invoice Title and Number Box
+      currentY = margin + 40;
+      pdf.setFillColor(240, 240, 240);
+      pdf.rect(margin, currentY, contentWidth, 25, 'F');
+      pdf.rect(margin, currentY, contentWidth, 25);
+      
+      currentY += 8;
+      pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
       pdf.text('FACTURE', pageWidth / 2, currentY, { align: 'center' });
 
@@ -579,66 +588,119 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.setFont('helvetica', 'normal');
       const createdAt = new Date(completedSale.created_at || Date.now());
       const pad = (n: number) => n.toString().padStart(2, '0');
-      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}-${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
+      const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
       const factCode = `FACT-${codeStamp}`;
-      pdf.text(`Numéro: ${factCode}`, margin, currentY);
-      currentY += 6;
-      const dateStr = `${pad(createdAt.getDate())} ${createdAt.toLocaleString('fr-FR', { month: 'long' })} ${createdAt.getFullYear()} ${pad(createdAt.getHours())}:${pad(createdAt.getMinutes())}`;
-      pdf.text(`Date: ${dateStr}`, margin, currentY);
+      pdf.text(`No: ${factCode}`, pageWidth / 2, currentY, { align: 'center' });
 
-      // Customer Info
+      // Date and Customer Info Box
+      currentY += 12;
+      pdf.setDrawColor(200, 200, 200);
+      pdf.setLineWidth(0.3);
+      pdf.rect(margin, currentY, contentWidth / 2 - 5, 30);
+      
+      currentY += 7;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.text('Date:', margin + 5, currentY);
+      pdf.setFont('helvetica', 'normal');
+      const dateStr = `${pad(createdAt.getDate())} ${createdAt.toLocaleString('fr-FR', { month: 'long' })} ${createdAt.getFullYear()} à ${pad(createdAt.getHours())}h${pad(createdAt.getMinutes())}`;
+      pdf.text(dateStr, margin + 5, currentY + 5);
+
+      // Customer Info Box
+      const customerBoxX = margin + contentWidth / 2 + 5;
+      currentY -= 7;
+      pdf.rect(customerBoxX, currentY, contentWidth / 2 - 5, 30);
+      
+      currentY += 7;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Client:', customerBoxX + 5, currentY);
+      pdf.setFont('helvetica', 'normal');
+      
       if (completedSale.customer_name) {
-        currentY += 10;
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Client:', margin, currentY);
-        currentY += 6;
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(completedSale.customer_name, margin, currentY);
+        currentY += 5;
+        pdf.text(completedSale.customer_name, customerBoxX + 5, currentY);
+      }
+      
+      if (completedSale.customer_address) {
+        currentY += 5;
+        pdf.setFontSize(9);
+        pdf.text(completedSale.customer_address.substring(0, 40), customerBoxX + 5, currentY);
+        pdf.setFontSize(10);
       }
 
       // Items Table
-      currentY += 15;
+      currentY += 20;
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       
-      // Table header
+      // Table header with background
+      pdf.setFillColor(230, 230, 230);
+      pdf.rect(margin, currentY, contentWidth, 8, 'F');
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.rect(margin, currentY, contentWidth, 8);
+      
       const colX = {
-        description: margin,
-        quantity: margin + 90,
-        unitPrice: margin + 120,
-        total: margin + 150
+        description: margin + 2,
+        quantity: margin + 100,
+        unitPrice: margin + 130,
+        total: margin + 160
       };
       
+      currentY += 6;
       pdf.text('Description', colX.description, currentY);
       pdf.text('Qté', colX.quantity, currentY);
       pdf.text('Prix Unit.', colX.unitPrice, currentY);
-      pdf.text('Total', colX.total, currentY);
+      pdf.text('Total (HTG)', colX.total, currentY);
       
+      // Items with alternating row colors
       currentY += 2;
-      pdf.line(margin, currentY, pageWidth - margin, currentY);
-      
-      // Items
-      currentY += 8;
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
       
       const items = completedSale.items || [];
-      items.forEach((item: any) => {
-        const description = item.dimension ? `${item.name} (${item.dimension})` : (item.diametre ? `${item.name} (Ø ${item.diametre})` : item.name);
+      items.forEach((item: any, index: number) => {
+        currentY += 7;
+        
+        // Alternating row background
+        if (index % 2 === 0) {
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, currentY - 5, contentWidth, 7, 'F');
+        }
+        
+        pdf.setDrawColor(220, 220, 220);
+        pdf.setLineWidth(0.1);
+        pdf.line(margin, currentY + 2, pageWidth - margin, currentY + 2);
+        
+        const description = item.dimension 
+          ? `${item.name} (${item.dimension})` 
+          : (item.diametre ? `${item.name} (Ø ${item.diametre})` : item.name);
         pdf.text(description, colX.description, currentY);
         pdf.text(item.quantity.toString(), colX.quantity, currentY);
-        pdf.text(`${item.unit_price.toFixed(2)} HTG`, colX.unitPrice, currentY);
-        pdf.text(`${item.total.toFixed(2)} HTG`, colX.total, currentY);
-        currentY += 7;
+        pdf.text(item.unit_price.toFixed(2), colX.unitPrice, currentY);
+        pdf.text(item.total.toFixed(2), colX.total, currentY);
       });
 
       // Line before totals
-      currentY += 3;
-      pdf.line(margin + 90, currentY, pageWidth - margin, currentY);
+      currentY += 5;
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, currentY, pageWidth - margin, currentY);
 
-      // Subtotal
-      currentY += 8;
+      // Totals Box
+      currentY += 10;
+      const totalsBoxY = currentY;
+      const totalsBoxHeight = completedSale.discount_amount > 0 ? 35 : 25;
+      
+      pdf.setFillColor(245, 245, 245);
+      pdf.rect(margin + 100, totalsBoxY, contentWidth - 100, totalsBoxHeight, 'F');
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.rect(margin + 100, totalsBoxY, contentWidth - 100, totalsBoxHeight);
+      
+      currentY += 7;
       pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
       pdf.text('Sous-total:', colX.unitPrice, currentY);
       pdf.text(`${completedSale.subtotal.toFixed(2)} HTG`, colX.total, currentY);
 
@@ -649,20 +711,27 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           ? `Remise (${completedSale.discount_value}%):` 
           : 'Remise:';
         pdf.text(discountLabel, colX.unitPrice, currentY);
+        pdf.setTextColor(200, 0, 0);
         pdf.text(`-${completedSale.discount_amount.toFixed(2)} HTG`, colX.total, currentY);
+        pdf.setTextColor(0, 0, 0);
       }
 
+      // Total line
+      currentY += 3;
+      pdf.setLineWidth(0.3);
+      pdf.line(margin + 100, currentY, pageWidth - margin, currentY);
+      
       // Total
-      currentY += 10;
+      currentY += 8;
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(12);
+      pdf.setFontSize(13);
       pdf.text('TOTAL:', colX.unitPrice, currentY);
       pdf.text(`${completedSale.total_amount.toFixed(2)} HTG`, colX.total, currentY);
 
       // Payment method
-      currentY += 10;
+      currentY += 12;
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(9);
+      pdf.setFontSize(10);
       const paymentMethodLabel = {
         espece: 'Espèce',
         cheque: 'Chèque',
