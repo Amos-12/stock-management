@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -18,7 +18,9 @@ import {
   PackagePlus
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import logo from '@/assets/logo.png';
 
 interface ResponsiveDashboardLayoutProps {
   children: ReactNode;
@@ -38,6 +40,21 @@ export const ResponsiveDashboardLayout = ({
   const { signOut, profile } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [companySettings, setCompanySettings] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchCompanySettings = async () => {
+      const { data } = await supabase
+        .from('company_settings')
+        .select('*')
+        .single();
+      if (data) {
+        setCompanySettings(data);
+      }
+    };
+    
+    fetchCompanySettings();
+  }, []);
 
   const adminNavItems = [
     { icon: Home, label: 'Dashboard', value: 'dashboard' },
@@ -78,8 +95,22 @@ export const ResponsiveDashboardLayout = ({
   const SidebarContent = () => (
     <div className="p-6 space-y-6">
       <div className="text-center border-b border-border pb-4">
-        <Package className="w-8 h-8 text-primary mx-auto mb-2" />
-        <h2 className="font-semibold text-foreground">{title}</h2>
+        {companySettings?.logo_url ? (
+          <img 
+            src={companySettings.logo_url} 
+            alt="Logo" 
+            className="w-12 h-12 object-contain mx-auto mb-2" 
+          />
+        ) : (
+          <img 
+            src={logo} 
+            alt="Logo" 
+            className="w-12 h-12 object-contain mx-auto mb-2" 
+          />
+        )}
+        <h2 className="font-semibold text-foreground">
+          {companySettings?.company_name || title}
+        </h2>
         <Badge variant={role === 'admin' ? 'default' : 'secondary'} className="mt-2">
           {role === 'admin' ? 'Administrateur' : 'Vendeur'}
         </Badge>
@@ -129,8 +160,22 @@ export const ResponsiveDashboardLayout = ({
               </Sheet>
               
               <div className="flex items-center">
-                <Package className="w-8 h-8 text-primary mr-3" />
-                <h1 className="text-xl font-bold text-primary hidden sm:block">GF Distribution & Multi-Services</h1>
+                {companySettings?.logo_url ? (
+                  <img 
+                    src={companySettings.logo_url} 
+                    alt="Logo" 
+                    className="w-8 h-8 object-contain mr-3" 
+                  />
+                ) : (
+                  <img 
+                    src={logo} 
+                    alt="Logo" 
+                    className="w-8 h-8 object-contain mr-3" 
+                  />
+                )}
+                <h1 className="text-xl font-bold text-primary hidden sm:block">
+                  {companySettings?.company_name || 'GF Distribution & Multi-Services'}
+                </h1>
               </div>
             </div>
 
@@ -141,23 +186,25 @@ export const ResponsiveDashboardLayout = ({
                 <span className="font-medium">{profile?.full_name}</span>
               </div>
 
-               <Button 
-                variant="ghost" 
-                size="icon"
-                className="hover:bg-primary/10 relative"
-                onClick={() => {
-                  if (onSectionChange) {
-                    onSectionChange('notifications');
-                  } else {
-                    navigate('/admin?section=notifications');
-                  }
-                }}
-              >
-                <Bell className="w-4 h-4" />
-                <span className="absolute -top-1 -right-1 bg-warning text-warning-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  3
-                </span>
-              </Button>
+              {role === 'admin' && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="hover:bg-primary/10 relative"
+                  onClick={() => {
+                    if (onSectionChange) {
+                      onSectionChange('notifications');
+                    } else {
+                      navigate('/admin?section=notifications');
+                    }
+                  }}
+                >
+                  <Bell className="w-4 h-4" />
+                  <span className="absolute -top-1 -right-1 bg-warning text-warning-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    3
+                  </span>
+                </Button>
+              )}
 
               <Button 
                 variant="ghost" 
