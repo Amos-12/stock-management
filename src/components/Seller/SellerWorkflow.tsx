@@ -299,12 +299,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       setCurrentStep('success');
       setCompletedSale({
         ...data.sale,
-        items: cart.map(item => ({
-          name: item.name,
-          quantity: item.cartQuantity,
-          unit_price: item.price,
-          total: item.price * item.cartQuantity
-        }))
+        items: cart.map(item => {
+          const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
+          const unitPrice = item.actualPrice !== undefined ? (item.actualPrice / item.cartQuantity) : item.price;
+          return {
+            name: item.name,
+            quantity: item.cartQuantity,
+            unit_price: unitPrice,
+            total: itemTotal
+          };
+        })
       });
       
       // Refresh products
@@ -649,12 +653,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
             <div className="border rounded-lg p-4 bg-muted/50">
               <h4 className="font-medium mb-3">Résumé de la commande</h4>
-              {cart.map((item) => (
-                <div key={item.id} className="flex justify-between text-sm mb-2">
-                  <span>{item.name} × {item.cartQuantity} {item.unit}</span>
-                  <span>{(item.price * item.cartQuantity).toFixed(2)} HTG</span>
-                </div>
-              ))}
+              {cart.map((item) => {
+                const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
+                const displayUnit = item.displayUnit || item.unit;
+                return (
+                  <div key={item.id} className="flex justify-between text-sm mb-2">
+                    <span>{item.name} × {item.cartQuantity} {displayUnit}</span>
+                    <span>{itemTotal.toFixed(2)} HTG</span>
+                  </div>
+                );
+              })}
               <div className="border-t mt-3 pt-3 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Sous-total</span>
