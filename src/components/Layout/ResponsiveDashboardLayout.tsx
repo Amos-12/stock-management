@@ -40,6 +40,7 @@ export const ResponsiveDashboardLayout = ({
   const { signOut, profile } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [notificationCount, setNotificationCount] = useState(0);
 
@@ -126,34 +127,47 @@ export const ResponsiveDashboardLayout = ({
     }
   };
 
-  const SidebarContent = () => (
-    <div className="p-6 space-y-6">
-      <div className="text-center border-b border-border pb-4">
+  const SidebarContent = ({ isDesktop = false }: { isDesktop?: boolean }) => (
+    <div className={cn("p-6 space-y-6 h-full flex flex-col", isDesktop && sidebarCollapsed && "p-3")}>
+      <div className={cn(
+        "border-b border-border pb-4",
+        isDesktop && sidebarCollapsed ? "text-center" : "text-center"
+      )}>
         {companySettings?.logo_url ? (
           <img 
             src={companySettings.logo_url} 
             alt="Logo" 
-            className="w-16 h-16 object-contain mx-auto mb-2" 
+            className={cn(
+              "object-contain mx-auto mb-2",
+              isDesktop && sidebarCollapsed ? "w-10 h-10" : "w-16 h-16"
+            )} 
           />
         ) : (
           <img 
             src={logo} 
             alt="Logo" 
-            className="w-16 h-16 object-contain mx-auto mb-2" 
+            className={cn(
+              "object-contain mx-auto mb-2",
+              isDesktop && sidebarCollapsed ? "w-10 h-10" : "w-16 h-16"
+            )} 
           />
         )}
-        <h2 className={cn(
-          "font-semibold text-foreground",
-          (companySettings?.company_name || title).length > 30 ? "text-sm" : "text-base"
-        )}>
-          {companySettings?.company_name || title}
-        </h2>
-        <Badge variant={role === 'admin' ? 'default' : 'secondary'} className="mt-2">
-          {role === 'admin' ? 'Administrateur' : 'Vendeur'}
-        </Badge>
+        {!(isDesktop && sidebarCollapsed) && (
+          <>
+            <h2 className={cn(
+              "font-semibold text-foreground",
+              (companySettings?.company_name || title).length > 30 ? "text-sm" : "text-base"
+            )}>
+              {companySettings?.company_name || title}
+            </h2>
+            <Badge variant={role === 'admin' ? 'default' : 'secondary'} className="mt-2">
+              {role === 'admin' ? 'Administrateur' : 'Vendeur'}
+            </Badge>
+          </>
+        )}
       </div>
       
-      <nav className="space-y-2">
+      <nav className="space-y-2 flex-1">
         {navItems.map((item: any) => {
           const Icon = item.icon;
           return (
@@ -161,19 +175,45 @@ export const ResponsiveDashboardLayout = ({
               key={item.value}
               variant={currentSection === item.value ? 'default' : 'ghost'}
               className={cn(
-                "w-full justify-start transition-smooth",
+                "w-full transition-smooth",
+                isDesktop && sidebarCollapsed ? "justify-center px-2" : "justify-start",
                 currentSection === item.value 
                   ? "bg-primary text-primary-foreground shadow-primary" 
                   : "hover:bg-primary/10 hover:text-primary"
               )}
               onClick={() => handleNavClick(item.value, item.route)}
+              title={isDesktop && sidebarCollapsed ? item.label : undefined}
             >
-              <Icon className="w-4 h-4 mr-3" />
-              {item.label}
+              <Icon className={cn("w-4 h-4", !(isDesktop && sidebarCollapsed) && "mr-3")} />
+              {!(isDesktop && sidebarCollapsed) && item.label}
             </Button>
           );
         })}
       </nav>
+
+      {/* Toggle Button for Desktop */}
+      {isDesktop && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="w-full mt-auto"
+          title={sidebarCollapsed ? 'Étendre le menu' : 'Réduire le menu'}
+        >
+          {sidebarCollapsed ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              Réduire
+            </>
+          )}
+        </Button>
+      )}
     </div>
   );
 
@@ -280,8 +320,11 @@ export const ResponsiveDashboardLayout = ({
       <div className="flex">
         <div className="flex w-full">
           {/* Desktop Sidebar */}
-          <aside className="w-64 flex-shrink-0 hidden lg:block bg-white border-r border-border h-[calc(100vh-64px)] sticky top-16">
-            <SidebarContent />
+          <aside className={cn(
+            "flex-shrink-0 hidden lg:block bg-white border-r border-border h-[calc(100vh-64px)] sticky top-16 transition-all duration-300",
+            sidebarCollapsed ? "w-20" : "w-64"
+          )}>
+            <SidebarContent isDesktop={true} />
           </aside>
 
           {/* Main Content */}

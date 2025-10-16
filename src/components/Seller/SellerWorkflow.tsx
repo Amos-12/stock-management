@@ -996,7 +996,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[60vh] md:max-h-[65vh] lg:max-h-[70vh] overflow-y-auto">
               {filteredProducts.map((product) => {
                 const cartItem = cart.find(item => item.id === product.id);
                 let availableStock = product.quantity;
@@ -1158,7 +1158,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 </Button>
               </div>
             ) : (
-              <div className="flex flex-col h-[calc(100vh-400px)] max-h-[600px]">
+              <div className="flex flex-col h-[55vh] md:h-[60vh] lg:h-[65vh]">
                 {/* Scrollable products list */}
                 <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                   {cart.map((item) => {
