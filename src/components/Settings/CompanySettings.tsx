@@ -130,7 +130,7 @@ export const CompanySettings = () => {
               id="company_name"
               value={settings.company_name}
               onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-              placeholder="QUINCAILLERIE PRO"
+              placeholder="Système Management!"
             />
           </div>
 
@@ -140,7 +140,7 @@ export const CompanySettings = () => {
               id="company_description"
               value={settings.company_description}
               onChange={(e) => setSettings({ ...settings, company_description: e.target.value })}
-              placeholder="Commerce de détail"
+              placeholder="Vente de produit alimentaire"
             />
           </div>
 
@@ -160,7 +160,7 @@ export const CompanySettings = () => {
               id="city"
               value={settings.city}
               onChange={(e) => setSettings({ ...settings, city: e.target.value })}
-              placeholder="Dakar 10000"
+              placeholder="Aux Cayes 8110"
             />
           </div>
 
@@ -170,7 +170,7 @@ export const CompanySettings = () => {
               id="phone"
               value={settings.phone}
               onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
-              placeholder="+221 XX XXX XX XX"
+              placeholder="+509 1234-5678"
             />
           </div>
 
@@ -181,7 +181,7 @@ export const CompanySettings = () => {
               type="email"
               value={settings.email}
               onChange={(e) => setSettings({ ...settings, email: e.target.value })}
-              placeholder="contact@quincaillerie.sn"
+              placeholder="contact@sysmanagement.com"
             />
           </div>
 

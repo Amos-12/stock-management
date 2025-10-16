@@ -22,7 +22,6 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { InvoiceGenerator } from '@/components/Invoice/InvoiceGenerator';
 import jsPDF from 'jspdf';
 import logo from '@/assets/logo.png';
 
@@ -435,8 +434,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       // Add logo image - use company logo if available, otherwise default
       try {
-        const logoWidth = 12;
-        const logoHeight = 12;
+        const logoWidth = 24;
+        const logoHeight = 24;
         const logoX = (receiptWidth - logoWidth) / 2;
         const logoToUse = companySettings.logo_url || logo;
         pdf.addImage(logoToUse, 'PNG', logoX, currentY, logoWidth, logoHeight);
@@ -570,11 +569,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       
       // Footer
       currentY += 3;
+      pdf.setFont('helvetica', 'italic');
       pdf.setFontSize(5);
-      pdf.text('Merci de votre visite!', contentWidth / 2 + margin, currentY, { align: 'center'});
+      pdf.text(`Merci d'avoir choisi ${companySettings.company_name} !`, contentWidth / 2 + margin, currentY, { align: 'center'});
 
       // Save and auto-print
-      const fileName = `recu_${receiptCode}.pdf`;
+      const fileName = `${receiptCode}.pdf`;
       pdf.save(fileName);
 
       setTimeout(() => {
@@ -614,45 +614,33 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       // Add logo image - use company logo if available, otherwise default
       try {
-        const logoSize = 20;
+        const logoSize = 36;
         const logoToUse = companySettings.logo_url || logo;
         pdf.addImage(logoToUse, 'PNG', margin, currentY, logoSize, logoSize);
       } catch (e) {
         console.error('Error adding logo to invoice:', e);
       }
 
-      // Company name on the left (in blue) - reduced size
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(41, 98, 255);
-      pdf.text(companySettings.company_name, margin + 25, currentY + 7);
-
       // Invoice number and dates on the right
       const createdAt = new Date(completedSale.created_at || Date.now());
       const pad = (n: number) => n.toString().padStart(2, '0');
-      const invoiceYear = createdAt.getFullYear();
-      const invoiceSeq = `${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}`;
-      const invoiceNumber = `FACTURE - ${invoiceYear}-${invoiceSeq}`;
+      const invoiceSeq = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
+      const invoiceNumber = `FACT-${invoiceSeq}`;
       
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
       pdf.text(invoiceNumber, pageWidth - margin, currentY, { align: 'right' });
       
-      currentY += 6;
+      currentY += 4;
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
       const dateStr = `${pad(createdAt.getDate())}/${pad(createdAt.getMonth()+1)}/${createdAt.getFullYear()}`;
       pdf.text(`Date de facturation: ${dateStr}`, pageWidth - margin, currentY, { align: 'right' });
       
-      currentY += 4;
-      const dueDate = new Date(createdAt);
-      dueDate.setDate(dueDate.getDate() + 30);
-      pdf.text(`Échéance: ${pad(dueDate.getDate())}/${pad(dueDate.getMonth()+1)}/${dueDate.getFullYear()}`, pageWidth - margin, currentY, { align: 'right' });
-
       // Company information on the left - Dynamic from settings
       currentY = margin + 25;
-      pdf.setFontSize(10);
+      pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
       pdf.text(companySettings.company_name, margin, currentY);
@@ -676,45 +664,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       currentY += 4;
       pdf.text(companySettings.email, margin, currentY);
 
-      // Customer information on the right
-      if (completedSale.customer_name || completedSale.customer_address) {
-        currentY = margin + 10;
-        
-        if (completedSale.customer_name) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(10);
-          pdf.setTextColor(0, 0, 0);
-          pdf.text(completedSale.customer_name, pageWidth - margin, currentY, { align: 'right' });
-          currentY += 5;
-        }
-        
-        if (completedSale.customer_address) {
-          pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(9);
-          pdf.setTextColor(80, 80, 80);
-          const address = String(completedSale.customer_address);
-          
-          // Split address into lines if too long
-          const maxLength = 40;
-          const addressLines = [];
-          for (let i = 0; i < address.length; i += maxLength) {
-            addressLines.push(address.substring(i, i + maxLength));
-          }
-          
-          addressLines.forEach(line => {
-            pdf.text(line, pageWidth - margin, currentY, { align: 'right' });
-            currentY += 4;
-          });
-        }
-      }
-
       // Customer information (if provided)
-      currentY = margin + 60;
+      currentY = margin + 55;
       if (completedSale.customer_name || completedSale.customer_address) {
         pdf.setFontSize(9);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(0, 0, 0);
-        pdf.text('CLIENT:', margin, currentY);
+        pdf.text('Information Client :', margin, currentY);
         
         currentY += 5;
         pdf.setFont('helvetica', 'normal');
@@ -726,7 +682,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           pdf.text(completedSale.customer_address, margin, currentY);
           currentY += 4;
         }
-        currentY += 6;
+        currentY += 4;
       }
 
       // Thank you message - Dynamic
@@ -735,7 +691,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.setTextColor(80, 80, 80);
       pdf.text(`Merci d'avoir choisi ${companySettings.company_name} !`, margin, currentY);
       
-      currentY += 10;
+      currentY += 4;
 
       // Table header with gray background
       pdf.setFillColor(220, 220, 220);
@@ -751,10 +707,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       const colX = {
         description: margin + 2,
-        quantity: margin + 70,
-        unit: margin + 95,
-        unitPrice: margin + 120,
-        total: margin + 155
+        quantity: margin + 65,
+        unit: margin + 85,
+        unitPrice: margin + 115,
+        total: margin + 150
       };
 
       currentY += 5.5;
@@ -796,8 +752,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         }
         
         // Wrap long descriptions - reduced length due to narrower column
-        if (description.length > 26) {
-          description = description.substring(0, 23) + '...';
+        if (description.length > 40) {
+          description = description.substring(0, 38) + '...';
         }
         
         pdf.setTextColor(0, 0, 0);
@@ -820,7 +776,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const tvaAmount = totalHT * tvaRate;
       const totalTTC = totalHT + tvaAmount;
       
-      pdf.setFont('courier', 'bold');
+      pdf.setFont('aptos', 'bold');
       pdf.setFontSize(10);
       
       const totalsX = colX.unitPrice;
@@ -864,19 +820,18 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.text(`${formatAmount(totalTTC, false)} HTG`, pageWidth - margin, currentY, { align: 'right' });
 
       // Payment information
-      currentY += 15;
+      currentY += 6;
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Moyens de paiement:', margin, currentY);
       
-      currentY += 5;
       pdf.setFont('helvetica', 'normal');
       const paymentMethodLabel = {
         espece: 'Espèces',
         cheque: 'Chèque',
         virement: 'Virement bancaire'
       }[completedSale.payment_method] || completedSale.payment_method || 'Espèces';
-      pdf.text(paymentMethodLabel, margin + 50, currentY);
+      pdf.text(paymentMethodLabel, margin + 33, currentY);
       
       // Payment terms from company settings
       if (companySettings.payment_terms) {
@@ -884,11 +839,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         pdf.setFont('helvetica', 'bold');
         pdf.text('Conditions de paiement:', margin, currentY);
         
-        currentY += 5;
         pdf.setFont('helvetica', 'normal');
         const termsLines = pdf.splitTextToSize(companySettings.payment_terms, pageWidth - margin * 2 - 50);
         termsLines.forEach((line: string) => {
-          pdf.text(line, margin + 50, currentY);
+          pdf.text(line, margin + 38, currentY);
           currentY += 4;
         });
       }
@@ -909,7 +863,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       // Save
       const codeStamp = `${createdAt.getFullYear()}${pad(createdAt.getMonth()+1)}${pad(createdAt.getDate())}${pad(createdAt.getHours())}${pad(createdAt.getMinutes())}${pad(createdAt.getSeconds())}`;
-      const fileName = `facture_FACT-${codeStamp}.pdf`;
+      const fileName = `FACT-${codeStamp}.pdf`;
       pdf.save(fileName);
 
       toast({
@@ -1334,8 +1288,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               })}
               <div className="border-t mt-3 pt-3 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>Sous-total</span>
-                  <span>{formatAmount(getSubtotal())}</span>
+                  <span><strong>Sous-total</strong></span>
+                  <span><strong>{formatAmount(getSubtotal())}</strong></span>
                 </div>
                 
                 {/* Discount Section */}
