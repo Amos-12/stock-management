@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -138,16 +138,32 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       if (error) throw error;
       
+      console.log('📦 Total products fetched:', data?.length);
+      
       // Filter products with available stock
       const availableProducts = (data || []).filter((product: Product) => {
+        let hasStock = false;
+        
         if (product.category === 'ceramique') {
-          return (product.stock_boite || 0) > 0;
+          hasStock = (product.stock_boite || 0) > 0;
+          if (hasStock) {
+            console.log('✅ Ceramique available:', product.name, 'stock_boite:', product.stock_boite);
+          }
         } else if (product.category === 'fer') {
-          return (product.stock_barre || 0) > 0;
+          hasStock = (product.stock_barre || 0) > 0;
         } else {
-          return product.quantity > 0;
+          hasStock = product.quantity > 0;
         }
+        
+        return hasStock;
       });
+      
+      console.log('📊 Available products by category:');
+      const byCat = availableProducts.reduce((acc: any, p: Product) => {
+        acc[p.category] = (acc[p.category] || 0) + 1;
+        return acc;
+      }, {});
+      console.log(byCat);
       
       setProducts(availableProducts as Product[]);
     } catch (error) {
@@ -432,10 +448,36 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const receiptWidth = 58;
       
       const items = completedSale.items || [];
-      const headerHeight = 50;
-      const itemsHeight = Math.max(items.length * 8, 10);
-      const footerHeight = 22;
-      const dynamicHeight = headerHeight + itemsHeight + footerHeight;
+      
+      // Calcul dynamique de la hauteur des infos client
+      const customerInfoHeight = 
+        (completedSale.customer_name ? 3 : 0) + 
+        (completedSale.customer_address ? 3 : 0);
+      
+      // Calcul dynamique de la hauteur des items
+      const itemsHeight = items.reduce((total: number, item: any) => {
+        let itemHeight = 6; // hauteur de base du nom du produit + ligne prix
+        
+        // Si dimension ou diamètre, ajouter une ligne
+        if (item.dimension || item.diametre) {
+          itemHeight += 3;
+        }
+        
+        // Si longueur en pieds pour le fer, ajouter une ligne
+        const ironProd = cart.find((p: any) => p.name === item.name);
+        if (ironProd?.longueur_barre_ft && ironProd.category === 'fer') {
+          itemHeight += 3;
+        }
+        
+        return total + itemHeight;
+      }, 0);
+      
+      // Calcul du footer
+      const hasDiscount = completedSale.discount_amount && completedSale.discount_amount > 0;
+      const footerHeight = 30 + (hasDiscount ? 3 : 0); // +3 si remise
+      
+      const headerHeight = 55; // Légèrement augmenté
+      const dynamicHeight = headerHeight + customerInfoHeight + itemsHeight + footerHeight + 15; // +15 marge sécurité
       
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -922,6 +964,15 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     { value: 'autres', label: 'Autres' }
   ];
 
+  // Liste dynamique des catégories disponibles avec produits
+  const availableCategories = useMemo(() => {
+    const categoriesWithProducts = new Set(products.map(p => p.category));
+    return [
+      { value: 'all', label: 'Toutes les catégories' },
+      ...categories.filter(cat => categoriesWithProducts.has(cat.value))
+    ];
+  }, [products]);
+
   const steps = [
     { id: 'products', label: 'Sélection Produits', icon: Package },
     { id: 'cart', label: 'Panier', icon: ShoppingCart },
@@ -1023,43 +1074,28 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 </Button>
               </div>
               
-              <div className="flex gap-2 flex-wrap mt-2">
-                <span className="text-sm font-medium text-muted-foreground self-center">Catégorie:</span>
-                <Button
-                  size="sm"
-                  variant={categoryFilter === 'all' ? 'default' : 'outline'}
-                  onClick={() => setCategoryFilter('all')}
-                >
-                  Toutes
-                </Button>
-                <Button
-                  size="sm"
-                  variant={categoryFilter === 'ceramique' ? 'default' : 'outline'}
-                  onClick={() => setCategoryFilter('ceramique')}
-                >
-                  Céramique
-                </Button>
-                <Button
-                  size="sm"
-                  variant={categoryFilter === 'fer' ? 'default' : 'outline'}
-                  onClick={() => setCategoryFilter('fer')}
-                >
-                  Fer
-                </Button>
-                <Button
-                  size="sm"
-                  variant={categoryFilter === 'energie' ? 'default' : 'outline'}
-                  onClick={() => setCategoryFilter('energie')}
-                >
-                  Énergie
-                </Button>
-                <Button
-                  size="sm"
-                  variant={categoryFilter === 'autres' ? 'default' : 'outline'}
-                  onClick={() => setCategoryFilter('autres')}
-                >
-                  Autres
-                </Button>
+              <div className="flex gap-2 items-center mt-2">
+                <Label htmlFor="category-filter" className="text-sm font-medium text-muted-foreground">
+                  Catégorie:
+                </Label>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger id="category-filter" className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCategories.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex justify-between items-center mt-3 px-1">
+                <Badge variant="secondary" className="text-base">
+                  {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''} disponible{filteredProducts.length > 1 ? 's' : ''}
+                </Badge>
               </div>
             </div>
           </CardHeader>
