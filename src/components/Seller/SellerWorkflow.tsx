@@ -434,8 +434,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       // Add logo image - use company logo if available, otherwise default
       try {
-        const logoWidth = 24;
-        const logoHeight = 24;
+        const logoWidth = 18;
+        const logoHeight = 18;
         const logoX = (receiptWidth - logoWidth) / 2;
         const logoToUse = companySettings.logo_url || logo;
         pdf.addImage(logoToUse, 'PNG', logoX, currentY, logoWidth, logoHeight);
