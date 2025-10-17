@@ -32,6 +32,9 @@ interface Product {
   quantity: number;
   price: number;
   alert_threshold: number;
+  stock_barre?: number;
+  bars_per_ton?: number;
+  diametre?: string;
 }
 
 const RestockPage = () => {
@@ -51,7 +54,7 @@ const RestockPage = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, category, quantity, price, alert_threshold')
+        .select('id, name, category, quantity, price, alert_threshold, stock_barre, bars_per_ton, diametre')
         .eq('is_active', true)
         .order('name');
 
@@ -87,37 +90,74 @@ const RestockPage = () => {
       const product = products.find(p => p.id === selectedProduct);
       if (!product) throw new Error('Produit introuvable');
 
-      const quantityToAdd = Number(restockQuantity);
-      const newQuantity = product.quantity + quantityToAdd;
+      const quantityToAdd = parseFloat(restockQuantity);
+      
+      // For iron products: handle tonnage to bars conversion
+      if (product.category === 'fer' && product.bars_per_ton) {
+        const barsToAdd = quantityToAdd * product.bars_per_ton;
+        const currentStock = product.stock_barre || 0;
+        const newStock = currentStock + barsToAdd;
 
-      // Update product quantity
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ quantity: newQuantity })
-        .eq('id', selectedProduct);
+        // Update iron bar stock
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ stock_barre: newStock })
+          .eq('id', selectedProduct);
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
 
-      // Record stock movement
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error: movementError } = await supabase
-        .from('stock_movements')
-        .insert({
-          product_id: selectedProduct,
-          movement_type: 'in',
-          quantity: quantityToAdd,
-          previous_quantity: product.quantity,
-          new_quantity: newQuantity,
-          reason: reason || 'Réapprovisionnement manuel',
-          created_by: user?.id
+        // Record stock movement
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error: movementError } = await supabase
+          .from('stock_movements')
+          .insert({
+            product_id: selectedProduct,
+            movement_type: 'in',
+            quantity: barsToAdd,
+            previous_quantity: currentStock,
+            new_quantity: newStock,
+            reason: `${reason || 'Réapprovisionnement'} (${quantityToAdd} tonne${quantityToAdd > 1 ? 's' : ''} = ${barsToAdd.toFixed(2)} barres)`,
+            created_by: user?.id
+          });
+
+        if (movementError) throw movementError;
+
+        toast({
+          title: "Succès",
+          description: `${product.name} réapprovisionné: +${quantityToAdd} tonne${quantityToAdd > 1 ? 's' : ''} (+${barsToAdd.toFixed(2)} barres)`
         });
+      } else {
+        // For regular products
+        const newQuantity = product.quantity + quantityToAdd;
 
-      if (movementError) throw movementError;
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ quantity: newQuantity })
+          .eq('id', selectedProduct);
 
-      toast({
-        title: "Succès",
-        description: `${product.name} réapprovisionné avec succès (+${quantityToAdd})`
-      });
+        if (updateError) throw updateError;
+
+        // Record stock movement
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error: movementError } = await supabase
+          .from('stock_movements')
+          .insert({
+            product_id: selectedProduct,
+            movement_type: 'in',
+            quantity: quantityToAdd,
+            previous_quantity: product.quantity,
+            new_quantity: newQuantity,
+            reason: reason || 'Réapprovisionnement manuel',
+            created_by: user?.id
+          });
+
+        if (movementError) throw movementError;
+
+        toast({
+          title: "Succès",
+          description: `${product.name} réapprovisionné avec succès (+${quantityToAdd})`
+        });
+      }
 
       // Reset form
       setSelectedProduct('');
@@ -209,11 +249,28 @@ const RestockPage = () => {
                   <Label>Quantité à ajouter *</Label>
                   <Input
                     type="number"
-                    min="1"
+                    step="0.01"
+                    min="0.01"
                     value={restockQuantity}
                     onChange={(e) => setRestockQuantity(e.target.value)}
-                    placeholder="Ex: 50"
+                    placeholder={
+                      products.find(p => p.id === selectedProduct)?.category === 'fer'
+                        ? "Ex: 0.25 (tonne), 0.5, 1, 1.75"
+                        : "Ex: 50"
+                    }
                   />
+                  {products.find(p => p.id === selectedProduct)?.category === 'fer' && products.find(p => p.id === selectedProduct)?.bars_per_ton && (
+                    <p className="text-xs text-muted-foreground">
+                      {restockQuantity && parseFloat(restockQuantity) > 0 ? (
+                        <>
+                          {parseFloat(restockQuantity)} tonne{parseFloat(restockQuantity) > 1 ? 's' : ''} = {' '}
+                          {(parseFloat(restockQuantity) * (products.find(p => p.id === selectedProduct)?.bars_per_ton || 0)).toFixed(2)} barres
+                        </>
+                      ) : (
+                        'Saisir en tonnes (accepte les décimales)'
+                      )}
+                    </p>
+                  )}
                 </div>
               </div>
 

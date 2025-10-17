@@ -19,12 +19,19 @@ interface CompanySettings {
   tva_rate: number;
   payment_terms: string;
   logo_url?: string;
+  logo_position_x?: number;
+  logo_position_y?: number;
+  logo_width?: number;
+  logo_height?: number;
 }
 
 export const CompanySettings = () => {
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>('');
 
   useEffect(() => {
     fetchSettings();
@@ -40,6 +47,9 @@ export const CompanySettings = () => {
 
       if (error) throw error;
       setSettings(data);
+      if (data.logo_url) {
+        setLogoPreview(data.logo_url);
+      }
     } catch (error) {
       console.error('Error fetching company settings:', error);
       toast({
@@ -49,6 +59,73 @@ export const CompanySettings = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: "Fichier trop volumineux",
+          description: "La taille maximale est de 2MB",
+          variant: "destructive"
+        });
+        return;
+      }
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleLogoUpload = async () => {
+    if (!logoFile || !settings) return;
+
+    setUploading(true);
+    try {
+      const fileExt = logoFile.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('company-assets')
+        .upload(filePath, logoFile);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('company-assets')
+        .getPublicUrl(filePath);
+
+      // Update settings with new logo URL
+      const { error: updateError } = await supabase
+        .from('company_settings')
+        .update({ logo_url: publicUrl })
+        .eq('id', settings.id);
+
+      if (updateError) throw updateError;
+
+      setSettings({ ...settings, logo_url: publicUrl });
+      toast({
+        title: "Logo téléversé",
+        description: "Le logo a été enregistré avec succès"
+      });
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de téléverser le logo",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+      setLogoFile(null);
     }
   };
 
@@ -68,6 +145,10 @@ export const CompanySettings = () => {
           email: settings.email,
           tva_rate: settings.tva_rate,
           payment_terms: settings.payment_terms,
+          logo_position_x: settings.logo_position_x,
+          logo_position_y: settings.logo_position_y,
+          logo_width: settings.logo_width,
+          logo_height: settings.logo_height,
         })
         .eq('id', settings.id);
 
@@ -123,6 +204,96 @@ export const CompanySettings = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Logo Section */}
+        <div className="space-y-4 pb-6 border-b">
+          <div>
+            <Label className="text-base font-semibold">Logo de l'entreprise</Label>
+            <p className="text-sm text-muted-foreground mt-1">
+              Téléversez le logo qui apparaîtra sur les factures et reçus
+            </p>
+          </div>
+          
+          {logoPreview && (
+            <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
+              <img src={logoPreview} alt="Logo" className="h-20 w-20 object-contain" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Aperçu du logo actuel</p>
+                <p className="text-xs text-muted-foreground">Formats acceptés: PNG, JPG (max 2MB)</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg"
+              onChange={handleLogoChange}
+              className="flex-1"
+            />
+            {logoFile && (
+              <Button 
+                onClick={handleLogoUpload} 
+                disabled={uploading}
+                className="gap-2"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Upload...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Téléverser
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+
+          {settings?.logo_url && (
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="space-y-2">
+                <Label htmlFor="logo_width">Largeur (px)</Label>
+                <Input
+                  id="logo_width"
+                  type="number"
+                  value={settings.logo_width || 50}
+                  onChange={(e) => setSettings({ ...settings, logo_width: parseFloat(e.target.value) || 50 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="logo_height">Hauteur (px)</Label>
+                <Input
+                  id="logo_height"
+                  type="number"
+                  value={settings.logo_height || 50}
+                  onChange={(e) => setSettings({ ...settings, logo_height: parseFloat(e.target.value) || 50 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="logo_position_x">Position X</Label>
+                <Input
+                  id="logo_position_x"
+                  type="number"
+                  value={settings.logo_position_x || 0}
+                  onChange={(e) => setSettings({ ...settings, logo_position_x: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="logo_position_y">Position Y</Label>
+                <Input
+                  id="logo_position_y"
+                  type="number"
+                  value={settings.logo_position_y || 0}
+                  onChange={(e) => setSettings({ ...settings, logo_position_y: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Company Information */}
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="company_name">Nom de l'entreprise</Label>

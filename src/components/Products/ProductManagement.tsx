@@ -18,6 +18,7 @@ interface Product {
   category: string;
   unit: string;
   price: number;
+  purchase_price?: number;
   quantity: number;
   alert_threshold: number;
   is_active: boolean;
@@ -32,6 +33,8 @@ interface Product {
   // Iron bar-specific fields
   diametre?: string;
   longueur_barre?: number;
+  longueur_barre_ft?: number;
+  bars_per_ton?: number;
   prix_par_metre?: number;
   prix_par_barre?: number;
   stock_barre?: number;
@@ -61,6 +64,7 @@ export const ProductManagement = () => {
     category: ProductCategory;
     unit: string;
     price: string;
+    purchase_price: string;
     quantity: string;
     alert_threshold: string;
     description: string;
@@ -69,9 +73,11 @@ export const ProductManagement = () => {
     dimension: string;
     surface_par_boite: string;
     prix_m2: string;
+    prix_achat_m2: string;
     stock_boite: string;
     diametre: string;
-    longueur_barre: string;
+    longueur_barre_ft: string;
+    bars_per_ton: string;
     prix_par_metre: string;
     prix_par_barre: string;
     stock_barre: string;
@@ -85,6 +91,7 @@ export const ProductManagement = () => {
     category: 'alimentaires',
     unit: 'unité',
     price: '',
+    purchase_price: '',
     quantity: '',
     alert_threshold: '10',
     description: '',
@@ -93,9 +100,11 @@ export const ProductManagement = () => {
     dimension: '',
     surface_par_boite: '',
     prix_m2: '',
+    prix_achat_m2: '',
     stock_boite: '',
     diametre: '',
-    longueur_barre: '12',
+    longueur_barre_ft: '',
+    bars_per_ton: '',
     prix_par_metre: '',
     prix_par_barre: '',
     stock_barre: '',
@@ -157,6 +166,7 @@ export const ProductManagement = () => {
       category: 'alimentaires' as const,
       unit: 'unité',
       price: '',
+      purchase_price: '',
       quantity: '',
       alert_threshold: '10',
       description: '',
@@ -165,9 +175,11 @@ export const ProductManagement = () => {
       dimension: '',
       surface_par_boite: '',
       prix_m2: '',
+      prix_achat_m2: '',
       stock_boite: '',
       diametre: '',
-      longueur_barre: '12',
+      longueur_barre_ft: '',
+      bars_per_ton: '',
       prix_par_metre: '',
       prix_par_barre: '',
       stock_barre: '',
@@ -196,6 +208,7 @@ export const ProductManagement = () => {
       category: product.category as ProductCategory,
       unit: product.unit || 'unité',
       price: product.price.toString(),
+      purchase_price: product.purchase_price?.toString() || '',
       quantity: product.quantity.toString(),
       alert_threshold: product.alert_threshold.toString(),
       description: product.description || '',
@@ -204,9 +217,11 @@ export const ProductManagement = () => {
       dimension: product.dimension || '',
       surface_par_boite: product.surface_par_boite?.toString() || '',
       prix_m2: product.prix_m2?.toString() || '',
+      prix_achat_m2: product.purchase_price?.toString() || '',
       stock_boite: product.stock_boite?.toString() || '',
       diametre: product.diametre || '',
-      longueur_barre: product.longueur_barre?.toString() || '12',
+      longueur_barre_ft: product.longueur_barre_ft?.toString() || '',
+      bars_per_ton: product.bars_per_ton?.toString() || '',
       prix_par_metre: product.prix_par_metre?.toString() || '',
       prix_par_barre: product.prix_par_barre?.toString() || '',
       stock_barre: product.stock_barre?.toString() || '',
@@ -235,10 +250,10 @@ export const ProductManagement = () => {
 
     // Validation for ceramic products
     if (formData.category === 'ceramique') {
-      if (!formData.dimension || !formData.surface_par_boite || !formData.prix_m2 || !formData.stock_boite) {
+      if (!formData.dimension || !formData.surface_par_boite || !formData.prix_m2 || !formData.prix_achat_m2 || !formData.stock_boite) {
         toast({
           title: "Erreur de validation",
-          description: "Veuillez remplir tous les champs obligatoires pour la céramique",
+          description: "Veuillez remplir tous les champs obligatoires pour la céramique (incluant prix d'achat)",
           variant: "destructive"
         });
         return;
@@ -247,7 +262,7 @@ export const ProductManagement = () => {
 
     // Validation for iron products
     if (formData.category === 'fer') {
-      if (!formData.diametre || !formData.longueur_barre || !formData.prix_par_metre || !formData.stock_barre) {
+      if (!formData.diametre || !formData.longueur_barre_ft || !formData.bars_per_ton || !formData.prix_par_barre || !formData.stock_barre) {
         toast({
           title: "Erreur de validation",
           description: "Veuillez remplir tous les champs obligatoires pour le fer",
@@ -290,24 +305,28 @@ export const ProductManagement = () => {
       if (formData.category === 'ceramique') {
         // Use ceramic-specific values
         productData.price = parseFloat(formData.prix_m2);
-        productData.quantity = parseInt(formData.stock_boite);
+        productData.purchase_price = parseFloat(formData.prix_achat_m2);
+        productData.quantity = parseFloat(formData.stock_boite);
         productData.dimension = formData.dimension;
         productData.surface_par_boite = parseFloat(formData.surface_par_boite);
         productData.prix_m2 = parseFloat(formData.prix_m2);
-        productData.stock_boite = parseInt(formData.stock_boite);
+        productData.stock_boite = parseFloat(formData.stock_boite);
       } else if (formData.category === 'fer') {
         // Use iron bar-specific values
         productData.price = parseFloat(formData.prix_par_barre);
-        productData.quantity = parseInt(formData.stock_barre);
+        productData.purchase_price = formData.purchase_price ? parseFloat(formData.purchase_price) : parseFloat(formData.prix_par_barre) * 0.7;
+        productData.quantity = parseFloat(formData.stock_barre);
         productData.diametre = formData.diametre;
-        productData.longueur_barre = parseFloat(formData.longueur_barre);
-        productData.prix_par_metre = parseFloat(formData.prix_par_metre);
+        productData.longueur_barre_ft = parseFloat(formData.longueur_barre_ft);
+        productData.bars_per_ton = parseFloat(formData.bars_per_ton);
+        productData.prix_par_metre = formData.prix_par_metre ? parseFloat(formData.prix_par_metre) : null;
         productData.prix_par_barre = parseFloat(formData.prix_par_barre);
-        productData.stock_barre = parseInt(formData.stock_barre);
+        productData.stock_barre = parseFloat(formData.stock_barre);
       } else {
         // Use standard values
         productData.price = parseFloat(formData.price);
-        productData.quantity = parseInt(formData.quantity);
+        productData.purchase_price = formData.purchase_price ? parseFloat(formData.purchase_price) : null;
+        productData.quantity = parseFloat(formData.quantity);
       }
 
       if (editingProduct) {
@@ -538,7 +557,7 @@ export const ProductManagement = () => {
                   {formData.category !== 'ceramique' && formData.category !== 'fer' && (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="price">Prix (HTG) *</Label>
+                        <Label htmlFor="price">Prix de vente (HTG) *</Label>
                         <Input
                           id="price"
                           type="number"
@@ -550,10 +569,29 @@ export const ProductManagement = () => {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="purchase_price">Prix d'achat (HTG)</Label>
+                        <Input
+                          id="purchase_price"
+                          type="number"
+                          step="0.01"
+                          value={formData.purchase_price}
+                          onChange={(e) => setFormData({...formData, purchase_price: e.target.value})}
+                          placeholder="0.00 HTG"
+                        />
+                        <p className="text-xs text-muted-foreground">Coût payé par le magasin (optionnel)</p>
+                        {formData.purchase_price && formData.price && (
+                          <p className="text-xs font-medium text-success">
+                            Bénéfice: {(parseFloat(formData.price) - parseFloat(formData.purchase_price)).toFixed(2)} HTG
+                            ({(((parseFloat(formData.price) - parseFloat(formData.purchase_price)) / parseFloat(formData.price)) * 100).toFixed(1)}%)
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="quantity">Quantité *</Label>
                         <Input
                           id="quantity"
                           type="number"
+                          step="0.01"
                           required
                           value={formData.quantity}
                           onChange={(e) => setFormData({...formData, quantity: e.target.value})}
@@ -635,7 +673,7 @@ export const ProductManagement = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="prix_m2">Prix au m² (HTG) *</Label>
+                      <Label htmlFor="prix_m2">Prix de vente par m² (HTG) *</Label>
                       <Input
                         id="prix_m2"
                         type="number"
@@ -645,17 +683,42 @@ export const ProductManagement = () => {
                         onChange={(e) => setFormData({...formData, prix_m2: e.target.value})}
                         placeholder="1200.00"
                       />
+                      <p className="text-xs text-muted-foreground">Prix de revente au client</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="prix_achat_m2">Prix d'achat par m² (HTG) *</Label>
+                      <Input
+                        id="prix_achat_m2"
+                        type="number"
+                        step="0.01"
+                        required
+                        value={formData.prix_achat_m2}
+                        onChange={(e) => {
+                          const prixAchat = e.target.value;
+                          setFormData({...formData, prix_achat_m2: prixAchat});
+                        }}
+                        placeholder="840.00"
+                      />
+                      <p className="text-xs text-muted-foreground">Coût unitaire payé par le magasin</p>
+                      {formData.prix_achat_m2 && formData.prix_m2 && (
+                        <p className="text-xs font-medium text-success">
+                          Bénéfice: {(parseFloat(formData.prix_m2) - parseFloat(formData.prix_achat_m2)).toFixed(2)} HTG/m²
+                          ({(((parseFloat(formData.prix_m2) - parseFloat(formData.prix_achat_m2)) / parseFloat(formData.prix_m2)) * 100).toFixed(1)}%)
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="stock_boite">Stock (boîtes) *</Label>
                       <Input
                         id="stock_boite"
                         type="number"
+                        step="0.01"
                         required
                         value={formData.stock_boite}
                         onChange={(e) => setFormData({...formData, stock_boite: e.target.value})}
                         placeholder="24"
                       />
+                      <p className="text-xs text-muted-foreground">Accepte les décimales</p>
                     </div>
                   </div>
                 )}
@@ -668,79 +731,92 @@ export const ProductManagement = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="diametre">Diamètre *</Label>
-                      <Input
-                        id="diametre"
-                        required
+                      <Select
                         value={formData.diametre}
-                        onChange={(e) => setFormData({...formData, diametre: e.target.value})}
-                        placeholder="Ex: Ø 3/8&quot;, Ø 1/2&quot;"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="longueur_barre">Longueur barre (m) *</Label>
-                      <Input
-                        id="longueur_barre"
-                        type="number"
-                        step="0.01"
-                        required
-                        value={formData.longueur_barre}
-                        onChange={(e) => {
-                          const longueur = e.target.value;
-                          const prixMetre = parseFloat(formData.prix_par_metre) || 0;
-                          const prixBarre = prixMetre && longueur ? (prixMetre * parseFloat(longueur)).toFixed(2) : '';
-                          setFormData({
-                            ...formData, 
-                            longueur_barre: longueur,
-                            prix_par_barre: prixBarre
-                          });
+                        onValueChange={(value) => {
+                          // Auto-set bars_per_ton based on diameter
+                          let barsPerTon = '';
+                          if (value === '1/2"') barsPerTon = '110';
+                          else if (value === '3/8"') barsPerTon = '195';
+                          else if (value === '1/4"') barsPerTon = '660';
+                          setFormData({...formData, diametre: value, bars_per_ton: barsPerTon});
                         }}
-                        placeholder="12"
-                      />
+                      >
+                        <SelectTrigger className="pointer-events-auto">
+                          <SelectValue placeholder="Sélectionner le diamètre" />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto z-[150]">
+                          <SelectItem value='1/2"'>1/2 pouce (110 barres/tonne)</SelectItem>
+                          <SelectItem value='3/8"'>3/8 pouce (195 barres/tonne)</SelectItem>
+                          <SelectItem value='1/4"'>1/4 pouce (660 barres/tonne)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="prix_par_metre">Prix par mètre (HTG) *</Label>
+                      <Label htmlFor="bars_per_ton">Barres par tonne 🔢</Label>
                       <Input
-                        id="prix_par_metre"
+                        id="bars_per_ton"
                         type="number"
-                        step="0.01"
-                        required
-                        value={formData.prix_par_metre}
-                        onChange={(e) => {
-                          const prixMetre = e.target.value;
-                          const longueur = parseFloat(formData.longueur_barre) || 12;
-                          const prixBarre = prixMetre ? (parseFloat(prixMetre) * longueur).toFixed(2) : '';
-                          setFormData({
-                            ...formData, 
-                            prix_par_metre: prixMetre,
-                            prix_par_barre: prixBarre
-                          });
-                        }}
-                        placeholder="62.50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="prix_par_barre">Prix par barre (HTG) 🔢</Label>
-                      <Input
-                        id="prix_par_barre"
-                        type="number"
-                        step="0.01"
-                        value={formData.prix_par_barre}
+                        value={formData.bars_per_ton}
                         readOnly
                         className="bg-muted cursor-not-allowed"
                         placeholder="Calculé automatiquement"
                       />
-                      <p className="text-xs text-muted-foreground">Calculé: Prix/m × Longueur</p>
+                      <p className="text-xs text-muted-foreground">Calculé selon le diamètre</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="longueur_barre_ft">Longueur barre (pieds) *</Label>
+                      <Select
+                        value={formData.longueur_barre_ft}
+                        onValueChange={(value) => setFormData({...formData, longueur_barre_ft: value})}
+                      >
+                        <SelectTrigger className="pointer-events-auto">
+                          <SelectValue placeholder="Sélectionner la longueur" />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto z-[150]">
+                          <SelectItem value="27">27 ft</SelectItem>
+                          <SelectItem value="30">30 ft</SelectItem>
+                          <SelectItem value="32">32 ft</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="prix_par_barre">Prix par barre (HTG) *</Label>
+                      <Input
+                        id="prix_par_barre"
+                        type="number"
+                        step="0.01"
+                        required
+                        value={formData.prix_par_barre}
+                        onChange={(e) => setFormData({...formData, prix_par_barre: e.target.value})}
+                        placeholder="750.00"
+                      />
+                      <p className="text-xs text-muted-foreground">Prix unitaire d'une barre</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="stock_barre">Stock (barres) *</Label>
                       <Input
                         id="stock_barre"
                         type="number"
+                        step="0.01"
                         required
                         value={formData.stock_barre}
                         onChange={(e) => setFormData({...formData, stock_barre: e.target.value})}
                         placeholder="50"
                       />
+                      <p className="text-xs text-muted-foreground">Accepte les décimales pour les fractions de tonne</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="purchase_price">Prix d'achat par barre (HTG)</Label>
+                      <Input
+                        id="purchase_price"
+                        type="number"
+                        step="0.01"
+                        value={formData.purchase_price}
+                        onChange={(e) => setFormData({...formData, purchase_price: e.target.value})}
+                        placeholder="525.00"
+                      />
+                      <p className="text-xs text-muted-foreground">Coût unitaire payé par le magasin</p>
                     </div>
                   </div>
                 )}

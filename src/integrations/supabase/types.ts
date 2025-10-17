@@ -23,7 +23,11 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          logo_height: number | null
+          logo_position_x: number | null
+          logo_position_y: number | null
           logo_url: string | null
+          logo_width: number | null
           payment_terms: string | null
           phone: string
           tva_rate: number
@@ -37,7 +41,11 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          logo_height?: number | null
+          logo_position_x?: number | null
+          logo_position_y?: number | null
           logo_url?: string | null
+          logo_width?: number | null
           payment_terms?: string | null
           phone?: string
           tva_rate?: number
@@ -51,7 +59,11 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          logo_height?: number | null
+          logo_position_x?: number | null
+          logo_position_y?: number | null
           logo_url?: string | null
+          logo_width?: number | null
           payment_terms?: string | null
           phone?: string
           tva_rate?: number
@@ -62,6 +74,7 @@ export type Database = {
       products: {
         Row: {
           alert_threshold: number
+          bars_per_ton: number | null
           capacite: number | null
           category: Database["public"]["Enums"]["product_category"]
           created_at: string
@@ -73,12 +86,14 @@ export type Database = {
           id: string
           is_active: boolean
           longueur_barre: number | null
+          longueur_barre_ft: number | null
           name: string
           price: number
           prix_m2: number | null
           prix_par_barre: number | null
           prix_par_metre: number | null
           puissance: number | null
+          purchase_price: number | null
           quantity: number
           sale_type: Database["public"]["Enums"]["sale_type"]
           specifications_techniques: Json | null
@@ -92,6 +107,7 @@ export type Database = {
         }
         Insert: {
           alert_threshold?: number
+          bars_per_ton?: number | null
           capacite?: number | null
           category: Database["public"]["Enums"]["product_category"]
           created_at?: string
@@ -103,12 +119,14 @@ export type Database = {
           id?: string
           is_active?: boolean
           longueur_barre?: number | null
+          longueur_barre_ft?: number | null
           name: string
           price: number
           prix_m2?: number | null
           prix_par_barre?: number | null
           prix_par_metre?: number | null
           puissance?: number | null
+          purchase_price?: number | null
           quantity?: number
           sale_type?: Database["public"]["Enums"]["sale_type"]
           specifications_techniques?: Json | null
@@ -122,6 +140,7 @@ export type Database = {
         }
         Update: {
           alert_threshold?: number
+          bars_per_ton?: number | null
           capacite?: number | null
           category?: Database["public"]["Enums"]["product_category"]
           created_at?: string
@@ -133,12 +152,14 @@ export type Database = {
           id?: string
           is_active?: boolean
           longueur_barre?: number | null
+          longueur_barre_ft?: number | null
           name?: string
           price?: number
           prix_m2?: number | null
           prix_par_barre?: number | null
           prix_par_metre?: number | null
           puissance?: number | null
+          purchase_price?: number | null
           quantity?: number
           sale_type?: Database["public"]["Enums"]["sale_type"]
           specifications_techniques?: Json | null
@@ -187,6 +208,8 @@ export type Database = {
           id: string
           product_id: string
           product_name: string
+          profit_amount: number | null
+          purchase_price_at_sale: number | null
           quantity: number
           sale_id: string
           subtotal: number
@@ -197,6 +220,8 @@ export type Database = {
           id?: string
           product_id: string
           product_name: string
+          profit_amount?: number | null
+          purchase_price_at_sale?: number | null
           quantity: number
           sale_id: string
           subtotal: number
@@ -207,6 +232,8 @@ export type Database = {
           id?: string
           product_id?: string
           product_name?: string
+          profit_amount?: number | null
+          purchase_price_at_sale?: number | null
           quantity?: number
           sale_id?: string
           subtotal?: number

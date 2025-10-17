@@ -116,7 +116,22 @@ Deno.serve(async (req) => {
 
     // Process each item: create sale_item, update stock, and create stock_movement
     for (const item of saleData.items) {
-      // Insert sale item
+      // Get current product with all fields including purchase_price
+      const { data: currentProduct, error: fetchError } = await supabaseClient
+        .from('products')
+        .select('quantity, stock_boite, stock_barre, category, purchase_price')
+        .eq('id', item.product_id)
+        .single()
+
+      if (fetchError) {
+        throw new Error(`Failed to fetch product ${item.product_name}`)
+      }
+
+      // Calculate profit
+      const purchasePriceAtSale = currentProduct.purchase_price || 0
+      const profitAmount = (item.unit_price - purchasePriceAtSale) * item.quantity
+
+      // Insert sale item with profit data
       const { error: itemError } = await supabaseClient
         .from('sale_items')
         .insert([{
@@ -126,22 +141,13 @@ Deno.serve(async (req) => {
           quantity: item.quantity,
           unit_price: item.unit_price,
           subtotal: item.subtotal,
+          purchase_price_at_sale: purchasePriceAtSale,
+          profit_amount: profitAmount
         }])
 
       if (itemError) {
         console.error('Sale item error:', itemError)
         throw new Error(`Failed to create sale item for ${item.product_name}`)
-      }
-
-      // Get current product with all stock fields and category
-      const { data: currentProduct, error: fetchError } = await supabaseClient
-        .from('products')
-        .select('quantity, stock_boite, stock_barre, category')
-        .eq('id', item.product_id)
-        .single()
-
-      if (fetchError) {
-        throw new Error(`Failed to fetch product ${item.product_name}`)
       }
 
       // Determine which stock field to update based on category
@@ -209,6 +215,7 @@ Deno.serve(async (req) => {
       }
 
       console.log(`Stock updated for ${item.product_name}: ${previousQuantity} -> ${newQuantity}`)
+      console.log(`Profit recorded: ${profitAmount.toFixed(2)} HTG (purchase: ${purchasePriceAtSale}, sale: ${item.unit_price})`)
     }
 
     return new Response(

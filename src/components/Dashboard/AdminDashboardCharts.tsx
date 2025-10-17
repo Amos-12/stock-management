@@ -64,6 +64,12 @@ export const AdminDashboardCharts = () => {
   const [todaySales, setTodaySales] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalSellers, setTotalSellers] = useState(0);
+  
+  // Profit stats
+  const [todayProfit, setTodayProfit] = useState(0);
+  const [weekProfit, setWeekProfit] = useState(0);
+  const [monthProfit, setMonthProfit] = useState(0);
+  const [yearProfit, setYearProfit] = useState(0);
 
   useEffect(() => {
     fetchChartData();
@@ -93,13 +99,13 @@ export const AdminDashboardCharts = () => {
 
   const fetchStatsData = async () => {
     try {
-      // Today's revenue and sales
+      // Today's revenue, sales, and profit
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
       const { data: todayData, error: todayError } = await supabase
         .from('sales')
-        .select('total_amount')
+        .select('total_amount, id')
         .gte('created_at', today.toISOString());
       
       if (todayError) throw todayError;
@@ -108,7 +114,18 @@ export const AdminDashboardCharts = () => {
       setTodayRevenue(todayRev);
       setTodaySales(todayData?.length || 0);
 
-      // Week revenue
+      // Calculate today's profit from sale_items
+      const { data: todayItems, error: todayItemsError } = await supabase
+        .from('sale_items')
+        .select('profit_amount, sales!inner(created_at)')
+        .gte('sales.created_at', today.toISOString());
+      
+      if (!todayItemsError) {
+        const todayPft = todayItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
+        setTodayProfit(todayPft);
+      }
+
+      // Week revenue and profit
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const { data: weekData, error: weekError } = await supabase
         .from('sales')
@@ -118,7 +135,17 @@ export const AdminDashboardCharts = () => {
       if (weekError) throw weekError;
       setWeekRevenue(weekData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0);
 
-      // Month revenue
+      const { data: weekItems, error: weekItemsError } = await supabase
+        .from('sale_items')
+        .select('profit_amount, sales!inner(created_at)')
+        .gte('sales.created_at', weekAgo.toISOString());
+      
+      if (!weekItemsError) {
+        const weekPft = weekItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
+        setWeekProfit(weekPft);
+      }
+
+      // Month revenue and profit
       const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const { data: monthData, error: monthError } = await supabase
         .from('sales')
@@ -128,7 +155,17 @@ export const AdminDashboardCharts = () => {
       if (monthError) throw monthError;
       setMonthRevenue(monthData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0);
 
-      // Year revenue
+      const { data: monthItems, error: monthItemsError } = await supabase
+        .from('sale_items')
+        .select('profit_amount, sales!inner(created_at)')
+        .gte('sales.created_at', monthAgo.toISOString());
+      
+      if (!monthItemsError) {
+        const monthPft = monthItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
+        setMonthProfit(monthPft);
+      }
+
+      // Year revenue and profit
       const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
       const { data: yearData, error: yearError } = await supabase
         .from('sales')
@@ -137,6 +174,16 @@ export const AdminDashboardCharts = () => {
       
       if (yearError) throw yearError;
       setYearRevenue(yearData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0);
+
+      const { data: yearItems, error: yearItemsError } = await supabase
+        .from('sale_items')
+        .select('profit_amount, sales!inner(created_at)')
+        .gte('sales.created_at', yearAgo.toISOString());
+      
+      if (!yearItemsError) {
+        const yearPft = yearItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
+        setYearProfit(yearPft);
+      }
 
       // Total products
       const { count: productsCount, error: productsError } = await supabase
@@ -323,35 +370,35 @@ export const AdminDashboardCharts = () => {
             isPositive: true,
             label: "vs hier"
           }}
+          variant="default"
+        />
+        <StatsCard
+          title="Bénéfices Aujourd'hui"
+          value={`${todayProfit.toFixed(2)} HTG`}
+          icon={TrendingUp}
+          change={{
+            value: 15.3,
+            isPositive: true,
+            label: "vs hier"
+          }}
           variant="success"
         />
         <StatsCard
           title="Ventes cette Semaine"
           value={`${weekRevenue.toFixed(2)} HTG`}
+          icon={DollarSign}
+          variant="default"
+        />
+        <StatsCard
+          title="Bénéfices cette Semaine"
+          value={`${weekProfit.toFixed(2)} HTG`}
           icon={TrendingUp}
           change={{
             value: 8.2,
             isPositive: true,
             label: "vs semaine dernière"
           }}
-          variant="default"
-        />
-        <StatsCard
-          title="Commandes Aujourd'hui"
-          value={todaySales}
-          icon={ShoppingCart}
-          change={{
-            value: 3.1,
-            isPositive: false,
-            label: "vs hier"
-          }}
-          variant="warning"
-        />
-        <StatsCard
-          title="Produits Actifs"
-          value={totalProducts}
-          icon={Package}
-          variant="default"
+          variant="success"
         />
       </div>
 
@@ -360,25 +407,25 @@ export const AdminDashboardCharts = () => {
           title="Ventes ce Mois"
           value={`${monthRevenue.toFixed(2)} HTG`}
           icon={Target}
-          variant="success"
+          variant="default"
         />
         <StatsCard
-          title="Ventes cette Année"
-          value={`${yearRevenue.toFixed(2)} HTG`}
+          title="Bénéfices ce Mois"
+          value={`${monthProfit.toFixed(2)} HTG`}
           icon={TrendingUp}
-          variant="default"
-        />
-        <StatsCard
-          title="Vendeurs Actifs"
-          value={totalSellers}
-          icon={Users}
-          variant="default"
-        />
-        <StatsCard
-          title="Marge Moyenne"
-          value="23.5%"
-          icon={Target}
           variant="success"
+        />
+        <StatsCard
+          title="Commandes Aujourd'hui"
+          value={todaySales}
+          icon={ShoppingCart}
+          variant="warning"
+        />
+        <StatsCard
+          title="Produits Actifs"
+          value={totalProducts}
+          icon={Package}
+          variant="default"
         />
       </div>
 
