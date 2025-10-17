@@ -43,6 +43,7 @@ interface Product {
   // Iron bar-specific fields
   diametre?: string;
   longueur_barre?: number;
+  longueur_barre_ft?: number;
   prix_par_metre?: number;
   prix_par_barre?: number;
   stock_barre?: number;
@@ -74,6 +75,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [saleTypeFilter, setSaleTypeFilter] = useState<'all' | 'retail' | 'wholesale'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [discountType, setDiscountType] = useState<'none' | 'percentage' | 'amount'>('none');
@@ -120,10 +122,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.category.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesSaleType = saleTypeFilter === 'all' || product.sale_type === saleTypeFilter;
-      return matchesSearch && matchesSaleType;
+      const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+      return matchesSearch && matchesSaleType && matchesCategory;
     });
     setFilteredProducts(filtered);
-  }, [searchTerm, saleTypeFilter, products]);
+  }, [searchTerm, saleTypeFilter, categoryFilter, products]);
 
   const fetchProducts = async () => {
     try {
@@ -131,11 +134,22 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         .from('products')
         .select('*')
         .eq('is_active', true)
-        .gt('quantity', 0)
         .order('name');
 
       if (error) throw error;
-      setProducts((data || []) as Product[]);
+      
+      // Filter products with available stock
+      const availableProducts = (data || []).filter((product: Product) => {
+        if (product.category === 'ceramique') {
+          return (product.stock_boite || 0) > 0;
+        } else if (product.category === 'fer') {
+          return (product.stock_barre || 0) > 0;
+        } else {
+          return product.quantity > 0;
+        }
+      });
+      
+      setProducts(availableProducts as Product[]);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -402,6 +416,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     setCustomerAddress('');
     setSearchTerm('');
     setSaleTypeFilter('all');
+    setCategoryFilter('all');
     setDiscountType('none');
     setDiscountValue('0');
     setPaymentMethod('espece');
@@ -417,7 +432,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const receiptWidth = 58;
       
       const items = completedSale.items || [];
-      const headerHeight = 35;
+      const headerHeight = 50;
       const itemsHeight = Math.max(items.length * 8, 10);
       const footerHeight = 22;
       const dynamicHeight = headerHeight + itemsHeight + footerHeight;
@@ -439,7 +454,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         const logoX = (receiptWidth - logoWidth) / 2;
         const logoToUse = companySettings.logo_url || logo;
         pdf.addImage(logoToUse, 'PNG', logoX, currentY, logoWidth, logoHeight);
-        currentY += logoHeight + 2;
+        currentY += logoHeight + 3;
       } catch (e) {
         console.error('Error adding logo:', e);
         currentY += 3;
@@ -520,6 +535,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           pdf.setFontSize(5);
           const detail = item.dimension ? `(${item.dimension})` : `(Ø ${item.diametre})`;
           pdf.text(detail, margin + 1, currentY);
+          pdf.setFontSize(6);
+          currentY += 0.5;
+        }
+        
+        // Add longueur for iron bars
+        const ironProduct = cart.find(p => p.name === item.name);
+        if (ironProduct?.longueur_barre_ft && ironProduct.category === 'fer') {
+          currentY += 2.5;
+          pdf.setFontSize(5);
+          pdf.text(`(${ironProduct.longueur_barre_ft} ft)`, margin + 1, currentY);
           pdf.setFontSize(6);
           currentY += 0.5;
         }
@@ -639,7 +664,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.text(`Date de facturation: ${dateStr}`, pageWidth - margin, currentY, { align: 'right' });
       
       // Company information on the left - Dynamic from settings
-      currentY = margin + 25;
+      currentY = margin + 42;
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
@@ -665,7 +690,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       pdf.text(companySettings.email, margin, currentY);
 
       // Customer information (if provided)
-      currentY = margin + 55;
+      currentY = margin + 72;
       if (completedSale.customer_name || completedSale.customer_address) {
         pdf.setFontSize(9);
         pdf.setFont('helvetica', 'bold');
@@ -737,14 +762,18 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         
         if (item.dimension) details.push(item.dimension);
         if (item.diametre) details.push(`Ø ${item.diametre}`);
+        const ironProd = cart.find(p => p.name === item.name);
+        if (ironProd?.longueur_barre_ft && ironProd.category === 'fer') {
+          details.push(`${ironProd.longueur_barre_ft} ft`);
+        }
         
         // For energy category, add specific fields
-        const product = cart.find(p => p.name === item.name);
-        if (product?.category === 'energie') {
-          if (product.type_energie) details.push(`Type: ${product.type_energie}`);
-          if (product.puissance) details.push(`${product.puissance}W`);
-          if (product.voltage) details.push(`${product.voltage}V`);
-          if (product.capacite) details.push(`${product.capacite}`);
+        const energyProd = cart.find(p => p.name === item.name);
+        if (energyProd?.category === 'energie') {
+          if (energyProd.type_energie) details.push(`Type: ${energyProd.type_energie}`);
+          if (energyProd.puissance) details.push(`${energyProd.puissance}W`);
+          if (energyProd.voltage) details.push(`${energyProd.voltage}V`);
+          if (energyProd.capacite) details.push(`${energyProd.capacite}`);
         }
         
         if (details.length > 0) {
@@ -993,6 +1022,45 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   Gros
                 </Button>
               </div>
+              
+              <div className="flex gap-2 flex-wrap mt-2">
+                <span className="text-sm font-medium text-muted-foreground self-center">Catégorie:</span>
+                <Button
+                  size="sm"
+                  variant={categoryFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setCategoryFilter('all')}
+                >
+                  Toutes
+                </Button>
+                <Button
+                  size="sm"
+                  variant={categoryFilter === 'ceramique' ? 'default' : 'outline'}
+                  onClick={() => setCategoryFilter('ceramique')}
+                >
+                  Céramique
+                </Button>
+                <Button
+                  size="sm"
+                  variant={categoryFilter === 'fer' ? 'default' : 'outline'}
+                  onClick={() => setCategoryFilter('fer')}
+                >
+                  Fer
+                </Button>
+                <Button
+                  size="sm"
+                  variant={categoryFilter === 'energie' ? 'default' : 'outline'}
+                  onClick={() => setCategoryFilter('energie')}
+                >
+                  Énergie
+                </Button>
+                <Button
+                  size="sm"
+                  variant={categoryFilter === 'autres' ? 'default' : 'outline'}
+                  onClick={() => setCategoryFilter('autres')}
+                >
+                  Autres
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -1046,8 +1114,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                               {product.diametre && (
                                 <p className="text-xs text-muted-foreground">⭕ Diamètre: {product.diametre}</p>
                               )}
-                              {product.longueur_barre && (
-                                <p className="text-xs text-muted-foreground">📏 Longueur: {product.longueur_barre}m</p>
+                              {product.longueur_barre_ft && (
+                                <p className="text-xs text-muted-foreground">📏 Longueur: {product.longueur_barre_ft} ft</p>
                               )}
                             </div>
                           )}

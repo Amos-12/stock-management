@@ -167,7 +167,7 @@ export const SellerDashboardStats = () => {
           icon={Receipt}
           variant="success"
           change={{
-            value: stats.weekSales > 0 ? ((stats.todaySales / stats.weekSales) * 100) : 0,
+            value: stats.weekSales > 0 ? Number(((stats.todaySales / stats.weekSales) * 100).toFixed(2)) : 0,
             isPositive: stats.todaySales > 0,
             label: "cette semaine"
           }}
@@ -178,7 +178,7 @@ export const SellerDashboardStats = () => {
           icon={DollarSign}
           variant="default"
           change={{
-            value: stats.weekRevenue > 0 ? ((stats.todayRevenue / stats.weekRevenue) * 100) : 0,
+            value: stats.weekRevenue > 0 ? Number(((stats.todayRevenue / stats.weekRevenue) * 100).toFixed(2)) : 0,
             isPositive: stats.todayRevenue > 0,
             label: "cette semaine"
           }}
