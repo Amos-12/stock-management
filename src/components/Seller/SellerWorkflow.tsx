@@ -106,11 +106,21 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     return currency ? `${formatted} HTG` : formatted;
   };
 
+  // Load authorized categories first, then products
   useEffect(() => {
-    loadAuthorizedCategories();
-    fetchProducts();
-    fetchCompanySettings();
+    const initializeData = async () => {
+      await loadAuthorizedCategories();
+      await fetchCompanySettings();
+    };
+    initializeData();
   }, []);
+
+  // Fetch products when authorized categories change
+  useEffect(() => {
+    if (authorizedCategories.length > 0) {
+      fetchProducts();
+    }
+  }, [authorizedCategories]);
 
   const loadAuthorizedCategories = async () => {
     if (!user?.id) return;
