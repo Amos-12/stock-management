@@ -180,7 +180,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         .eq('is_active', true);
       
       // Filter by authorized categories if restrictions exist
-      if (authorizedCategories.length > 0 && !authorizedCategories.includes('all')) {
+      if (authorizedCategories && authorizedCategories.length > 0 && !authorizedCategories.includes('all')) {
         query = query.in('category', authorizedCategories as any);
       }
       
@@ -1050,7 +1050,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     let categoriesWithProducts = new Set(products.map(p => p.category));
     
     // Filter by authorized categories if restrictions exist
-    if (authorizedCategories.length > 0 && !authorizedCategories.includes('all')) {
+    if (authorizedCategories && authorizedCategories.length > 0 && !authorizedCategories.includes('all')) {
       categoriesWithProducts = new Set(
         Array.from(categoriesWithProducts).filter(cat => 
           authorizedCategories.includes(cat)
