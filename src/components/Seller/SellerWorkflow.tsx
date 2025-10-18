@@ -83,7 +83,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [saleTypeFilter, setSaleTypeFilter] = useState<'all' | 'retail' | 'wholesale'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [authorizedCategories, setAuthorizedCategories] = useState<string[]>([]);
+  const [authorizedCategories, setAuthorizedCategories] = useState<string[] | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [discountType, setDiscountType] = useState<'none' | 'percentage' | 'amount'>('none');
@@ -115,9 +115,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     initializeData();
   }, []);
 
-  // Fetch products when authorized categories change
+  // Fetch products when authorized categories are loaded (even if empty = all categories)
   useEffect(() => {
-    if (authorizedCategories.length > 0) {
+    if (authorizedCategories !== null) {
       fetchProducts();
     }
   }, [authorizedCategories]);
