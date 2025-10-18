@@ -106,14 +106,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     return currency ? `${formatted} HTG` : formatted;
   };
 
-  // Load authorized categories first, then products
+  // Load company settings once on mount
   useEffect(() => {
-    const initializeData = async () => {
-      await loadAuthorizedCategories();
-      await fetchCompanySettings();
-    };
-    initializeData();
+    fetchCompanySettings();
   }, []);
+
+  // Load authorized categories when user is available
+  useEffect(() => {
+    if (user?.id) {
+      loadAuthorizedCategories();
+    }
+  }, [user?.id]);
 
   // Fetch products when authorized categories change
   useEffect(() => {
@@ -122,24 +125,26 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
   const loadAuthorizedCategories = async () => {
     if (!user?.id) {
-      // No user = allow all categories (empty array = no restrictions)
-      setAuthorizedCategories([]);
-      return;
+      console.log('⚠️ No user ID available yet');
+      return; // Don't set anything, wait for user
     }
     
     try {
+      console.log('🔍 Loading categories for user:', user.id);
       const { data, error } = await supabase
         .from('seller_authorized_categories')
         .select('category')
         .eq('user_id', user.id);
-      
+
       if (error) throw error;
       
       if (data && data.length > 0) {
         // Seller has specific category restrictions
+        console.log('🔒 Seller restricted to categories:', data.map(d => d.category));
         setAuthorizedCategories(data.map(d => d.category));
       } else {
         // Seller has no restrictions = empty array (all categories)
+        console.log('✅ Seller has access to all categories');
         setAuthorizedCategories([]);
       }
     } catch (error) {
