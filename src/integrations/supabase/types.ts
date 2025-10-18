@@ -75,6 +75,8 @@ export type Database = {
         Row: {
           alert_threshold: number
           bars_per_ton: number | null
+          bloc_poids: number | null
+          bloc_type: string | null
           capacite: number | null
           category: Database["public"]["Enums"]["product_category"]
           created_at: string
@@ -103,11 +105,16 @@ export type Database = {
           type_energie: string | null
           unit: string
           updated_at: string
+          vetement_couleur: string | null
+          vetement_genre: string | null
+          vetement_taille: string | null
           voltage: number | null
         }
         Insert: {
           alert_threshold?: number
           bars_per_ton?: number | null
+          bloc_poids?: number | null
+          bloc_type?: string | null
           capacite?: number | null
           category: Database["public"]["Enums"]["product_category"]
           created_at?: string
@@ -136,11 +143,16 @@ export type Database = {
           type_energie?: string | null
           unit?: string
           updated_at?: string
+          vetement_couleur?: string | null
+          vetement_genre?: string | null
+          vetement_taille?: string | null
           voltage?: number | null
         }
         Update: {
           alert_threshold?: number
           bars_per_ton?: number | null
+          bloc_poids?: number | null
+          bloc_type?: string | null
           capacite?: number | null
           category?: Database["public"]["Enums"]["product_category"]
           created_at?: string
@@ -169,6 +181,9 @@ export type Database = {
           type_energie?: string | null
           unit?: string
           updated_at?: string
+          vetement_couleur?: string | null
+          vetement_genre?: string | null
+          vetement_taille?: string | null
           voltage?: number | null
         }
         Relationships: []
@@ -302,6 +317,30 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_authorized_categories: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          category: Database["public"]["Enums"]["product_category"]
+          id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          category: Database["public"]["Enums"]["product_category"]
+          id?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          category?: Database["public"]["Enums"]["product_category"]
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       stock_movements: {
         Row: {
           created_at: string
@@ -385,6 +424,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_seller_authorized_categories: {
+        Args: { _user_id: string }
+        Returns: {
+          category: Database["public"]["Enums"]["product_category"]
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -413,6 +458,8 @@ export type Database = {
         | "ceramique"
         | "fer"
         | "materiaux_de_construction"
+        | "blocs"
+        | "vetements"
       sale_type: "retail" | "wholesale"
     }
     CompositeTypes: {
@@ -552,6 +599,8 @@ export const Constants = {
         "ceramique",
         "fer",
         "materiaux_de_construction",
+        "blocs",
+        "vetements",
       ],
       sale_type: ["retail", "wholesale"],
     },

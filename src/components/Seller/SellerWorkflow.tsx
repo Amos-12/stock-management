@@ -53,6 +53,13 @@ interface Product {
   puissance?: any;
   voltage?: any;
   capacite?: any;
+  // Blocs-specific fields
+  bloc_type?: string;
+  bloc_poids?: number;
+  // Vêtements-specific fields
+  vetement_taille?: string;
+  vetement_genre?: string;
+  vetement_couleur?: string;
 }
 
 interface CartItem extends Product {
@@ -76,6 +83,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [saleTypeFilter, setSaleTypeFilter] = useState<'all' | 'retail' | 'wholesale'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [authorizedCategories, setAuthorizedCategories] = useState<string[]>([]);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [discountType, setDiscountType] = useState<'none' | 'percentage' | 'amount'>('none');
@@ -99,9 +107,35 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   };
 
   useEffect(() => {
+    loadAuthorizedCategories();
     fetchProducts();
     fetchCompanySettings();
   }, []);
+
+  const loadAuthorizedCategories = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('seller_authorized_categories')
+        .select('category')
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        // Seller has specific restrictions
+        setAuthorizedCategories(data.map(d => d.category));
+      } else {
+        // Seller has no restrictions = all categories
+        setAuthorizedCategories(['all']);
+      }
+    } catch (error) {
+      console.error('Error loading authorized categories:', error);
+      // Default to all if error
+      setAuthorizedCategories(['all']);
+    }
+  };
 
   const fetchCompanySettings = async () => {
     try {
@@ -130,11 +164,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select('*')
-        .eq('is_active', true)
-        .order('name');
+        .eq('is_active', true);
+      
+      // Filter by authorized categories if restrictions exist
+      if (authorizedCategories.length > 0 && !authorizedCategories.includes('all')) {
+        query = query.in('category', authorizedCategories as any);
+      }
+      
+      const { data, error } = await query.order('name');
 
       if (error) throw error;
       
@@ -469,6 +509,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           itemHeight += 3;
         }
         
+        // Si bloc_type, ajouter une ligne
+        if (item.bloc_type) {
+          itemHeight += 3;
+        }
+        
+        // Si vêtements (taille ou couleur), ajouter une ligne
+        if (item.vetement_taille || item.vetement_couleur) {
+          itemHeight += 3;
+        }
+        
         return total + itemHeight;
       }, 0);
       
@@ -587,6 +637,27 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           currentY += 2.5;
           pdf.setFontSize(5);
           pdf.text(`(${ironProduct.longueur_barre_ft} ft)`, margin + 1, currentY);
+          pdf.setFontSize(6);
+          currentY += 0.5;
+        }
+        
+        // Add bloc type
+        if (item.bloc_type) {
+          currentY += 2.5;
+          pdf.setFontSize(5);
+          pdf.text(`(Type: ${item.bloc_type})`, margin + 1, currentY);
+          pdf.setFontSize(6);
+          currentY += 0.5;
+        }
+        
+        // Add vêtements details
+        if (item.vetement_taille || item.vetement_couleur) {
+          currentY += 2.5;
+          pdf.setFontSize(5);
+          const details = [];
+          if (item.vetement_taille) details.push(`T:${item.vetement_taille}`);
+          if (item.vetement_couleur) details.push(item.vetement_couleur);
+          pdf.text(details.join(' - '), margin + 1, currentY);
           pdf.setFontSize(6);
           currentY += 0.5;
         }
@@ -966,12 +1037,22 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
   // Liste dynamique des catégories disponibles avec produits
   const availableCategories = useMemo(() => {
-    const categoriesWithProducts = new Set(products.map(p => p.category));
+    let categoriesWithProducts = new Set(products.map(p => p.category));
+    
+    // Filter by authorized categories if restrictions exist
+    if (authorizedCategories.length > 0 && !authorizedCategories.includes('all')) {
+      categoriesWithProducts = new Set(
+        Array.from(categoriesWithProducts).filter(cat => 
+          authorizedCategories.includes(cat)
+        )
+      );
+    }
+    
     return [
       { value: 'all', label: 'Toutes les catégories' },
       ...categories.filter(cat => categoriesWithProducts.has(cat.value))
     ];
-  }, [products]);
+  }, [products, authorizedCategories]);
 
   const steps = [
     { id: 'products', label: 'Sélection Produits', icon: Package },
@@ -1170,6 +1251,33 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                               )}
                               {product.capacite && (
                                 <p className="text-xs text-muted-foreground">🔋 Capacité: {product.capacite}Ah</p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Blocs product details */}
+                          {product.category === 'blocs' && (
+                            <div className="space-y-1 mt-1">
+                              {product.bloc_type && (
+                                <p className="text-xs text-muted-foreground">🧱 Type: {product.bloc_type}</p>
+                              )}
+                              {product.bloc_poids && (
+                                <p className="text-xs text-muted-foreground">⚖️ Poids: {product.bloc_poids} kg</p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Vêtements product details */}
+                          {product.category === 'vetements' && (
+                            <div className="space-y-1 mt-1">
+                              {product.vetement_taille && (
+                                <p className="text-xs text-muted-foreground">📏 Taille: {product.vetement_taille}</p>
+                              )}
+                              {product.vetement_genre && (
+                                <p className="text-xs text-muted-foreground">👤 Genre: {product.vetement_genre}</p>
+                              )}
+                              {product.vetement_couleur && (
+                                <p className="text-xs text-muted-foreground">🎨 Couleur: {product.vetement_couleur}</p>
                               )}
                             </div>
                           )}

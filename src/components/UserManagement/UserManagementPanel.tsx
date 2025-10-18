@@ -6,7 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Users, UserCheck, Mail, Calendar, Search, UserPlus, RefreshCcw } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Users, UserCheck, Mail, Calendar, Search, UserPlus, RefreshCcw, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -19,12 +21,32 @@ interface User {
   created_at: string;
 }
 
+const ALL_CATEGORIES = [
+  { value: 'alimentaires', label: 'Alimentaires' },
+  { value: 'boissons', label: 'Boissons' },
+  { value: 'gazeuses', label: 'Gazeuses' },
+  { value: 'electronique', label: 'Électronique' },
+  { value: 'ceramique', label: 'Céramique' },
+  { value: 'fer', label: 'Fer / Acier' },
+  { value: 'materiaux_de_construction', label: 'Matériaux de construction' },
+  { value: 'energie', label: 'Énergie' },
+  { value: 'blocs', label: 'Blocs' },
+  { value: 'vetements', label: 'Vêtements' },
+  { value: 'autres', label: 'Autres' }
+];
+
 export const UserManagementPanel = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [emailToPromote, setEmailToPromote] = useState('');
   const [isPromoting, setIsPromoting] = useState(false);
+  const [selectedUserCategories, setSelectedUserCategories] = useState<{
+    userId: string;
+    userName: string;
+    categories: string[];
+  }>({ userId: '', userName: '', categories: [] });
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -144,6 +166,84 @@ export const UserManagementPanel = () => {
       });
     } finally {
       setIsPromoting(false);
+    }
+  };
+
+  const loadUserCategories = async (userId: string, userName: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('seller_authorized_categories')
+        .select('category')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      setSelectedUserCategories({
+        userId,
+        userName,
+        categories: data?.map(d => d.category) || []
+      });
+      setIsCategoryDialogOpen(true);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les catégories",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleCategory = (category: string, checked: boolean | string) => {
+    const isChecked = checked === true;
+    setSelectedUserCategories(prev => ({
+      ...prev,
+      categories: isChecked
+        ? [...prev.categories, category]
+        : prev.categories.filter(c => c !== category)
+    }));
+  };
+
+  const saveUserCategories = async () => {
+    try {
+      const { userId, categories } = selectedUserCategories;
+
+      // Delete all existing categories for this user
+      await supabase
+        .from('seller_authorized_categories')
+        .delete()
+        .eq('user_id', userId);
+
+      // Insert new categories if any selected
+      if (categories.length > 0) {
+        const rows = categories.map(cat => ({
+          user_id: userId,
+          category: cat as any
+        }));
+
+        const { error } = await supabase
+          .from('seller_authorized_categories')
+          .insert(rows);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Succès",
+        description: categories.length > 0 
+          ? "Catégories autorisées mises à jour" 
+          : "Toutes les catégories sont maintenant accessibles"
+      });
+
+      setIsCategoryDialogOpen(false);
+      setSelectedUserCategories({ userId: '', userName: '', categories: [] });
+    } catch (error) {
+      console.error('Error saving categories:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder les catégories",
+        variant: "destructive"
+      });
     }
   };
 
@@ -275,6 +375,7 @@ export const UserManagementPanel = () => {
                   <TableHead className="hidden sm:table-cell">Email</TableHead>
                   <TableHead>Rôle</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead>Actions</TableHead>
                   <TableHead className="hidden md:table-cell">Créé le</TableHead>
                 </TableRow>
               </TableHeader>
@@ -315,6 +416,18 @@ export const UserManagementPanel = () => {
                         <Badge variant="outline">Admin</Badge>
                       )}
                     </TableCell>
+                    <TableCell>
+                      {user.role === 'seller' && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => loadUserCategories(user.id, user.full_name)}
+                        >
+                          <Settings className="w-4 h-4 mr-1" />
+                          Catégories
+                        </Button>
+                      )}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Calendar className="w-4 h-4 mr-1" />
@@ -335,6 +448,56 @@ export const UserManagementPanel = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Category Management Dialog */}
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Gérer les catégories autorisées</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              {selectedUserCategories.userName}
+            </p>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                {selectedUserCategories.categories.length === 0 
+                  ? "✅ Ce vendeur a accès à toutes les catégories"
+                  : `🔒 Ce vendeur n'a accès qu'aux ${selectedUserCategories.categories.length} catégorie(s) sélectionnée(s)`
+                }
+              </p>
+            </div>
+            <div className="space-y-3">
+              {ALL_CATEGORIES.map(cat => (
+                <div key={cat.value} className="flex items-center gap-3 p-2 hover:bg-muted rounded-md">
+                  <Checkbox
+                    id={`cat-${cat.value}`}
+                    checked={selectedUserCategories.categories.includes(cat.value)}
+                    onCheckedChange={(checked) => toggleCategory(cat.value, checked)}
+                  />
+                  <Label 
+                    htmlFor={`cat-${cat.value}`} 
+                    className="flex-1 cursor-pointer text-sm"
+                  >
+                    {cat.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsCategoryDialogOpen(false)}
+              >
+                Annuler
+              </Button>
+              <Button onClick={saveUserCategories}>
+                Enregistrer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

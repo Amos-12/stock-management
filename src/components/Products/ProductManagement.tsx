@@ -45,9 +45,16 @@ interface Product {
   capacite?: number;
   type_energie?: string;
   specifications_techniques?: any;
+  // Blocs-specific fields
+  bloc_type?: string;
+  bloc_poids?: number;
+  // Vêtements-specific fields
+  vetement_taille?: string;
+  vetement_genre?: string;
+  vetement_couleur?: string;
 }
 
-type ProductCategory = 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres' | 'ceramique' | 'fer' | 'materiaux_de_construction' | 'energie';
+type ProductCategory = 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres' | 'ceramique' | 'fer' | 'materiaux_de_construction' | 'energie' | 'blocs' | 'vetements';
 
 export const ProductManagement = () => {
   const { user, role } = useAuth();
@@ -86,6 +93,11 @@ export const ProductManagement = () => {
     voltage: string;
     capacite: string;
     type_energie: string;
+    bloc_type: string;
+    bloc_poids: string;
+    vetement_taille: string;
+    vetement_genre: string;
+    vetement_couleur: string;
   }>({
     name: '',
     category: 'alimentaires',
@@ -112,7 +124,12 @@ export const ProductManagement = () => {
     puissance: '',
     voltage: '',
     capacite: '',
-    type_energie: ''
+    type_energie: '',
+    bloc_type: '',
+    bloc_poids: '',
+    vetement_taille: '',
+    vetement_genre: '',
+    vetement_couleur: ''
   });
 
   const categories = [
@@ -124,6 +141,8 @@ export const ProductManagement = () => {
     { value: 'fer', label: 'Fer / Acier' },
     { value: 'materiaux_de_construction', label: 'Matériaux de construction' },
     { value: 'energie', label: 'Énergie' },
+    { value: 'blocs', label: 'Blocs' },
+    { value: 'vetements', label: 'Vêtements' },
     { value: 'autres', label: 'Autres' }
   ];
 
@@ -187,7 +206,12 @@ export const ProductManagement = () => {
       puissance: '',
       voltage: '',
       capacite: '',
-      type_energie: ''
+      type_energie: '',
+      bloc_type: '',
+      bloc_poids: '',
+      vetement_taille: '',
+      vetement_genre: '',
+      vetement_couleur: ''
     });
     setEditingProduct(null);
   };
@@ -229,7 +253,12 @@ export const ProductManagement = () => {
       puissance: product.puissance?.toString() || '',
       voltage: product.voltage?.toString() || '',
       capacite: product.capacite?.toString() || '',
-      type_energie: product.type_energie || ''
+      type_energie: product.type_energie || '',
+      bloc_type: product.bloc_type || '',
+      bloc_poids: product.bloc_poids?.toString() || '',
+      vetement_taille: product.vetement_taille || '',
+      vetement_genre: product.vetement_genre || '',
+      vetement_couleur: product.vetement_couleur || ''
     });
     setIsDialogOpen(true);
   };
@@ -272,6 +301,30 @@ export const ProductManagement = () => {
       }
     }
 
+    // Validation for blocs
+    if (formData.category === 'blocs') {
+      if (!formData.bloc_type) {
+        toast({
+          title: "Erreur de validation",
+          description: "Veuillez sélectionner le type de bloc",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    // Validation for vetements
+    if (formData.category === 'vetements') {
+      if (!formData.vetement_taille || !formData.vetement_genre || !formData.vetement_couleur) {
+        toast({
+          title: "Erreur de validation",
+          description: "Veuillez remplir tous les champs obligatoires pour les vêtements",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     // Validation for standard products
     if (formData.category !== 'ceramique' && formData.category !== 'fer') {
       if (!formData.price || !formData.quantity) {
@@ -298,7 +351,12 @@ export const ProductManagement = () => {
         puissance: formData.puissance ? parseFloat(formData.puissance) : null,
         voltage: formData.voltage ? parseFloat(formData.voltage) : null,
         capacite: formData.capacite ? parseFloat(formData.capacite) : null,
-        type_energie: formData.type_energie || null
+        type_energie: formData.type_energie || null,
+        bloc_type: formData.bloc_type || null,
+        bloc_poids: formData.bloc_poids ? parseFloat(formData.bloc_poids) : null,
+        vetement_taille: formData.vetement_taille || null,
+        vetement_genre: formData.vetement_genre || null,
+        vetement_couleur: formData.vetement_couleur || null
       };
 
       // Map values based on category
@@ -532,7 +590,21 @@ export const ProductManagement = () => {
                       </Badge>
                     </div>
                   )}
-                  {formData.category !== 'ceramique' && formData.category !== 'fer' && formData.category !== 'energie' && (
+                  {formData.category === 'blocs' && (
+                    <div className="col-span-1 sm:col-span-2">
+                      <Badge variant="outline" className="text-xs">
+                        🧱 Blocs : Précisez le type de bloc et son poids (optionnel)
+                      </Badge>
+                    </div>
+                  )}
+                  {formData.category === 'vetements' && (
+                    <div className="col-span-1 sm:col-span-2">
+                      <Badge variant="outline" className="text-xs">
+                        👕 Vêtements : Précisez la taille, le genre et la couleur
+                      </Badge>
+                    </div>
+                  )}
+                  {formData.category !== 'ceramique' && formData.category !== 'fer' && formData.category !== 'energie' && formData.category !== 'blocs' && formData.category !== 'vetements' && (
                     <div className="col-span-1 sm:col-span-2">
                       <Badge variant="outline" className="text-xs">
                         📦 Produit standard : Remplissez le prix unitaire et la quantité en stock
@@ -883,6 +955,97 @@ export const ProductManagement = () => {
                         placeholder="Ex: 100 (Ah pour batteries, kg pour gaz)"
                       />
                       <p className="text-xs text-muted-foreground">Ah pour batteries, kg pour bonbonnes, litres pour carburants</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Blocs-specific fields */}
+                {formData.category === 'blocs' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
+                    <div className="col-span-1 sm:col-span-2">
+                      <h3 className="font-semibold text-sm mb-2">🧱 Configuration Blocs</h3>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bloc_type">Type de bloc *</Label>
+                      <Select
+                        value={formData.bloc_type}
+                        onValueChange={(value) => setFormData({...formData, bloc_type: value})}
+                      >
+                        <SelectTrigger className="pointer-events-auto">
+                          <SelectValue placeholder="Sélectionner le type" />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto z-[150]">
+                          <SelectItem value="6_pouces">Bloc 6"</SelectItem>
+                          <SelectItem value="8_pouces">Bloc 8"</SelectItem>
+                          <SelectItem value="creux">Bloc Creux</SelectItem>
+                          <SelectItem value="plein">Bloc Plein</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bloc_poids">Poids (kg) - Optionnel</Label>
+                      <Input
+                        id="bloc_poids"
+                        type="number"
+                        step="0.01"
+                        value={formData.bloc_poids}
+                        onChange={(e) => setFormData({...formData, bloc_poids: e.target.value})}
+                        placeholder="Ex: 12.5"
+                      />
+                      <p className="text-xs text-muted-foreground">Poids approximatif par bloc</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Vêtements-specific fields */}
+                {formData.category === 'vetements' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
+                    <div className="col-span-1 sm:col-span-2">
+                      <h3 className="font-semibold text-sm mb-2">👕 Configuration Vêtements</h3>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="vetement_taille">Taille *</Label>
+                      <Select
+                        value={formData.vetement_taille}
+                        onValueChange={(value) => setFormData({...formData, vetement_taille: value})}
+                      >
+                        <SelectTrigger className="pointer-events-auto">
+                          <SelectValue placeholder="Sélectionner la taille" />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto z-[150]">
+                          <SelectItem value="S">S</SelectItem>
+                          <SelectItem value="M">M</SelectItem>
+                          <SelectItem value="L">L</SelectItem>
+                          <SelectItem value="XL">XL</SelectItem>
+                          <SelectItem value="XXL">XXL</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="vetement_genre">Genre *</Label>
+                      <Select
+                        value={formData.vetement_genre}
+                        onValueChange={(value) => setFormData({...formData, vetement_genre: value})}
+                      >
+                        <SelectTrigger className="pointer-events-auto">
+                          <SelectValue placeholder="Sélectionner le genre" />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto z-[150]">
+                          <SelectItem value="homme">Homme</SelectItem>
+                          <SelectItem value="femme">Femme</SelectItem>
+                          <SelectItem value="enfant">Enfant</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2 col-span-1 sm:col-span-2">
+                      <Label htmlFor="vetement_couleur">Couleur *</Label>
+                      <Input
+                        id="vetement_couleur"
+                        type="text"
+                        value={formData.vetement_couleur}
+                        onChange={(e) => setFormData({...formData, vetement_couleur: e.target.value})}
+                        placeholder="Ex: Rouge, Bleu, Noir"
+                      />
                     </div>
                   </div>
                 )}
