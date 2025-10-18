@@ -354,7 +354,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             return item;
           }
           
-          // Recalculate price and display unit for special categories
+          // Recalculate price and display unit based on category
           let actualPrice = item.price * newQuantity;
           let displayUnit = item.unit;
           
@@ -366,9 +366,15 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           }
           
           // Recalculate for iron bars
-          if (item.category === 'fer' && item.prix_par_barre) {
+          else if (item.category === 'fer' && item.prix_par_barre) {
             actualPrice = item.prix_par_barre * newQuantity;
             displayUnit = 'barre';
+          }
+          
+          // Recalculate for clothing - standard pricing
+          else if (item.category === 'vetements') {
+            actualPrice = item.price * newQuantity;
+            displayUnit = item.unit;
           }
           
           return { ...item, cartQuantity: newQuantity, actualPrice, displayUnit };
@@ -435,9 +441,19 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         }))
       };
 
-      // Call Edge Function to process sale
+      // Get the current session to pass auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('Session non valide. Veuillez vous reconnecter.');
+      }
+
+      // Call Edge Function to process sale with auth header
       const { data, error } = await supabase.functions.invoke('process-sale', {
-        body: saleRequest
+        body: saleRequest,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) throw error;
