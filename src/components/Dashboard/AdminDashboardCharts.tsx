@@ -51,6 +51,7 @@ const COLORS = ['hsl(var(--primary))', 'hsl(var(--success))', 'hsl(var(--warning
 export const AdminDashboardCharts = () => {
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
+  const [profitData, setProfitData] = useState<RevenueData[]>([]);
   const [topProducts, setTopProducts] = useState<ProductSalesData[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
   const [topSellers, setTopSellers] = useState<SellerData[]>([]);
@@ -80,6 +81,7 @@ export const AdminDashboardCharts = () => {
       setLoading(true);
       await Promise.all([
         fetchRevenueData(),
+        fetchProfitData(),
         fetchTopProducts(),
         fetchCategoryData(),
         fetchTopSellers(),
@@ -235,6 +237,44 @@ export const AdminDashboardCharts = () => {
     }));
 
     setRevenueData(chartData);
+  };
+
+  const fetchProfitData = async () => {
+    const daysBack = period === 'daily' ? 7 : period === 'weekly' ? 28 : 365;
+    const { data: salesData, error: salesError } = await supabase
+      .from('sales')
+      .select('id, created_at')
+      .gte('created_at', new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString())
+      .order('created_at');
+
+    if (salesError) throw salesError;
+
+    // Fetch sale_items with profit data
+    const { data: itemsData, error: itemsError } = await supabase
+      .from('sale_items')
+      .select('sale_id, profit_amount')
+      .in('sale_id', salesData?.map(s => s.id) || []);
+
+    if (itemsError) throw itemsError;
+
+    // Group profit by date
+    const profitByDate: Record<string, number> = {};
+    salesData?.forEach(sale => {
+      const date = new Date(sale.created_at).toLocaleDateString('fr-FR');
+      const saleProfit = itemsData
+        ?.filter(item => item.sale_id === sale.id)
+        .reduce((sum, item) => sum + (item.profit_amount || 0), 0) || 0;
+      
+      profitByDate[date] = (profitByDate[date] || 0) + saleProfit;
+    });
+
+    const chartData = Object.entries(profitByDate).map(([date, profit]) => ({
+      date,
+      revenue: profit,
+      sales: 0
+    }));
+
+    setProfitData(chartData);
   };
 
   const fetchTopProducts = async () => {
@@ -472,6 +512,32 @@ export const AdminDashboardCharts = () => {
                   stroke="hsl(var(--primary))" 
                   strokeWidth={2}
                   dot={{ fill: 'hsl(var(--primary))' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Profit Chart */}
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg">Évolution des Bénéfices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={profitData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value: any) => [`${value} HTG`, 'Bénéfices']}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="revenue" 
+                  stroke="hsl(var(--success))" 
+                  strokeWidth={2}
+                  dot={{ fill: 'hsl(var(--success))' }}
                 />
               </LineChart>
             </ResponsiveContainer>

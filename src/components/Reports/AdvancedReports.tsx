@@ -39,10 +39,12 @@ interface ProductSales {
 interface ReportData {
   totalRevenue: number;
   totalSales: number;
+  totalProfit: number;
   averageOrderValue: number;
   topProducts: ProductSales[];
   salesByPeriod: { period: string; revenue: number; sales: number }[];
   paymentMethods: { method: string; count: number; percentage: number }[];
+  categoryDistribution: { category: string; revenue: number; count: number; percentage: number }[];
 }
 
 export const AdvancedReports = () => {
@@ -105,6 +107,17 @@ export const AdvancedReports = () => {
       const totalSales = salesWithSellers.length;
       const averageOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
 
+      // Calculate total profit
+      let totalProfit = 0;
+      for (const sale of salesWithSellers) {
+        const { data: itemsData } = await supabase
+          .from('sale_items')
+          .select('profit_amount')
+          .eq('sale_id', sale.id);
+        
+        totalProfit += itemsData?.reduce((sum, item) => sum + (item.profit_amount || 0), 0) || 0;
+      }
+
       // Top products
       const productSales: Record<string, ProductSales> = {};
       salesWithSellers.forEach(sale => {
@@ -153,13 +166,51 @@ export const AdvancedReports = () => {
         .map(([period, data]) => ({ period, ...data }))
         .sort((a, b) => a.period.localeCompare(b.period));
 
+      // Category distribution from sales
+      const { data: allSaleItems, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('product_name, subtotal, sale_id')
+        .in('sale_id', salesWithSellers.map(s => s.id));
+
+      if (itemsError) throw itemsError;
+
+      // Get products to get their categories
+      const productNames = [...new Set(allSaleItems?.map(item => item.product_name) || [])];
+      const { data: productsData } = await supabase
+        .from('products')
+        .select('name, category')
+        .in('name', productNames);
+
+      const categoryRevenue: Record<string, { revenue: number; count: number }> = {};
+      allSaleItems?.forEach(item => {
+        const product = productsData?.find(p => p.name === item.product_name);
+        if (product) {
+          if (!categoryRevenue[product.category]) {
+            categoryRevenue[product.category] = { revenue: 0, count: 0 };
+          }
+          categoryRevenue[product.category].revenue += item.subtotal;
+          categoryRevenue[product.category].count += 1;
+        }
+      });
+
+      const categoryDistribution = Object.entries(categoryRevenue)
+        .map(([category, data]) => ({
+          category,
+          revenue: data.revenue,
+          count: data.count,
+          percentage: (data.revenue / totalRevenue) * 100
+        }))
+        .sort((a, b) => b.revenue - a.revenue);
+
       setReportData({
         totalRevenue,
         totalSales,
+        totalProfit,
         averageOrderValue,
         topProducts,
         salesByPeriod: salesByPeriodArray,
-        paymentMethods
+        paymentMethods,
+        categoryDistribution
       });
 
     } catch (error) {
@@ -312,11 +363,23 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
 
             <Card className="shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Nombre de Ventes</CardTitle>
+                <CardTitle className="text-sm font-medium">Bénéfices Totaux</CardTitle>
                 <TrendingUp className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-primary">
+                  {reportData.totalProfit.toFixed(2)} HTG
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Nombre de Ventes</CardTitle>
+                <BarChart3 className="h-4 w-4 text-warning" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-warning">
                   {reportData.totalSales}
                 </div>
               </CardContent>
@@ -325,27 +388,53 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
             <Card className="shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Panier Moyen</CardTitle>
-                <Target className="h-4 w-4 text-warning" />
+                <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-warning">
+                <div className="text-2xl font-bold">
                   {reportData.averageOrderValue.toFixed(2)} HTG
                 </div>
               </CardContent>
             </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Top Produits</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {reportData.topProducts.length}
-                </div>
-              </CardContent>
-            </Card>
           </div>
+
+          {/* Category Distribution */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart className="w-5 h-5" />
+                Répartition par Catégorie
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {reportData.categoryDistribution.map((cat, index) => {
+                  const colors = ['hsl(var(--primary))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))', 'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
+                  const color = colors[index % colors.length];
+                  return (
+                    <div key={cat.category} className="p-4 rounded-lg border" style={{ borderLeft: `4px solid ${color}` }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium capitalize">{cat.category}</span>
+                        <Badge variant="secondary">{cat.count}</Badge>
+                      </div>
+                      <div className="text-2xl font-bold mb-1">
+                        {cat.revenue.toFixed(2)} HTG
+                      </div>
+                      <div className="w-full bg-secondary rounded-full h-2 mb-2">
+                        <div 
+                          className="h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${cat.percentage}%`, backgroundColor: color }}
+                        />
+                      </div>
+                      <div className="text-sm text-muted-foreground text-center font-medium">
+                        {cat.percentage.toFixed(1)}% du CA total
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Top Products */}
           <Card className="shadow-lg">

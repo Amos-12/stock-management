@@ -269,6 +269,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       actualPrice = product.prix_par_barre * quantityToAdd;
       displayUnit = 'barre';
     }
+    
+    // Calculate for vêtements - standard pricing
+    if (product.category === 'vetements') {
+      quantityToAdd = customQty || 1;
+      actualPrice = product.price * quantityToAdd;
+      displayUnit = product.unit;
+    }
 
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
@@ -1050,6 +1057,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     { value: 'fer', label: 'Fer / Acier' },
     { value: 'materiaux_de_construction', label: 'Matériaux de construction' },
     { value: 'energie', label: 'Énergie' },
+    { value: 'blocs', label: 'Blocs' },
+    { value: 'vetements', label: 'Vêtements' },
     { value: 'autres', label: 'Autres' }
   ];
 
@@ -1314,8 +1323,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                           <div className="mt-2">
                             {product.category === 'ceramique' && product.prix_m2 ? (
                               <div className="text-success font-bold text-lg">{formatAmount(product.prix_m2)}/m²</div>
-                            ) : product.category === 'fer' && product.prix_par_barre ? (
+                           ) : product.category === 'fer' && product.prix_par_barre ? (
                               <div className="text-success font-bold text-lg">{formatAmount(product.prix_par_barre)}/barre</div>
+                            ) : product.category === 'vetements' ? (
+                              <div className="text-success font-bold text-lg">{formatAmount(product.price)}/{product.unit}</div>
                             ) : (
                               <div className="text-success font-bold text-lg">{formatAmount(product.price)}</div>
                             )}
