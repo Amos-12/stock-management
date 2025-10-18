@@ -123,7 +123,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   }, [authorizedCategories]);
 
   const loadAuthorizedCategories = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      // No user = allow all categories (fallback)
+      setAuthorizedCategories(['all']);
+      return;
+    }
     
     try {
       const { data, error } = await supabase
