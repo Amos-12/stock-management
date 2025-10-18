@@ -83,7 +83,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [saleTypeFilter, setSaleTypeFilter] = useState<'all' | 'retail' | 'wholesale'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [authorizedCategories, setAuthorizedCategories] = useState<string[] | null>(null);
+  const [authorizedCategories, setAuthorizedCategories] = useState<string[]>([]);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [discountType, setDiscountType] = useState<'none' | 'percentage' | 'amount'>('none');
@@ -115,17 +115,15 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     initializeData();
   }, []);
 
-  // Fetch products when authorized categories are loaded (even if empty = all categories)
+  // Fetch products when authorized categories change
   useEffect(() => {
-    if (authorizedCategories !== null) {
-      fetchProducts();
-    }
+    fetchProducts();
   }, [authorizedCategories]);
 
   const loadAuthorizedCategories = async () => {
     if (!user?.id) {
-      // No user = allow all categories (fallback)
-      setAuthorizedCategories(['all']);
+      // No user = allow all categories (empty array = no restrictions)
+      setAuthorizedCategories([]);
       return;
     }
     
@@ -138,16 +136,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Seller has specific restrictions
+        // Seller has specific category restrictions
         setAuthorizedCategories(data.map(d => d.category));
       } else {
-        // Seller has no restrictions = all categories
-        setAuthorizedCategories(['all']);
+        // Seller has no restrictions = empty array (all categories)
+        setAuthorizedCategories([]);
       }
     } catch (error) {
       console.error('Error loading authorized categories:', error);
-      // Default to all if error
-      setAuthorizedCategories(['all']);
+      // Default to all categories on error
+      setAuthorizedCategories([]);
     }
   };
 
@@ -183,8 +181,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         .select('*')
         .eq('is_active', true);
       
-      // Filter by authorized categories if restrictions exist
-      if (authorizedCategories && authorizedCategories.length > 0 && !authorizedCategories.includes('all')) {
+      // Filter by authorized categories if restrictions exist (non-empty array)
+      if (authorizedCategories.length > 0) {
         query = query.in('category', authorizedCategories as any);
       }
       
@@ -192,6 +190,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       if (error) throw error;
       
+      console.log('📦 Authorized categories:', authorizedCategories);
       console.log('📦 Total products fetched:', data?.length);
       
       // Filter products with available stock
@@ -1053,8 +1052,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const availableCategories = useMemo(() => {
     let categoriesWithProducts = new Set(products.map(p => p.category));
     
-    // Filter by authorized categories if restrictions exist
-    if (authorizedCategories && authorizedCategories.length > 0 && !authorizedCategories.includes('all')) {
+    // Filter by authorized categories if restrictions exist (non-empty array)
+    const hasRestrictions = authorizedCategories.length > 0;
+    if (hasRestrictions) {
       categoriesWithProducts = new Set(
         Array.from(categoriesWithProducts).filter(cat => 
           authorizedCategories.includes(cat)
