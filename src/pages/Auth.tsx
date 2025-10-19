@@ -131,7 +131,7 @@ const Auth = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background">
         <div className="text-center">
-          <Package className="w-12 h-12 text-primary mx-auto mb-4 animate-pulse" />
+          <img src={logo} alt="Logo" className="w-14 h-14 object-contain mx-auto mb-4 animate-pulse" />
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>

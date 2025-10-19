@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import logo from '@/assets/logo.png';
 
 interface Sale {
   id: string;
@@ -130,11 +131,11 @@ const SellerDashboard = () => {
     }
   };
 
-  if (authLoading || loadingApproval) {
+  if (authLoading || (user && loadingApproval)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary-light via-background to-secondary">
         <div className="text-center">
-          <Package className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
+          <img src={logo} alt="Logo" className="w-14 h-14 object-contain mx-auto mb-4 animate-pulse" />
           <p className="text-muted-foreground">Chargement du tableau de bord...</p>
         </div>
       </div>

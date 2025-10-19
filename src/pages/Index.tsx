@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Package, ArrowRight, Shield } from 'lucide-react';
+import { ArrowRight, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import logo from '@/assets/logo.png';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -82,7 +83,7 @@ const Index = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background">
         <div className="text-center">
-          <Package className="w-12 h-12 text-primary mx-auto mb-4 animate-pulse" />
+          <img src={logo} alt="Logo" className="w-14 h-14 object-contain mx-auto mb-4 animate-pulse" />
           <p className="text-muted-foreground">Chargement de votre espace...</p>
         </div>
       </div>
@@ -95,7 +96,7 @@ const Index = () => {
         <Card className="max-w-md w-full shadow-lg">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <Package className="w-12 h-12 text-primary mr-3" />
+              <img src={logo} alt="Logo" className="w-12 h-12 object-contain mr-3" />
               <CardTitle className="text-2xl">GF Distribution</CardTitle>
             </div>
             <p className="text-muted-foreground">
