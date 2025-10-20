@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/core';
 
 const config: CapacitorConfig = {
-  appId: 'com.gfdistribution.stock',
-  appName: 'GF Distribution',
+  appId: 'com.gestion.stock',
+  appName: 'Stock Management',
   webDir: 'dist'
 };
 
