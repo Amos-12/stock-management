@@ -17,8 +17,7 @@ import {
   ArrowRight,
   AlertCircle,
   FileText,
-  Printer,
-  Trash2
+  Printer
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -96,29 +95,6 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [customQuantityValue, setCustomQuantityValue] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'espece' | 'cheque' | 'virement'>('espece');
   const [companySettings, setCompanySettings] = useState<any>(null);
-
-  // Utility function to convert decimal tonnage to fractional display
-  const getTonnageLabel = (tonnage: number): string => {
-    const integerPart = Math.floor(tonnage);
-    const decimalPart = tonnage - integerPart;
-    
-    let fractionStr = '';
-    if (Math.abs(decimalPart - 0.25) < 0.01) {
-      fractionStr = '1/4';
-    } else if (Math.abs(decimalPart - 0.5) < 0.01) {
-      fractionStr = '1/2';
-    } else if (Math.abs(decimalPart - 0.75) < 0.01) {
-      fractionStr = '3/4';
-    } else if (decimalPart > 0.01) {
-      fractionStr = decimalPart.toFixed(2);
-    }
-    
-    if (integerPart > 0) {
-      return fractionStr ? `${integerPart} ${fractionStr} tonne${tonnage > 1 ? 's' : ''}` : `${integerPart} tonne${integerPart > 1 ? 's' : ''}`;
-    } else {
-      return fractionStr ? `${fractionStr} tonne` : `${tonnage.toFixed(2)} tonne${tonnage > 1 ? 's' : ''}`;
-    }
-  };
 
   // Utility function to format amounts with space as thousands separator
   const formatAmount = (amount: number, currency = true): string => {
@@ -218,9 +194,6 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const { data, error } = await query.order('name');
 
       if (error) throw error;
-      
-      console.log('📦 Authorized categories:', authorizedCategories);
-      console.log('📦 Total products fetched:', data?.length);
       
       // Filter products with available stock
       const availableProducts = (data || []).filter((product: Product) => {
@@ -353,14 +326,6 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     }
 
     addToCart(product, qty);
-  };
-
-  const removeFromCart = (productId: string) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== productId));
-    toast({
-      title: "Article retiré",
-      description: "L'article a été retiré du panier",
-    });
   };
 
   const updateQuantity = (productId: string, change: number) => {
@@ -1734,7 +1699,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                       Diamètre: {customQuantityDialog.product.diametre}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Longueur: {customQuantityDialog.product.longueur_barre}m par barre
+                      Longueur: {customQuantityDialog.product.longueur_barre_ft} ft par barre
                     </p>
                     <p className="text-sm text-success">
                       Prix: {customQuantityDialog.product.prix_par_barre} HTG/barre
