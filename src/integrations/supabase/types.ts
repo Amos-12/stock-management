@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action_type: Database["public"]["Enums"]["activity_action_type"]
+          created_at: string
+          description: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: Database["public"]["Enums"]["activity_action_type"]
+          created_at?: string
+          description: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: Database["public"]["Enums"]["activity_action_type"]
+          created_at?: string
+          description?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       company_settings: {
         Row: {
           address: string
@@ -441,12 +482,18 @@ export type Database = {
         }
         Returns: boolean
       }
-      promote_user_to_admin: {
-        Args: { user_email: string }
-        Returns: boolean
-      }
+      promote_user_to_admin: { Args: { user_email: string }; Returns: boolean }
     }
     Enums: {
+      activity_action_type:
+        | "sale_created"
+        | "product_added"
+        | "product_updated"
+        | "product_deleted"
+        | "stock_adjusted"
+        | "user_approved"
+        | "user_deactivated"
+        | "settings_updated"
       app_role: "admin" | "seller"
       product_category:
         | "alimentaires"
@@ -588,6 +635,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      activity_action_type: [
+        "sale_created",
+        "product_added",
+        "product_updated",
+        "product_deleted",
+        "stock_adjusted",
+        "user_approved",
+        "user_deactivated",
+        "settings_updated",
+      ],
       app_role: ["admin", "seller"],
       product_category: [
         "alimentaires",

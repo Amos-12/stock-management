@@ -26,6 +26,8 @@ export const SalesManagement = () => {
   const [loading, setLoading] = useState(true);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [todayRevenue, setTodayRevenue] = useState(0);
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchSales();

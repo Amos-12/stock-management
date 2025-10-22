@@ -138,6 +138,40 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     };
   };
 
+  const getFractionLabel = (tonnage: number): string => {
+    const whole = Math.floor(tonnage);
+    const decimal = tonnage - whole;
+    
+    const fractions: Record<number, string> = {
+      0.25: '1/4',
+      0.5: '1/2',
+      0.75: '3/4'
+    };
+    
+    const roundedDecimal = Math.round(decimal * 100) / 100;
+    const fractionPart = fractions[roundedDecimal];
+    
+    if (decimal === 0) return `${whole} tonne${whole > 1 ? 's' : ''}`;
+    if (!fractionPart) return `${tonnage.toFixed(2)} tonne${tonnage > 1 ? 's' : ''}`;
+    if (whole === 0) return `${fractionPart} tonne`;
+    return `${whole} ${fractionPart} tonne${tonnage > 1 ? 's' : ''}`;
+  };
+
+  const getTonnageLabel = (tonnage: number | undefined): string => {
+    if (!tonnage) return '';
+    const labels: Record<number, string> = {
+      0.25: 'Quart de tonne',
+      0.5: 'Demi-tonne',
+      0.75: 'Trois quarts de tonne',
+      1: 'Une tonne',
+      1.25: 'Une tonne et quart',
+      1.5: 'Une tonne et demie',
+      1.75: 'Une tonne trois quarts',
+      2: 'Deux tonnes'
+    };
+    return labels[tonnage] || '';
+  };
+
   // Get label for standard tonnage
   const getTonnageLabel = (tonnage: number): string => {
     if (tonnage === 0.25) return 'Quart de tonne';
@@ -1543,11 +1577,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <h5 className="font-medium">{item.name}</h5>
-                            {item.category === 'fer' && item.tonnageInfo?.isStandard && (
-                              <Badge variant="secondary" className="text-xs">
-                                🏗️ {item.tonnageInfo.formatted}
-                              </Badge>
-                            )}
+                  {item.category === 'fer' && item.tonnageInfo?.isStandard && item.tonnageInfo.standardValue && (
+                    <Badge variant="secondary" className="text-xs">
+                      🏗️ {getFractionLabel(item.tonnageInfo.standardValue)}
+                    </Badge>
+                  )}
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {displayText} = {formatAmount(itemTotal)}
@@ -1564,15 +1598,24 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                           <span className="text-sm font-medium w-8 text-center">
                             {item.cartQuantity}
                           </span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.id, 1)}
-                            disabled={item.cartQuantity >= item.quantity}
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateQuantity(item.id, 1)}
+                        disabled={item.cartQuantity >= item.quantity}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => removeFromCart(item.id)}
+                        title="Retirer du panier"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                       </div>
                     );
                   })}
