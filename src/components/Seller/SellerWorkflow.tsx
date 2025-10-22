@@ -48,6 +48,7 @@ interface Product {
   prix_par_barre?: number;
   stock_barre?: number;
   decimal_autorise?: boolean;
+  bars_per_ton?: number;
   // Energy-specific fields
   type_energie?: any;
   puissance?: any;
@@ -64,8 +65,14 @@ interface Product {
 
 interface CartItem extends Product {
   cartQuantity: number;
-  displayUnit?: string; // For ceramics: "m²", For iron: "barre"
+  displayUnit?: string; // For ceramics: "m²", For iron: "barre" or "tonne"
   actualPrice?: number; // Calculated price for ceramics
+  tonnageInfo?: { // For iron bars with standard tonnage
+    tonnage: number;
+    isStandard: boolean;
+    standardValue?: number;
+    formatted: string;
+  };
 }
 
 type WorkflowStep = 'products' | 'cart' | 'checkout' | 'success';
@@ -104,6 +111,44 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       useGrouping: true
     }).replace(/\s/g, ' '); // Ensure space separator
     return currency ? `${formatted} HTG` : formatted;
+  };
+
+  // Calculate tonnage from bars for iron products
+  const calculateTonnage = (bars: number, barsPerTon?: number) => {
+    if (!barsPerTon || barsPerTon === 0) {
+      return {
+        tonnage: 0,
+        isStandard: false,
+        standardValue: undefined,
+        formatted: ''
+      };
+    }
+    
+    const tonnage = bars / barsPerTon;
+    
+    // Check if it's a standard multiple (with 1% tolerance for floating point)
+    const standardTonnages = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+    const match = standardTonnages.find(t => Math.abs(tonnage - t) < 0.01);
+    
+    return {
+      tonnage: tonnage,
+      isStandard: !!match,
+      standardValue: match,
+      formatted: match ? `${match}T` : `${tonnage.toFixed(3)}T`
+    };
+  };
+
+  // Get label for standard tonnage
+  const getTonnageLabel = (tonnage: number): string => {
+    if (tonnage === 0.25) return 'Quart de tonne';
+    if (tonnage === 0.5) return 'Demi-tonne';
+    if (tonnage === 0.75) return 'Trois quarts de tonne';
+    if (tonnage === 1.0) return 'Une tonne';
+    if (tonnage === 1.25) return 'Une tonne et quart';
+    if (tonnage === 1.5) return 'Une tonne et demie';
+    if (tonnage === 1.75) return 'Une tonne trois quarts';
+    if (tonnage === 2.0) return 'Deux tonnes';
+    return `${tonnage} tonnes`;
   };
 
   // Load company settings once on mount
@@ -267,7 +312,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     if (product.category === 'fer' && product.prix_par_barre) {
       quantityToAdd = customQty || 1;
       actualPrice = product.prix_par_barre * quantityToAdd;
-      displayUnit = 'barre';
+      
+      // Calculate tonnage if bars_per_ton is available
+      const tonnageInfo = product.bars_per_ton ? calculateTonnage(quantityToAdd, product.bars_per_ton) : undefined;
+      
+      // Use tonnage as display unit if it's a standard multiple
+      if (tonnageInfo?.isStandard && tonnageInfo.standardValue) {
+        displayUnit = 'tonne';
+      } else {
+        displayUnit = 'barre';
+      }
     }
     
     // Calculate for vêtements - standard pricing
@@ -295,17 +349,28 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           return prevCart;
         }
         
+        // Calculate tonnage for iron bars
+        const tonnageInfo = product.category === 'fer' && product.bars_per_ton 
+          ? calculateTonnage(newCartQuantity, product.bars_per_ton)
+          : undefined;
+        
         return prevCart.map(item =>
           item.id === product.id
-            ? { ...item, cartQuantity: newCartQuantity, actualPrice, displayUnit }
+            ? { ...item, cartQuantity: newCartQuantity, actualPrice, displayUnit, tonnageInfo }
             : item
         );
       } else {
+        // Calculate tonnage for iron bars
+        const tonnageInfo = product.category === 'fer' && product.bars_per_ton 
+          ? calculateTonnage(quantityToAdd, product.bars_per_ton)
+          : undefined;
+        
         return [...prevCart, { 
           ...product, 
           cartQuantity: quantityToAdd,
           actualPrice,
-          displayUnit
+          displayUnit,
+          tonnageInfo
         }];
       }
     });
@@ -368,7 +433,18 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           // Recalculate for iron bars
           else if (item.category === 'fer' && item.prix_par_barre) {
             actualPrice = item.prix_par_barre * newQuantity;
-            displayUnit = 'barre';
+            
+            // Recalculate tonnage info
+            const tonnageInfo = item.bars_per_ton ? calculateTonnage(newQuantity, item.bars_per_ton) : undefined;
+            
+            // Use tonnage as display unit if it's a standard multiple
+            if (tonnageInfo?.isStandard && tonnageInfo.standardValue) {
+              displayUnit = 'tonne';
+              return { ...item, cartQuantity: newQuantity, actualPrice, displayUnit, tonnageInfo };
+            } else {
+              displayUnit = 'barre';
+              return { ...item, cartQuantity: newQuantity, actualPrice, displayUnit, tonnageInfo };
+            }
           }
           
           // Recalculate for clothing - standard pricing
@@ -654,6 +730,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       items.forEach((item: any) => {
         currentY += 3;
         
+        // Check if this is iron with standard tonnage
+        const ironProduct = cart.find(p => p.name === item.name);
+        const isIronWithTonnage = ironProduct?.category === 'fer' && ironProduct.tonnageInfo?.isStandard;
+        
         // Product name
         let itemName = item.name;
         if (itemName.length > 18) {
@@ -673,7 +753,6 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         }
         
         // Add longueur for iron bars
-        const ironProduct = cart.find(p => p.name === item.name);
         if (ironProduct?.longueur_barre_ft && ironProduct.category === 'fer') {
           currentY += 2.5;
           pdf.setFontSize(5);
@@ -705,8 +784,19 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         
         // Quantity, Price, Total on the product name line
         const baseY = item.dimension || item.diametre ? currentY - 3 : currentY;
-        pdf.text(item.quantity.toString(), contentWidth - 30, baseY);
-        pdf.text(`${formatAmount(item.unit_price, false)}`, contentWidth - 20, baseY);
+        
+        // For iron with standard tonnage, display tonnage instead of bars
+        let qtyDisplay = item.quantity.toString();
+        let unitPriceDisplay = item.unit_price;
+        
+        if (isIronWithTonnage && ironProduct?.tonnageInfo?.standardValue) {
+          qtyDisplay = ironProduct.tonnageInfo.standardValue.toString();
+          // Recalculate unit price per tonne
+          unitPriceDisplay = item.unit_price * (ironProduct.bars_per_ton || 1);
+        }
+        
+        pdf.text(qtyDisplay, contentWidth - 30, baseY);
+        pdf.text(`${formatAmount(unitPriceDisplay, false)}`, contentWidth - 20, baseY);
         pdf.text(`${formatAmount(item.total, false)}`, contentWidth - 2 + margin, baseY, { align: 'right' });
       });
       
@@ -910,13 +1000,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         const rowHeight = 6;
         currentY += rowHeight;
         
+        // Check if this is iron with standard tonnage
+        const ironProd = cart.find(p => p.name === item.name);
+        const isIronWithTonnage = ironProd?.category === 'fer' && ironProd.tonnageInfo?.isStandard;
+        
         // Build description
         let description = item.name;
         const details = [];
         
         if (item.dimension) details.push(item.dimension);
         if (item.diametre) details.push(`Ø ${item.diametre}`);
-        const ironProd = cart.find(p => p.name === item.name);
         if (ironProd?.longueur_barre_ft && ironProd.category === 'fer') {
           details.push(`${ironProd.longueur_barre_ft} ft`);
         }
@@ -941,9 +1034,22 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         
         pdf.setTextColor(0, 0, 0);
         pdf.text(description, colX.description, currentY);
-        pdf.text(item.quantity.toString(), colX.quantity, currentY);
-        pdf.text(item.unit || 'pce', colX.unit, currentY);
-        pdf.text(`${formatAmount(item.unit_price, false)} HTG`, colX.unitPrice, currentY);
+        
+        // For iron with standard tonnage, display tonnage instead of bars
+        let qtyDisplay = item.quantity.toString();
+        let unitDisplay = item.unit || 'pce';
+        let unitPriceDisplay = item.unit_price;
+        
+        if (isIronWithTonnage && ironProd?.tonnageInfo?.standardValue) {
+          qtyDisplay = ironProd.tonnageInfo.standardValue.toString();
+          unitDisplay = 'tonne';
+          // Recalculate unit price per tonne
+          unitPriceDisplay = item.unit_price * (ironProd.bars_per_ton || 1);
+        }
+        
+        pdf.text(qtyDisplay, colX.quantity, currentY);
+        pdf.text(unitDisplay, colX.unit, currentY);
+        pdf.text(`${formatAmount(unitPriceDisplay, false)} HTG`, colX.unitPrice, currentY);
         pdf.text(`${formatAmount(item.total, false)} HTG`, colX.total, currentY);
       });
 
@@ -1421,12 +1527,30 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                   {cart.map((item) => {
                     const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
+                    
+                    // For iron bars, display tonnage if it's a standard multiple
+                    let displayText = `${item.cartQuantity} ${item.displayUnit || item.unit}`;
+                    if (item.category === 'fer' && item.tonnageInfo) {
+                      if (item.tonnageInfo.isStandard && item.tonnageInfo.standardValue) {
+                        displayText = `${item.tonnageInfo.standardValue} tonne (${item.cartQuantity} barres)`;
+                      } else {
+                        displayText = `${item.cartQuantity} barres (${item.tonnageInfo.formatted})`;
+                      }
+                    }
+                    
                     return (
                       <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex-1">
-                          <h5 className="font-medium">{item.name}</h5>
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-medium">{item.name}</h5>
+                            {item.category === 'fer' && item.tonnageInfo?.isStandard && (
+                              <Badge variant="secondary" className="text-xs">
+                                🏗️ {item.tonnageInfo.formatted}
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">
-                            {item.cartQuantity} {item.displayUnit || item.unit} = {formatAmount(itemTotal)}
+                            {displayText} = {formatAmount(itemTotal)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1536,10 +1660,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               <h4 className="font-medium mb-3">Résumé de la commande</h4>
               {cart.map((item) => {
                 const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
-                const displayUnit = item.displayUnit || item.unit;
+                
+                // For iron bars, display tonnage if it's a standard multiple
+                let displayText = `${item.name} × ${item.cartQuantity} ${item.displayUnit || item.unit}`;
+                if (item.category === 'fer' && item.tonnageInfo?.isStandard && item.tonnageInfo.standardValue) {
+                  displayText = `${item.name} × ${item.tonnageInfo.standardValue} tonne`;
+                }
+                
                 return (
                   <div key={item.id} className="flex justify-between text-sm mb-2">
-                    <span>{item.name} × {item.cartQuantity} {displayUnit}</span>
+                    <span>{displayText}</span>
                     <span>{formatAmount(itemTotal)}</span>
                   </div>
                 );
@@ -1707,10 +1837,42 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                     <p className="text-sm text-success">
                       Prix: {customQuantityDialog.product.prix_par_barre} HTG/barre
                     </p>
+                    {customQuantityDialog.product.bars_per_ton && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        📊 {customQuantityDialog.product.bars_per_ton} barres = 1 tonne
+                      </p>
+                    )}
                   </>
                 )}
               </div>
             )}
+            
+            {/* Quick tonnage buttons for iron */}
+            {customQuantityDialog.product?.category === 'fer' && customQuantityDialog.product.bars_per_ton && (
+              <div className="space-y-2">
+                <Label className="text-sm">Raccourcis rapides:</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[0.25, 0.5, 0.75, 1.0].map(tonnage => {
+                    const bars = Math.round(tonnage * (customQuantityDialog.product?.bars_per_ton || 0));
+                    return (
+                      <Button
+                        key={tonnage}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCustomQuantityValue(bars.toString())}
+                        className="text-xs"
+                      >
+                        {tonnage}T
+                        <br />
+                        <span className="text-[10px] text-muted-foreground">({bars}b)</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="custom-quantity">
                 {customQuantityDialog.product?.category === 'ceramique' 
@@ -1740,6 +1902,24 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                     </>
                   )}
                 </p>
+              )}
+              {customQuantityDialog.product?.category === 'fer' && customQuantityValue && customQuantityDialog.product.bars_per_ton && (
+                <div className="text-sm text-primary font-medium">
+                  {(() => {
+                    const bars = parseFloat(customQuantityValue);
+                    const tonnageInfo = calculateTonnage(bars, customQuantityDialog.product.bars_per_ton);
+                    return (
+                      <p>
+                        💡 {bars} barres = {tonnageInfo.formatted}
+                        {tonnageInfo.isStandard && tonnageInfo.standardValue && (
+                          <span className="ml-1 text-success">
+                            ({getTonnageLabel(tonnageInfo.standardValue)})
+                          </span>
+                        )}
+                      </p>
+                    );
+                  })()}
+                </div>
               )}
             </div>
             <div className="flex gap-2 justify-end">
