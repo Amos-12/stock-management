@@ -975,8 +975,10 @@ export const ProductManagement = () => {
                           <SelectValue placeholder="Sélectionner le type" />
                         </SelectTrigger>
                         <SelectContent className="pointer-events-auto z-[150]">
+                          <SelectItem value="4_pouces">Bloc 4"</SelectItem>
+                          <SelectItem value="5_pouces">Bloc 5"</SelectItem>
                           <SelectItem value="6_pouces">Bloc 6"</SelectItem>
-                          <SelectItem value="8_pouces">Bloc 8"</SelectItem>
+                          <SelectItem value="20_pouces">Bloc 20"</SelectItem>
                           <SelectItem value="creux">Bloc Creux</SelectItem>
                           <SelectItem value="plein">Bloc Plein</SelectItem>
                         </SelectContent>
