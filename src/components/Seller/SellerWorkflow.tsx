@@ -17,12 +17,13 @@ import {
   ArrowRight,
   AlertCircle,
   FileText,
-  Printer
+  Printer,
+  Trash2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import jsPDF from 'jspdf';
+import { generateInvoice, generateReceipt } from '@/lib/pdfGenerator';
 import logo from '@/assets/logo.png';
 
 interface Product {
@@ -172,17 +173,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     return labels[tonnage] || '';
   };
 
-  // Get label for standard tonnage
-  const getTonnageLabel = (tonnage: number): string => {
-    if (tonnage === 0.25) return 'Quart de tonne';
-    if (tonnage === 0.5) return 'Demi-tonne';
-    if (tonnage === 0.75) return 'Trois quarts de tonne';
-    if (tonnage === 1.0) return 'Une tonne';
-    if (tonnage === 1.25) return 'Une tonne et quart';
-    if (tonnage === 1.5) return 'Une tonne et demie';
-    if (tonnage === 1.75) return 'Une tonne trois quarts';
-    if (tonnage === 2.0) return 'Deux tonnes';
-    return `${tonnage} tonnes`;
+  const removeFromCart = (productId: string) => {
+    setCart(cart.filter(item => item.id !== productId));
+    toast({
+      title: "Article retiré",
+      description: "L'article a été retiré du panier",
+    });
   };
 
   // Load company settings once on mount

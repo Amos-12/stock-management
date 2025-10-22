@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ShoppingCart, Search, TrendingUp, Calendar } from 'lucide-react';
+import { ShoppingCart, Search, TrendingUp, Calendar, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { SaleDetailsDialog } from './SaleDetailsDialog';
 
 interface Sale {
   id: string;
@@ -104,6 +106,11 @@ export const SalesManagement = () => {
     });
   };
 
+  const handleViewSale = (saleId: string) => {
+    setSelectedSaleId(saleId);
+    setDialogOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -181,12 +188,13 @@ export const SalesManagement = () => {
                   <TableHead>Vendeur</TableHead>
                   <TableHead>Montant</TableHead>
                   <TableHead>Paiement</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSales.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Aucune vente trouvée
                     </TableCell>
                   </TableRow>
@@ -209,6 +217,16 @@ export const SalesManagement = () => {
                         <Badge variant="outline" className="capitalize">
                           {sale.payment_method}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewSale(sale.id)}
+                          title="Voir les détails"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

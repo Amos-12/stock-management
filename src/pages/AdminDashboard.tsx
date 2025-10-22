@@ -8,6 +8,7 @@ import { StockAlerts } from '@/components/Notifications/StockAlerts';
 import { ProductManagement } from '@/components/Products/ProductManagement';
 import { SalesManagement } from '@/components/Sales/SalesManagement';
 import { CompanySettings } from '@/components/Settings/CompanySettings';
+import { ActivityLogPanel } from '@/components/ActivityLog/ActivityLogPanel';
 
 const AdminDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -28,6 +29,8 @@ const AdminDashboard = () => {
         return <StockAlerts />;
       case 'settings':
         return <CompanySettings />;
+      case 'activity':
+        return <ActivityLogPanel />;
       default:
         return <AdminDashboardCharts />;
     }

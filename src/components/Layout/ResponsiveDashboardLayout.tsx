@@ -15,7 +15,8 @@ import {
   User,
   Menu,
   Home,
-  PackagePlus
+  PackagePlus,
+  ClipboardList
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -99,7 +100,8 @@ export const ResponsiveDashboardLayout = ({
     { icon: PackagePlus, label: 'Réapprovisionnement', value: 'restock', route: '/restock' },
     { icon: TrendingUp, label: 'Rapports', value: 'reports' },
     { icon: Bell, label: 'Notifications', value: 'notifications' },
-    { icon: Settings, label: 'Paramètres', value: 'settings' }
+    { icon: Settings, label: 'Paramètres', value: 'settings' },
+    { icon: ClipboardList, label: 'Logs d\'activité', value: 'activity' },
   ];
 
   const sellerNavItems = [
