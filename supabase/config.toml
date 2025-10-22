@@ -2,3 +2,6 @@ project_id = "xngppwphedaexwkgfjdv"
 
 [functions.process-sale]
 verify_jwt = true
+
+[functions.create-activity-log]
+verify_jwt = true
