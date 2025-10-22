@@ -218,6 +218,32 @@ Deno.serve(async (req) => {
       console.log(`Profit recorded: ${profitAmount.toFixed(2)} HTG (purchase: ${purchasePriceAtSale}, sale: ${item.unit_price})`)
     }
 
+    // Create activity log
+    try {
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', user.id)
+        .single()
+
+      await supabaseClient
+        .from('activity_logs')
+        .insert({
+          user_id: user.id,
+          action_type: 'sale_created',
+          entity_type: 'sale',
+          entity_id: sale.id,
+          description: `Vente de ${saleData.total_amount.toFixed(2)} HTG créée par ${profile?.full_name || 'Vendeur'} pour ${saleData.customer_name || 'Client anonyme'}`,
+          metadata: {
+            total_amount: saleData.total_amount,
+            items_count: saleData.items.length,
+            payment_method: saleData.payment_method
+          }
+        })
+    } catch (logError) {
+      console.error('Failed to create activity log:', logError)
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

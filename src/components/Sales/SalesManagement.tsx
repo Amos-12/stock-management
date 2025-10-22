@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ShoppingCart, Search, TrendingUp, Calendar } from 'lucide-react';
+import { ShoppingCart, Search, TrendingUp, Calendar, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { SaleDetailsDialog } from './SaleDetailsDialog';
 
 interface Sale {
   id: string;
@@ -26,6 +28,8 @@ export const SalesManagement = () => {
   const [loading, setLoading] = useState(true);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [todayRevenue, setTodayRevenue] = useState(0);
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchSales();
