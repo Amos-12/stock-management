@@ -6,6 +6,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
   TrendingUp, 
   Download, 
   Calendar as CalendarIcon, 
@@ -14,8 +20,12 @@ import {
   Target,
   DollarSign,
   Package,
-  Users
+  Users,
+  ChevronDown,
+  FileSpreadsheet,
+  FileText
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -265,6 +275,96 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
     });
   };
 
+  const exportToExcel = () => {
+    if (!reportData) return;
+
+    // Sheet 1: Résumé
+    const summaryData = [
+      ['RAPPORT DE VENTES COMPLET'],
+      ['Période', `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`],
+      ['Date de génération', format(new Date(), 'dd/MM/yyyy HH:mm')],
+      [''],
+      ['Métrique', 'Valeur'],
+      ['Chiffre d\'affaires total', `${reportData.totalRevenue.toFixed(2)} HTG`],
+      ['Bénéfices totaux', `${reportData.totalProfit.toFixed(2)} HTG`],
+      ['Nombre total de ventes', reportData.totalSales],
+      ['Panier moyen', `${reportData.averageOrderValue.toFixed(2)} HTG`]
+    ];
+
+    // Sheet 2: Ventes par catégorie
+    const categoryData = [
+      ['Catégorie', 'Revenu (HTG)', 'Nombre de ventes', 'Pourcentage (%)'],
+      ...reportData.categoryDistribution.map(cat => [
+        cat.category,
+        cat.revenue.toFixed(2),
+        cat.count,
+        cat.percentage.toFixed(1)
+      ])
+    ];
+
+    // Sheet 3: Top 10 Produits
+    const productsData = [
+      ['Position', 'Produit', 'Quantité vendue', 'Chiffre d\'affaires (HTG)'],
+      ...reportData.topProducts.map((prod, idx) => [
+        idx + 1,
+        prod.product_name,
+        prod.quantity_sold,
+        prod.total_revenue.toFixed(2)
+      ])
+    ];
+
+    // Sheet 4: Méthodes de paiement
+    const paymentData = [
+      ['Méthode de paiement', 'Nombre de transactions', 'Pourcentage (%)'],
+      ...reportData.paymentMethods.map(pm => [
+        pm.method,
+        pm.count,
+        pm.percentage.toFixed(1)
+      ])
+    ];
+
+    // Sheet 5: Historique chronologique
+    const historyData = [
+      ['Date', 'Revenu (HTG)', 'Nombre de ventes'],
+      ...reportData.salesByPeriod.map(sp => [
+        format(new Date(sp.period), 'dd/MM/yyyy'),
+        sp.revenue.toFixed(2),
+        sp.sales
+      ])
+    ];
+
+    // Créer le workbook
+    const wb = XLSX.utils.book_new();
+    
+    const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
+    const ws2 = XLSX.utils.aoa_to_sheet(categoryData);
+    const ws3 = XLSX.utils.aoa_to_sheet(productsData);
+    const ws4 = XLSX.utils.aoa_to_sheet(paymentData);
+    const ws5 = XLSX.utils.aoa_to_sheet(historyData);
+    
+    // Définir la largeur des colonnes pour meilleure lisibilité
+    ws1['!cols'] = [{ wch: 30 }, { wch: 30 }];
+    ws2['!cols'] = [{ wch: 25 }, { wch: 18 }, { wch: 18 }, { wch: 15 }];
+    ws3['!cols'] = [{ wch: 10 }, { wch: 35 }, { wch: 18 }, { wch: 22 }];
+    ws4['!cols'] = [{ wch: 25 }, { wch: 22 }, { wch: 15 }];
+    ws5['!cols'] = [{ wch: 15 }, { wch: 18 }, { wch: 18 }];
+    
+    XLSX.utils.book_append_sheet(wb, ws1, 'Résumé');
+    XLSX.utils.book_append_sheet(wb, ws2, 'Catégories');
+    XLSX.utils.book_append_sheet(wb, ws3, 'Top Produits');
+    XLSX.utils.book_append_sheet(wb, ws4, 'Méthodes Paiement');
+    XLSX.utils.book_append_sheet(wb, ws5, 'Historique');
+    
+    // Télécharger le fichier
+    const fileName = `rapport_complet_${format(dateRange.from, 'yyyyMMdd')}_${format(dateRange.to, 'yyyyMMdd')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    
+    toast({
+      title: "Export réussi",
+      description: "Le rapport Excel complet a été téléchargé avec succès",
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Controls */}
@@ -336,10 +436,25 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
               <Button onClick={generateReport} disabled={loading}>
                 {loading ? 'Génération...' : 'Actualiser'}
               </Button>
-              <Button variant="outline" onClick={exportReport} disabled={!reportData}>
-                <Download className="w-4 h-4 mr-2" />
-                Exporter
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={!reportData}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Exporter
+                    <ChevronDown className="w-4 h-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={exportReport}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Export rapide (CSV)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportToExcel}>
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Export complet (Excel)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardContent>

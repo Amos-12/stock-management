@@ -115,6 +115,33 @@ export const UserManagementPanel = () => {
 
       if (error) throw error;
 
+      // Get user info for logging
+      const currentUser = users.find(u => u.id === userId);
+      
+      // Get current user ID from auth
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (currentUser && user) {
+        // Log user activation/deactivation
+        const actionType = !currentStatus ? 'user_approved' : 'user_deactivated';
+        const description = !currentStatus
+          ? `Utilisateur "${currentUser.full_name}" approuvé et activé`
+          : `Utilisateur "${currentUser.full_name}" désactivé`;
+
+        await (supabase as any).from('activity_logs').insert({
+          user_id: user.id,
+          action_type: actionType,
+          entity_type: 'user',
+          entity_id: userId,
+          description: description,
+          metadata: {
+            target_user_name: currentUser.full_name,
+            target_user_email: currentUser.email,
+            new_status: !currentStatus
+          }
+        });
+      }
+
       toast({
         title: "Succès",
         description: !currentStatus ? "Vendeur activé avec succès" : "Vendeur désactivé"

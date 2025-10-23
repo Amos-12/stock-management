@@ -183,12 +183,13 @@ export const SalesManagement = () => {
                   <TableHead>Vendeur</TableHead>
                   <TableHead>Montant</TableHead>
                   <TableHead>Paiement</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSales.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Aucune vente trouvée
                     </TableCell>
                   </TableRow>
@@ -212,6 +213,18 @@ export const SalesManagement = () => {
                           {sale.payment_method}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedSaleId(sale.id);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -220,6 +233,12 @@ export const SalesManagement = () => {
           </div>
         </CardContent>
       </Card>
+      
+      <SaleDetailsDialog 
+        saleId={selectedSaleId}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </div>
   );
 };

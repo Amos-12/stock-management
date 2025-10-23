@@ -400,17 +400,47 @@ export const ProductManagement = () => {
           title: "Produit mis à jour",
           description: "Le produit a été modifié avec succès"
         });
+
+        // Log the activity
+        await (supabase as any).from('activity_logs').insert({
+          user_id: user.id,
+          action_type: 'product_updated',
+          entity_type: 'product',
+          entity_id: editingProduct.id,
+          description: `Produit "${formData.name}" modifié dans la catégorie ${formData.category}`,
+          metadata: {
+            product_name: formData.name,
+            category: formData.category,
+            price: productData.price
+          }
+        });
       } else {
         // Create new product
-        const { error } = await supabase
+        const { data: newProduct, error } = await supabase
           .from('products')
-          .insert([productData]);
+          .insert([productData])
+          .select()
+          .single();
 
         if (error) throw error;
 
         toast({
           title: "Produit créé",
           description: "Le produit a été ajouté avec succès"
+        });
+
+        // Log the activity
+        await (supabase as any).from('activity_logs').insert({
+          user_id: user.id,
+          action_type: 'product_added',
+          entity_type: 'product',
+          entity_id: newProduct.id,
+          description: `Nouveau produit "${formData.name}" ajouté dans la catégorie ${formData.category}`,
+          metadata: {
+            product_name: formData.name,
+            category: formData.category,
+            price: productData.price
+          }
         });
       }
 
@@ -450,17 +480,35 @@ export const ProductManagement = () => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
 
     try {
+      // Get product name before deletion
+      const product = products.find(p => p.id === id);
+      const productName = product?.name || 'Produit';
+
       const { error } = await supabase
         .from('products')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id);
 
       if (error) throw error;
 
       toast({
-        title: "Produit supprimé",
-        description: "Le produit a été supprimé avec succès"
+        title: "Produit désactivé",
+        description: "Le produit a été désactivé avec succès"
       });
+
+      // Log deactivation
+      if (user) {
+        await (supabase as any).from('activity_logs').insert({
+          user_id: user.id,
+          action_type: 'product_deactivated',
+          entity_type: 'product',
+          entity_id: id,
+          description: `Produit "${productName}" désactivé`,
+          metadata: {
+            product_name: productName
+          }
+        });
+      }
 
       fetchProducts();
     } catch (error: any) {

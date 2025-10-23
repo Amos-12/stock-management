@@ -17,11 +17,13 @@ import {
   ArrowRight,
   AlertCircle,
   FileText,
-  Printer
+  Printer,
+  Trash2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { generateReceipt, generateInvoice } from '@/lib/pdfGenerator';
 import jsPDF from 'jspdf';
 import logo from '@/assets/logo.png';
 
@@ -104,6 +106,29 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       useGrouping: true
     }).replace(/\s/g, ' '); // Ensure space separator
     return currency ? `${formatted} HTG` : formatted;
+  };
+
+  // Utility function to convert decimal tonnage to fractional display
+  const getTonnageLabel = (tonnage: number): string => {
+    const integerPart = Math.floor(tonnage);
+    const decimalPart = tonnage - integerPart;
+    
+    let fractionStr = '';
+    if (Math.abs(decimalPart - 0.25) < 0.01) {
+      fractionStr = '1/4';
+    } else if (Math.abs(decimalPart - 0.5) < 0.01) {
+      fractionStr = '1/2';
+    } else if (Math.abs(decimalPart - 0.75) < 0.01) {
+      fractionStr = '3/4';
+    } else if (decimalPart > 0.01) {
+      fractionStr = decimalPart.toFixed(2);
+    }
+    
+    if (integerPart > 0) {
+      return fractionStr ? `${integerPart} ${fractionStr} tonne${tonnage > 1 ? 's' : ''}` : `${integerPart} tonne${integerPart > 1 ? 's' : ''}`;
+    } else {
+      return fractionStr ? `${fractionStr} tonne` : `${tonnage.toFixed(2)} tonne${tonnage > 1 ? 's' : ''}`;
+    }
   };
 
   // Load company settings once on mount
@@ -325,6 +350,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     addToCart(product, qty);
   };
 
+  const removeFromCart = (productId: string) => {
+    setCart(prevCart => prevCart.filter(item => item.id !== productId));
+    toast({
+      title: "Article retiré",
+      description: "L'article a été supprimé du panier",
+    });
+  };
+
   const updateQuantity = (productId: string, change: number) => {
     setCart(prevCart => {
       return prevCart.map(item => {
@@ -518,9 +551,36 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const printReceipt = async () => {
     if (!completedSale || !companySettings) return;
     
-    try {
-      // Format 58mm largeur pour imprimante thermique
-      const receiptWidth = 58;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('user_id', user?.id)
+      .single();
+    
+    generateReceipt(
+      completedSale,
+      companySettings,
+      cart,
+      profile?.full_name || 'Vendeur'
+    );
+  };
+
+  const printInvoice = async () => {
+    if (!completedSale || !companySettings) return;
+    
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('user_id', user?.id)
+      .single();
+    
+    generateInvoice(
+      completedSale,
+      companySettings,
+      cart,
+      profile?.full_name || 'Vendeur'
+    );
+  };
       
       const items = completedSale.items || [];
       
@@ -1420,29 +1480,40 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                         <div className="flex-1">
                           <h5 className="font-medium">{item.name}</h5>
                           <p className="text-sm text-muted-foreground">
-                            {item.cartQuantity} {item.displayUnit || item.unit} = {formatAmount(itemTotal)}
+                            {item.category === 'fer' && item.unit === 'tonne' 
+                              ? getTonnageLabel(item.cartQuantity)
+                              : `${item.cartQuantity} ${item.displayUnit || item.unit}`
+                            } = {formatAmount(itemTotal)}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.id, -1)}
-                          >
-                            <Minus className="w-3 h-3" />
-                          </Button>
-                          <span className="text-sm font-medium w-8 text-center">
-                            {item.cartQuantity}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.id, 1)}
-                            disabled={item.cartQuantity >= item.quantity}
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateQuantity(item.id, -1)}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <span className="text-sm font-medium w-8 text-center">
+                        {item.cartQuantity}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateQuantity(item.id, 1)}
+                        disabled={item.cartQuantity >= item.quantity}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => removeFromCart(item.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                       </div>
                     );
                   })}
