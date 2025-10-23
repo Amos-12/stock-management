@@ -85,13 +85,13 @@ export const generateReceipt = (
   pdf.setFont('helvetica', 'normal');
   let yPos = 10;
   
-  // Add logo if available
+  // Add logo if available (centered)
   if (companySettings.logo_url) {
     try {
-      const logoX = companySettings.logo_position_x || 25;
-      const logoY = companySettings.logo_position_y || yPos;
       const logoW = companySettings.logo_width || 30;
       const logoH = companySettings.logo_height || 30;
+      const logoX = companySettings.logo_position_x || (80 - logoW) / 2; // Center on 80mm width
+      const logoY = companySettings.logo_position_y || yPos;
       pdf.addImage(companySettings.logo_url, 'PNG', logoX, logoY, logoW, logoH);
       yPos += logoH + 5;
     } catch (error) {
@@ -185,7 +185,16 @@ export const generateReceipt = (
   // Items
   pdf.setFont('helvetica', 'normal');
   items.forEach(item => {
-    const itemName = item.name.length > 25 ? item.name.substring(0, 22) + '...' : item.name;
+    // Build item description with details
+    let itemDescription = item.name;
+    if (item.category === 'fer' && item.diametre) {
+      itemDescription = `${item.name} Ø${item.diametre}`;
+      if (item.longueur_barre) {
+        itemDescription += ` L:${item.longueur_barre}m`;
+      }
+    }
+    
+    const itemName = itemDescription.length > 25 ? itemDescription.substring(0, 22) + '...' : itemDescription;
     pdf.text(itemName, 5, yPos);
     yPos += 3;
     
@@ -371,13 +380,30 @@ export const generateInvoice = (
       yPos = 20;
     }
     
-    pdf.text(item.name, 17, yPos);
-    pdf.text(item.cartQuantity.toString(), 120, yPos, { align: 'right' });
+    // Build item description with details
+    let itemDescription = item.name;
+    if (item.category === 'fer' && item.diametre) {
+      itemDescription = `${item.name} Ø${item.diametre}`;
+      if (item.longueur_barre) {
+        itemDescription += ` - Longueur: ${item.longueur_barre}m`;
+      }
+    }
     
-    // Use fractional display for iron products
+    pdf.text(itemDescription, 17, yPos);
+    
+    // Display quantity with fractional format for iron products
+    let qtyDisplay = '';
+    if (item.category === 'fer' && item.unit === 'tonne') {
+      qtyDisplay = getTonnageLabel(item.cartQuantity);
+    } else {
+      qtyDisplay = item.cartQuantity.toString();
+    }
+    pdf.text(qtyDisplay, 120, yPos, { align: 'right' });
+    
+    // Unit column
     let unitText = item.displayUnit || item.unit;
     if (item.category === 'fer' && item.unit === 'tonne') {
-      unitText = 'tonne';
+      unitText = ''; // Already included in quantity display
     }
     pdf.text(unitText, 140, yPos, { align: 'right' });
     
