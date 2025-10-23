@@ -7,6 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
   ShoppingCart, 
   Package, 
   Search,
@@ -18,7 +24,8 @@ import {
   AlertCircle,
   FileText,
   Printer,
-  Trash2
+  Trash2,
+  ChevronDown
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -548,7 +555,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     onSaleComplete?.();
   };
 
-  const printReceipt = async () => {
+  const printReceipt58mm = async () => {
     if (!completedSale || !companySettings) return;
     
     const { data: profile } = await supabase
@@ -561,7 +568,26 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       completedSale,
       companySettings,
       cart,
-      profile?.full_name || 'Vendeur'
+      profile?.full_name || 'Vendeur',
+      58
+    );
+  };
+
+  const printReceipt80mm = async () => {
+    if (!completedSale || !companySettings) return;
+    
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('user_id', user?.id)
+      .single();
+    
+    generateReceipt(
+      completedSale,
+      companySettings,
+      cart,
+      profile?.full_name || 'Vendeur',
+      80
     );
   };
 
@@ -1166,14 +1192,28 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               {completedSale && (
                 <>
-                  <Button 
-                    onClick={printReceipt}
-                    variant="outline" 
-                    className="gap-2 w-full sm:w-auto"
-                  >
-                    <Printer className="w-4 h-4" />
-                    Imprimer Reçu Thermique
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="gap-2 w-full sm:w-auto"
+                      >
+                        <Printer className="w-4 h-4" />
+                        Imprimer Reçu Thermique
+                        <ChevronDown className="w-4 h-4 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={printReceipt58mm}>
+                        <Printer className="w-4 h-4 mr-2" />
+                        Format 58mm
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={printReceipt80mm}>
+                        <Printer className="w-4 h-4 mr-2" />
+                        Format 80mm
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button 
                     onClick={printInvoice}
                     variant="outline" 

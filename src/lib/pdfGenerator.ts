@@ -74,23 +74,31 @@ export const generateReceipt = (
   saleData: SaleData,
   companySettings: CompanySettings,
   items: CartItem[],
-  sellerName: string
+  sellerName: string,
+  width: number = 80 // Default 80mm, can be 58mm or 80mm
 ) => {
   const pdf = new jsPDF({
     unit: 'mm',
-    format: [80, 297],
+    format: [width, 297],
     orientation: 'portrait'
   });
 
   pdf.setFont('helvetica', 'normal');
   let yPos = 10;
   
+  // Responsive margins and sizing based on width
+  const margin = width === 58 ? 3 : 5;
+  const contentWidth = width - (margin * 2);
+  const logoSize = width === 58 ? 20 : 30;
+  const titleFontSize = width === 58 ? 10 : 12;
+  const regularFontSize = width === 58 ? 7 : 8;
+  
   // Add logo if available (centered)
   if (companySettings.logo_url) {
     try {
-      const logoW = companySettings.logo_width || 30;
-      const logoH = companySettings.logo_height || 30;
-      const logoX = companySettings.logo_position_x || (80 - logoW) / 2; // Center on 80mm width
+      const logoW = companySettings.logo_width || logoSize;
+      const logoH = companySettings.logo_height || logoSize;
+      const logoX = companySettings.logo_position_x || (width - logoW) / 2; // Center on receipt width
       const logoY = companySettings.logo_position_y || yPos;
       pdf.addImage(companySettings.logo_url, 'PNG', logoX, logoY, logoW, logoH);
       yPos += logoH + 5;
@@ -100,55 +108,55 @@ export const generateReceipt = (
   }
   
   // Company name
-  pdf.setFontSize(12);
+  pdf.setFontSize(titleFontSize);
   pdf.setFont('helvetica', 'bold');
   const companyName = companySettings.company_name;
   const nameWidth = pdf.getTextWidth(companyName);
-  pdf.text(companyName, (80 - nameWidth) / 2, yPos);
+  pdf.text(companyName, (width - nameWidth) / 2, yPos);
   yPos += 5;
   
   // Company description
   if (companySettings.company_description) {
-    pdf.setFontSize(8);
+    pdf.setFontSize(regularFontSize);
     pdf.setFont('helvetica', 'normal');
     const descWidth = pdf.getTextWidth(companySettings.company_description);
-    pdf.text(companySettings.company_description, (80 - descWidth) / 2, yPos);
+    pdf.text(companySettings.company_description, (width - descWidth) / 2, yPos);
     yPos += 4;
   }
   
   // Address
-  pdf.setFontSize(8);
+  pdf.setFontSize(regularFontSize);
   const address = `${companySettings.address}, ${companySettings.city}`;
   const addressWidth = pdf.getTextWidth(address);
-  pdf.text(address, (80 - addressWidth) / 2, yPos);
+  pdf.text(address, (width - addressWidth) / 2, yPos);
   yPos += 4;
   
   // Contact info
   const contact = `Tél: ${companySettings.phone}`;
   const contactWidth = pdf.getTextWidth(contact);
-  pdf.text(contact, (80 - contactWidth) / 2, yPos);
+  pdf.text(contact, (width - contactWidth) / 2, yPos);
   yPos += 4;
   
   const email = companySettings.email;
   const emailWidth = pdf.getTextWidth(email);
-  pdf.text(email, (80 - emailWidth) / 2, yPos);
+  pdf.text(email, (width - emailWidth) / 2, yPos);
   yPos += 6;
   
   // Separator
   pdf.setLineWidth(0.3);
-  pdf.line(5, yPos, 75, yPos);
+  pdf.line(margin, yPos, width - margin, yPos);
   yPos += 5;
   
   // Receipt title
-  pdf.setFontSize(10);
+  pdf.setFontSize(titleFontSize - 1);
   pdf.setFont('helvetica', 'bold');
   const receiptTitle = 'REÇU DE VENTE';
   const titleWidth = pdf.getTextWidth(receiptTitle);
-  pdf.text(receiptTitle, (80 - titleWidth) / 2, yPos);
+  pdf.text(receiptTitle, (width - titleWidth) / 2, yPos);
   yPos += 6;
   
   // Transaction details
-  pdf.setFontSize(8);
+  pdf.setFontSize(regularFontSize);
   pdf.setFont('helvetica', 'normal');
   const date = new Date(saleData.created_at).toLocaleString('fr-FR', {
     day: '2-digit',
@@ -157,33 +165,38 @@ export const generateReceipt = (
     hour: '2-digit',
     minute: '2-digit'
   });
-  pdf.text(`Date: ${date}`, 5, yPos);
+  pdf.text(`Date: ${date}`, margin, yPos);
   yPos += 4;
-  pdf.text(`N° Reçu: ${saleData.id.substring(0, 8)}`, 5, yPos);
+  pdf.text(`N° Reçu: ${saleData.id.substring(0, 8)}`, margin, yPos);
   yPos += 4;
-  pdf.text(`Vendeur: ${sellerName}`, 5, yPos);
+  pdf.text(`Vendeur: ${sellerName}`, margin, yPos);
   yPos += 4;
   
   if (saleData.customer_name) {
-    pdf.text(`Client: ${saleData.customer_name}`, 5, yPos);
+    pdf.text(`Client: ${saleData.customer_name}`, margin, yPos);
     yPos += 4;
   }
   
   yPos += 2;
-  pdf.line(5, yPos, 75, yPos);
+  pdf.line(margin, yPos, width - margin, yPos);
   yPos += 5;
   
-  // Items header
+  // Items header - responsive column positioning
+  const qtyCol = width === 58 ? 33 : 48;
+  const amountCol = width === 58 ? 42 : 60;
+  
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Article', 5, yPos);
-  pdf.text('Qté', 48, yPos);
-  pdf.text('Montant', 60, yPos, { align: 'right' });
+  pdf.text('Article', margin, yPos);
+  pdf.text('Qté', qtyCol, yPos);
+  pdf.text('Montant', amountCol, yPos, { align: 'right' });
   yPos += 4;
-  pdf.line(5, yPos, 75, yPos);
+  pdf.line(margin, yPos, width - margin, yPos);
   yPos += 4;
   
   // Items
   pdf.setFont('helvetica', 'normal');
+  const maxNameLength = width === 58 ? 15 : 25;
+  
   items.forEach(item => {
     // Build item description with details
     let itemDescription = item.name;
@@ -194,8 +207,8 @@ export const generateReceipt = (
       }
     }
     
-    const itemName = itemDescription.length > 25 ? itemDescription.substring(0, 22) + '...' : itemDescription;
-    pdf.text(itemName, 5, yPos);
+    const itemName = itemDescription.length > maxNameLength ? itemDescription.substring(0, maxNameLength - 3) + '...' : itemDescription;
+    pdf.text(itemName, margin, yPos);
     yPos += 3;
     
     // Quantity with fractional display for iron products
@@ -206,26 +219,26 @@ export const generateReceipt = (
       qtyText = `${item.cartQuantity} ${item.displayUnit || item.unit}`;
     }
     
-    pdf.text(qtyText, 48, yPos);
+    pdf.text(qtyText, qtyCol, yPos);
     
     const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
-    pdf.text(formatAmount(itemTotal, false), 75, yPos, { align: 'right' });
+    pdf.text(formatAmount(itemTotal, false), width - margin, yPos, { align: 'right' });
     yPos += 5;
     
     if (yPos > 270) {
-      pdf.addPage([80, 297]);
+      pdf.addPage([width, 297]);
       yPos = 10;
     }
   });
   
   yPos += 2;
-  pdf.line(5, yPos, 75, yPos);
+  pdf.line(margin, yPos, width - margin, yPos);
   yPos += 5;
   
   // Totals
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Sous-total HT:', 5, yPos);
-  pdf.text(formatAmount(saleData.subtotal, false), 75, yPos, { align: 'right' });
+  pdf.text('Sous-total HT:', margin, yPos);
+  pdf.text(formatAmount(saleData.subtotal, false), width - margin, yPos, { align: 'right' });
   yPos += 5;
   
   if (saleData.discount_amount > 0) {
@@ -233,37 +246,37 @@ export const generateReceipt = (
     const discountLabel = saleData.discount_type === 'percentage' 
       ? `Remise (${saleData.discount_value}%):`
       : 'Remise:';
-    pdf.text(discountLabel, 5, yPos);
-    pdf.text(`-${formatAmount(saleData.discount_amount, false)}`, 75, yPos, { align: 'right' });
+    pdf.text(discountLabel, margin, yPos);
+    pdf.text(`-${formatAmount(saleData.discount_amount, false)}`, width - margin, yPos, { align: 'right' });
     yPos += 5;
   }
   
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
-  pdf.text('TOTAL:', 5, yPos);
-  pdf.text(formatAmount(saleData.total_amount), 75, yPos, { align: 'right' });
+  pdf.setFontSize(titleFontSize - 1);
+  pdf.text('TOTAL:', margin, yPos);
+  pdf.text(formatAmount(saleData.total_amount), width - margin, yPos, { align: 'right' });
   yPos += 6;
   
   // Payment method
-  pdf.setFontSize(8);
+  pdf.setFontSize(regularFontSize);
   pdf.setFont('helvetica', 'normal');
   const methodLabels: Record<string, string> = {
     'espece': 'Espèces',
     'cheque': 'Chèque',
     'virement': 'Virement'
   };
-  pdf.text(`Mode de paiement: ${methodLabels[saleData.payment_method] || saleData.payment_method}`, 5, yPos);
+  pdf.text(`Mode de paiement: ${methodLabels[saleData.payment_method] || saleData.payment_method}`, margin, yPos);
   yPos += 6;
   
-  pdf.line(5, yPos, 75, yPos);
+  pdf.line(margin, yPos, width - margin, yPos);
   yPos += 5;
   
   // Thank you message
-  pdf.setFontSize(9);
+  pdf.setFontSize(regularFontSize + 1);
   pdf.setFont('helvetica', 'italic');
   const thanks = 'Merci de votre confiance !';
   const thanksWidth = pdf.getTextWidth(thanks);
-  pdf.text(thanks, (80 - thanksWidth) / 2, yPos);
+  pdf.text(thanks, (width - thanksWidth) / 2, yPos);
   
   // Open in new window for printing
   const pdfBlob = pdf.output('blob');
