@@ -502,7 +502,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge Function Error:', error);
+        throw new Error(`Erreur serveur: ${error.message || 'Service indisponible'}`);
+      }
       
       if (!data.success) {
         throw new Error(data.error || 'Échec du traitement de la vente');
@@ -540,12 +543,31 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       onSaleComplete?.();
 
     } catch (error) {
-      console.error('Error processing sale:', error);
-      const errorMessage = error instanceof Error ? error.message : "Impossible d'enregistrer la vente";
+      console.error('Erreur détaillée lors du traitement de la vente:', error);
+      
+      let errorMessage = "Impossible d'enregistrer la vente";
+      let errorDescription = "";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Détails spécifiques basés sur le message d'erreur
+        if (error.message.includes('stock')) {
+          errorDescription = "Un ou plusieurs produits n'ont pas assez de stock disponible.";
+        } else if (error.message.includes('Session')) {
+          errorDescription = "Veuillez vous reconnecter et réessayer.";
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorDescription = "Problème de connexion réseau. Vérifiez votre connexion internet.";
+        } else {
+          errorDescription = "Détails: " + error.message;
+        }
+      }
+      
       toast({
-        title: "Erreur",
-        description: errorMessage,
-        variant: "destructive"
+        title: "❌ Erreur de vente",
+        description: errorDescription || errorMessage,
+        variant: "destructive",
+        duration: 6000,
       });
     } finally {
       setIsProcessing(false);
@@ -982,7 +1004,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                         <div className="flex-1">
                           <h5 className="font-medium">{item.name}</h5>
                           <p className="text-sm text-muted-foreground">
-                            {item.category === 'fer' && item.unit === 'tonne' 
+                            {item.category === 'fer' && item.unit === 'barre' 
                               ? getTonnageLabel(item.cartQuantity)
                               : `${item.cartQuantity} ${item.displayUnit || item.unit}`
                             } = {formatAmount(itemTotal)}
@@ -1296,11 +1318,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               <Label htmlFor="custom-quantity">
                 {customQuantityDialog.product?.category === 'ceramique' 
                   ? 'Surface nécessaire (m²)' 
-                  : 'Nombre de barres'}
+                  : customQuantityDialog.product?.category === 'fer'
+                    ? 'Tonnage (tonnes)'
+                    : 'Quantité'}
               </Label>
               
               {/* Quick fraction buttons for iron (tonnage) */}
-              {customQuantityDialog.product?.category === 'fer' && customQuantityDialog.product?.unit === 'tonne' && (
+              {customQuantityDialog.product?.category === 'fer' && (
                 <div className="grid grid-cols-4 gap-2 mb-3">
                   <Button
                     type="button"
@@ -1365,7 +1389,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   )}
                 </p>
               )}
-              {customQuantityDialog.product?.category === 'fer' && customQuantityDialog.product?.unit === 'tonne' && customQuantityValue && (
+              {customQuantityDialog.product?.category === 'fer' && customQuantityValue && (
                 <p className="text-xs text-muted-foreground">
                   Quantité sélectionnée: {getTonnageLabel(parseFloat(customQuantityValue))}
                 </p>
