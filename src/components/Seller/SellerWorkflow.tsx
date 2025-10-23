@@ -303,14 +303,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       displayUnit = product.unit;
     }
 
+    // Get available stock based on category
+    const availableStock = product.category === 'ceramique' ? (product.stock_boite || 0) : 
+                          product.category === 'fer' ? (product.stock_barre || 0) : 
+                          product.quantity;
+
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
       
       if (existingItem) {
         const newCartQuantity = existingItem.cartQuantity + quantityToAdd;
-        const availableStock = product.category === 'ceramique' ? (product.stock_boite || 0) : 
-                                product.category === 'fer' ? (product.stock_barre || 0) : 
-                                product.quantity;
         
         if (newCartQuantity > availableStock) {
           toast({
@@ -327,6 +329,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             : item
         );
       } else {
+        // Validate stock for new items
+        if (quantityToAdd > availableStock) {
+          toast({
+            title: "Stock insuffisant",
+            description: `Quantité demandée : ${quantityToAdd} ${displayUnit}\nStock disponible : ${availableStock} ${displayUnit}`,
+            variant: "destructive"
+          });
+          return prevCart;
+        }
+        
         return [...prevCart, { 
           ...product, 
           cartQuantity: quantityToAdd,
@@ -1286,10 +1298,53 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   ? 'Surface nécessaire (m²)' 
                   : 'Nombre de barres'}
               </Label>
+              
+              {/* Quick fraction buttons for iron (tonnage) */}
+              {customQuantityDialog.product?.category === 'fer' && customQuantityDialog.product?.unit === 'tonne' && (
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCustomQuantityValue('0.25')}
+                    className="text-xs"
+                  >
+                    1/4 T
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCustomQuantityValue('0.5')}
+                    className="text-xs"
+                  >
+                    1/2 T
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCustomQuantityValue('0.75')}
+                    className="text-xs"
+                  >
+                    3/4 T
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCustomQuantityValue('1')}
+                    className="text-xs"
+                  >
+                    1 T
+                  </Button>
+                </div>
+              )}
+              
               <Input
                 id="custom-quantity"
                 type="number"
-                step={customQuantityDialog.product?.category === 'ceramique' ? '0.01' : '1'}
+                step={customQuantityDialog.product?.category === 'ceramique' ? '0.01' : '0.01'}
                 min="0"
                 value={customQuantityValue}
                 onChange={(e) => setCustomQuantityValue(e.target.value)}
@@ -1308,6 +1363,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                       {' '}(≈ {(Math.ceil(parseFloat(customQuantityValue) / customQuantityDialog.product.surface_par_boite) * customQuantityDialog.product.surface_par_boite).toFixed(2)} m²)
                     </>
                   )}
+                </p>
+              )}
+              {customQuantityDialog.product?.category === 'fer' && customQuantityDialog.product?.unit === 'tonne' && customQuantityValue && (
+                <p className="text-xs text-muted-foreground">
+                  Quantité sélectionnée: {getTonnageLabel(parseFloat(customQuantityValue))}
                 </p>
               )}
             </div>
