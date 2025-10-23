@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
 
     console.log('Processing sale for user:', user.id)
     console.log('Sale items:', saleData.items.length)
+    console.log('📦 Items to process:', JSON.stringify(saleData.items, null, 2))
 
     // Validate stock availability for all items before processing
     for (const item of saleData.items) {
@@ -90,6 +91,8 @@ Deno.serve(async (req) => {
       }
     }
 
+    console.log('✅ Stock validation passed for all items')
+
     // Create sale record
     const { data: sale, error: saleError } = await supabaseClient
       .from('sales')
@@ -112,7 +115,7 @@ Deno.serve(async (req) => {
       throw new Error('Failed to create sale')
     }
 
-    console.log('Sale created:', sale.id)
+    console.log('✅ Sale created:', sale.id)
 
     // Process each item: create sale_item, update stock, and create stock_movement
     for (const item of saleData.items) {
@@ -256,11 +259,12 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error processing sale:', error)
+    console.error('🔴 Error processing sale:', error)
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Internal server error'
+      JSON.stringify({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Internal server error',
+        details: error instanceof Error ? error.stack : undefined
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

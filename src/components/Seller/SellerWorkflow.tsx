@@ -57,6 +57,7 @@ interface Product {
   prix_par_barre?: number;
   stock_barre?: number;
   decimal_autorise?: boolean;
+  bars_per_ton?: number;  // Number of bars per metric ton (for iron category)
   // Energy-specific fields
   type_energie?: any;
   puissance?: any;
@@ -136,6 +137,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     } else {
       return fractionStr ? `${fractionStr} tonne` : `${tonnage.toFixed(2)} tonne${tonnage > 1 ? 's' : ''}`;
     }
+  };
+
+  // Convert tonnage to number of bars based on bars_per_ton
+  const tonnageToBarres = (tonnage: number, barsPerTon: number): number => {
+    return tonnage * barsPerTon;
+  };
+
+  // Convert bars to tonnage for display
+  const barresToTonnage = (barres: number, barsPerTon: number): number => {
+    return barres / barsPerTon;
   };
 
   // Load company settings once on mount
@@ -289,8 +300,15 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       displayUnit = `m² (${boxesNeeded} boîtes)`;
     }
 
-    // Calculate for iron bars
-    if (product.category === 'fer' && product.prix_par_barre) {
+    // Calculate for iron bars - convert tonnage input to actual bars
+    if (product.category === 'fer' && product.prix_par_barre && product.bars_per_ton) {
+      // customQty is in TONNES, we need to convert to BARS
+      const tonnageInput = customQty || 0;
+      quantityToAdd = tonnageToBarres(tonnageInput, product.bars_per_ton); // Convert to bars
+      actualPrice = product.prix_par_barre * quantityToAdd; // Price per bar * number of bars
+      displayUnit = getTonnageLabel(tonnageInput); // Display as fractional tonnage
+    } else if (product.category === 'fer' && product.prix_par_barre) {
+      // Fallback if bars_per_ton is not defined
       quantityToAdd = customQty || 1;
       actualPrice = product.prix_par_barre * quantityToAdd;
       displayUnit = 'barre';
@@ -467,6 +485,28 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const discountAmount = getDiscountAmount();
       const totalAmount = getFinalTotal();
 
+      // Validate cart items before sending
+      const invalidItems = cart.filter(item => {
+        if (item.category === 'fer') {
+          const availableStock = item.stock_barre || 0;
+          if (item.cartQuantity > availableStock) {
+            return true;
+          }
+        }
+        return false;
+      });
+
+      if (invalidItems.length > 0) {
+        const itemNames = invalidItems.map(i => i.name).join(', ');
+        throw new Error(`Stock insuffisant pour: ${itemNames}. Veuillez ajuster les quantités.`);
+      }
+
+      console.log('✅ Cart validation passed:', {
+        itemCount: cart.length,
+        totalAmount: totalAmount,
+        hasDiscount: discountType !== 'none'
+      });
+
       // Prepare sale data for Edge Function
       const saleRequest = {
         customer_name: customerName.trim() || null,
@@ -503,8 +543,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       });
 
       if (error) {
-        console.error('Edge Function Error:', error);
-        throw new Error(`Erreur serveur: ${error.message || 'Service indisponible'}`);
+        console.error('🔴 Edge Function Error Details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw new Error(`Erreur serveur (${error.code || 'UNKNOWN'}): ${error.message || 'Service temporairement indisponible. Réessayez dans quelques instants.'}`);
       }
       
       if (!data.success) {
@@ -543,31 +588,50 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       onSaleComplete?.();
 
     } catch (error) {
-      console.error('Erreur détaillée lors du traitement de la vente:', error);
+      console.error('🔴 Erreur détaillée lors du traitement de la vente:', error);
+      console.error('🔴 Stack trace:', error instanceof Error ? error.stack : 'N/A');
+      console.error('🔴 Cart contents:', JSON.stringify(cart, null, 2));
       
-      let errorMessage = "Impossible d'enregistrer la vente";
+      let errorTitle = "❌ Échec de la vente";
       let errorDescription = "";
       
       if (error instanceof Error) {
-        errorMessage = error.message;
+        const errorMsg = error.message.toLowerCase();
         
-        // Détails spécifiques basés sur le message d'erreur
-        if (error.message.includes('stock')) {
-          errorDescription = "Un ou plusieurs produits n'ont pas assez de stock disponible.";
-        } else if (error.message.includes('Session')) {
-          errorDescription = "Veuillez vous reconnecter et réessayer.";
-        } else if (error.message.includes('network') || error.message.includes('fetch')) {
-          errorDescription = "Problème de connexion réseau. Vérifiez votre connexion internet.";
-        } else {
-          errorDescription = "Détails: " + error.message;
+        // Stock insuffisant
+        if (errorMsg.includes('stock') || errorMsg.includes('insufficient')) {
+          errorTitle = "❌ Stock insuffisant";
+          errorDescription = `Un ou plusieurs produits n'ont pas assez de stock disponible.\n\nDétails: ${error.message}`;
+        } 
+        // Problème de session/authentification
+        else if (errorMsg.includes('session') || errorMsg.includes('auth') || errorMsg.includes('token')) {
+          errorTitle = "🔐 Erreur d'authentification";
+          errorDescription = `Votre session a expiré. Veuillez vous reconnecter et réessayer.\n\nDétails: ${error.message}`;
+        } 
+        // Problème réseau
+        else if (errorMsg.includes('network') || errorMsg.includes('fetch') || errorMsg.includes('connection')) {
+          errorTitle = "🌐 Problème de connexion";
+          errorDescription = `Impossible de contacter le serveur. Vérifiez votre connexion internet.\n\nDétails: ${error.message}`;
         }
+        // Erreur serveur
+        else if (errorMsg.includes('serveur') || errorMsg.includes('server') || errorMsg.includes('service')) {
+          errorTitle = "⚠️ Erreur serveur";
+          errorDescription = `Le serveur a rencontré une erreur lors du traitement.\n\nDétails: ${error.message}\n\nVeuillez réessayer dans quelques instants.`;
+        }
+        // Erreur inconnue
+        else {
+          errorTitle = "❌ Erreur inattendue";
+          errorDescription = `Une erreur s'est produite lors de l'enregistrement de la vente.\n\n📋 Détails techniques:\n${error.message}\n\n💡 Suggestion: Vérifiez les logs de la console (F12) pour plus d'informations.`;
+        }
+      } else {
+        errorDescription = "Erreur inconnue. Contactez le support technique.";
       }
       
       toast({
-        title: "❌ Erreur de vente",
-        description: errorDescription || errorMessage,
+        title: errorTitle,
+        description: errorDescription,
         variant: "destructive",
-        duration: 6000,
+        duration: 8000, // 8 secondes pour lire
       });
     } finally {
       setIsProcessing(false);
@@ -1004,8 +1068,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                         <div className="flex-1">
                           <h5 className="font-medium">{item.name}</h5>
                           <p className="text-sm text-muted-foreground">
-                            {item.category === 'fer' && item.unit === 'barre' 
-                              ? getTonnageLabel(item.cartQuantity)
+                            {item.category === 'fer' && item.bars_per_ton 
+                              ? `${item.displayUnit} (${item.cartQuantity.toFixed(2)} barres)`
                               : `${item.cartQuantity} ${item.displayUnit || item.unit}`
                             } = {formatAmount(itemTotal)}
                           </p>
@@ -1309,6 +1373,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                     </p>
                     <p className="text-sm text-success">
                       Prix: {customQuantityDialog.product.prix_par_barre} HTG/barre
+                      {customQuantityDialog.product.bars_per_ton && (
+                        <span className="text-xs text-muted-foreground block">
+                          ({customQuantityDialog.product.bars_per_ton} barres/tonne)
+                        </span>
+                      )}
                     </p>
                   </>
                 )}
@@ -1389,9 +1458,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   )}
                 </p>
               )}
-              {customQuantityDialog.product?.category === 'fer' && customQuantityValue && (
+              {customQuantityDialog.product?.category === 'fer' && customQuantityValue && customQuantityDialog.product.bars_per_ton && (
                 <p className="text-xs text-muted-foreground">
                   Quantité sélectionnée: {getTonnageLabel(parseFloat(customQuantityValue))}
+                  <span className="block">
+                    ≈ {tonnageToBarres(parseFloat(customQuantityValue), customQuantityDialog.product.bars_per_ton).toFixed(2)} barres
+                  </span>
                 </p>
               )}
             </div>

@@ -11,6 +11,7 @@ export interface CartItem {
   displayUnit?: string;
   diametre?: string;
   longueur_barre?: number;
+  bars_per_ton?: number;
 }
 
 export interface CompanySettings {
@@ -65,6 +66,11 @@ export const getTonnageLabel = (tonnage: number): string => {
   }
 };
 
+// Convert bars to tonnage for display
+const barresToTonnage = (barres: number, barsPerTon: number): number => {
+  return barres / barsPerTon;
+};
+
 const formatAmount = (amount: number, currency = true): string => {
   const formatted = amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   return currency ? `${formatted} HTG` : formatted;
@@ -107,39 +113,68 @@ export const generateReceipt = (
     }
   }
   
-  // Company name
+  // Company name - center with overflow protection
   pdf.setFontSize(titleFontSize);
   pdf.setFont('helvetica', 'bold');
   const companyName = companySettings.company_name;
   const nameWidth = pdf.getTextWidth(companyName);
-  pdf.text(companyName, (width - nameWidth) / 2, yPos);
+  const maxTextWidth = contentWidth - 2; // Safety margin
+  if (nameWidth > maxTextWidth) {
+    // Truncate if too long
+    const truncatedName = companyName.substring(0, Math.floor(companyName.length * (maxTextWidth / nameWidth))) + '...';
+    pdf.text(truncatedName, margin + 1, yPos);
+  } else {
+    pdf.text(companyName, (width - nameWidth) / 2, yPos);
+  }
   yPos += 4;
   
-  // Company description
+  // Company description - center with overflow protection
   if (companySettings.company_description) {
     pdf.setFontSize(regularFontSize);
     pdf.setFont('helvetica', 'normal');
-    const descWidth = pdf.getTextWidth(companySettings.company_description);
-    pdf.text(companySettings.company_description, (width - descWidth) / 2, yPos);
+    const desc = companySettings.company_description;
+    const descWidth = pdf.getTextWidth(desc);
+    if (descWidth > maxTextWidth) {
+      const truncatedDesc = desc.substring(0, Math.floor(desc.length * (maxTextWidth / descWidth))) + '...';
+      pdf.text(truncatedDesc, margin + 1, yPos);
+    } else {
+      pdf.text(desc, (width - descWidth) / 2, yPos);
+    }
     yPos += 3;
   }
   
-  // Address
+  // Address - center with overflow protection
   pdf.setFontSize(regularFontSize);
   const address = `${companySettings.address}, ${companySettings.city}`;
   const addressWidth = pdf.getTextWidth(address);
-  pdf.text(address, (width - addressWidth) / 2, yPos);
+  if (addressWidth > maxTextWidth) {
+    const truncatedAddress = address.substring(0, Math.floor(address.length * (maxTextWidth / addressWidth))) + '...';
+    pdf.text(truncatedAddress, margin + 1, yPos);
+  } else {
+    pdf.text(address, (width - addressWidth) / 2, yPos);
+  }
   yPos += 3;
   
-  // Contact info
+  // Contact info - center with overflow protection
   const contact = `Tél: ${companySettings.phone}`;
   const contactWidth = pdf.getTextWidth(contact);
-  pdf.text(contact, (width - contactWidth) / 2, yPos);
+  if (contactWidth > maxTextWidth) {
+    const truncatedContact = contact.substring(0, Math.floor(contact.length * (maxTextWidth / contactWidth))) + '...';
+    pdf.text(truncatedContact, margin + 1, yPos);
+  } else {
+    pdf.text(contact, (width - contactWidth) / 2, yPos);
+  }
   yPos += 3;
   
+  // Email - center with overflow protection
   const email = companySettings.email;
   const emailWidth = pdf.getTextWidth(email);
-  pdf.text(email, (width - emailWidth) / 2, yPos);
+  if (emailWidth > maxTextWidth) {
+    const truncatedEmail = email.substring(0, Math.floor(email.length * (maxTextWidth / emailWidth))) + '...';
+    pdf.text(truncatedEmail, margin + 1, yPos);
+  } else {
+    pdf.text(email, (width - emailWidth) / 2, yPos);
+  }
   yPos += 6;
   
   // Separator
@@ -195,7 +230,7 @@ export const generateReceipt = (
   
   // Items
   pdf.setFont('helvetica', 'normal');
-  const maxNameLength = width === 58 ? 15 : 25;
+  const maxNameLength = width === 58 ? 12 : 20; // Reduced for better overflow protection
   
   items.forEach(item => {
     // Build item description with details
@@ -207,14 +242,18 @@ export const generateReceipt = (
       }
     }
     
-    const itemName = itemDescription.length > maxNameLength ? itemDescription.substring(0, maxNameLength - 3) + '...' : itemDescription;
+    const itemName = itemDescription.length > maxNameLength ? itemDescription.substring(0, maxNameLength - 2) + '..' : itemDescription;
     pdf.text(itemName, margin, yPos);
     yPos += 3;
     
     // Quantity with fractional display for iron products
     let qtyText = '';
-    if (item.category === 'fer' && item.unit === 'barre') {
-      qtyText = getTonnageLabel(item.cartQuantity);
+    if (item.category === 'fer' && item.bars_per_ton) {
+      // Display tonnage with bars in parentheses
+      const tonnage = barresToTonnage(item.cartQuantity, item.bars_per_ton);
+      qtyText = `${getTonnageLabel(tonnage)} (${item.cartQuantity.toFixed(1)}b)`;
+    } else if (item.category === 'fer' && item.unit === 'barre') {
+      qtyText = `${item.cartQuantity} ${item.unit}`;
     } else {
       qtyText = `${item.cartQuantity} ${item.displayUnit || item.unit}`;
     }
@@ -406,8 +445,11 @@ export const generateInvoice = (
     
     // Display quantity with fractional format for iron products
     let qtyDisplay = '';
-    if (item.category === 'fer' && item.unit === 'barre') {
-      qtyDisplay = getTonnageLabel(item.cartQuantity);
+    if (item.category === 'fer' && item.bars_per_ton) {
+      const tonnage = barresToTonnage(item.cartQuantity, item.bars_per_ton);
+      qtyDisplay = `${getTonnageLabel(tonnage)} (${item.cartQuantity.toFixed(1)}b)`;
+    } else if (item.category === 'fer' && item.unit === 'barre') {
+      qtyDisplay = item.cartQuantity.toString();
     } else {
       qtyDisplay = item.cartQuantity.toString();
     }
@@ -415,8 +457,10 @@ export const generateInvoice = (
     
     // Unit column
     let unitText = item.displayUnit || item.unit;
-    if (item.category === 'fer' && item.unit === 'barre') {
+    if (item.category === 'fer' && item.bars_per_ton) {
       unitText = ''; // Already included in quantity display
+    } else if (item.category === 'fer' && item.unit === 'barre') {
+      unitText = 'barre'; // Show unit for bars without bars_per_ton
     }
     pdf.text(unitText, 140, yPos, { align: 'right' });
     
