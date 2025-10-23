@@ -158,11 +158,11 @@ const Auth = () => {
             )}
             <h1 className={cn(
               "font-bold text-primary",
-              (companySettings?.company_name || 'GF Distribution & Multi-Services').length > 30 
+              (companySettings?.company_name || 'Stock Management').length > 30 
                 ? "text-2xl" 
                 : "text-3xl"
             )}>
-              {companySettings?.company_name || 'GF Distribution & Multi-Services'}
+              {companySettings?.company_name || 'Stock Management'}
             </h1>
           </div>
           <p className="text-muted-foreground">

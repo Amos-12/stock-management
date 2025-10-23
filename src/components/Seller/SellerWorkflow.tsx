@@ -140,11 +140,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       
       if (data && data.length > 0) {
         // Seller has specific category restrictions
-        console.log('🔒 Seller restricted to categories:', data.map(d => d.category));
         setAuthorizedCategories(data.map(d => d.category));
       } else {
         // Seller has no restrictions = empty array (all categories)
-        console.log('✅ Seller has access to all categories');
         setAuthorizedCategories([]);
       }
     } catch (error) {
@@ -212,8 +210,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         
         return hasStock;
       });
-      
-      console.log('📊 Available products by category:');
+    
       const byCat = availableProducts.reduce((acc: any, p: Product) => {
         acc[p.category] = (acc[p.category] || 0) + 1;
         return acc;

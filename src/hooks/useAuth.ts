@@ -190,7 +190,7 @@ export const useAuth = () => {
 
       toast({
         title: "Connexion réussie",
-        description: "Bienvenue sur GF Distribution !",
+        description: "Bienvenue sur Complexe Petit Pas !",
       });
 
       return { error: null };

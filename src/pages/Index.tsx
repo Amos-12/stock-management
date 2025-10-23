@@ -97,7 +97,7 @@ const Index = () => {
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
               <img src={logo} alt="Logo" className="w-12 h-12 object-contain mr-3" />
-              <CardTitle className="text-2xl">GF Distribution</CardTitle>
+              <CardTitle className="text-2xl">Complexe Petit Pas</CardTitle>
             </div>
             <p className="text-muted-foreground">
               Système de gestion de stock et de vente
