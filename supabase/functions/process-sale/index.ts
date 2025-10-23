@@ -9,6 +9,7 @@ interface SaleItem {
   product_id: string
   product_name: string
   quantity: number
+  unit: string
   unit_price: number
   subtotal: number
 }

@@ -12,6 +12,8 @@ export interface CartItem {
   diametre?: string;
   longueur_barre?: number;
   bars_per_ton?: number;
+  sourceUnit?: 'barre' | 'tonne';
+  sourceValue?: number;
 }
 
 export interface CompanySettings {
@@ -246,14 +248,21 @@ export const generateReceipt = (
     pdf.text(itemName, margin, yPos);
     yPos += 3;
     
-    // Quantity with fractional display for iron products
+    // Quantity display for iron products - ALWAYS show bars first
     let qtyText = '';
     if (item.category === 'fer' && item.bars_per_ton) {
-      // Display tonnage with bars in parentheses
-      const tonnage = barresToTonnage(item.cartQuantity, item.bars_per_ton);
-      qtyText = `${getTonnageLabel(tonnage)} (${item.cartQuantity.toFixed(1)}b)`;
-    } else if (item.category === 'fer' && item.unit === 'barre') {
-      qtyText = `${item.cartQuantity} ${item.unit}`;
+      const barsQty = Math.round(item.cartQuantity); // Ensure integer display
+      if (item.sourceUnit === 'tonne') {
+        const tonnage = barresToTonnage(barsQty, item.bars_per_ton);
+        qtyText = `${barsQty} barres (≈ ${getTonnageLabel(tonnage)})`;
+      } else if (barsQty % item.bars_per_ton === 0) {
+        const tonnes = barsQty / item.bars_per_ton;
+        qtyText = `${barsQty} barres (= ${tonnes} T)`;
+      } else {
+        qtyText = `${barsQty} barres`;
+      }
+    } else if (item.category === 'fer') {
+      qtyText = `${Math.round(item.cartQuantity)} barres`;
     } else {
       qtyText = `${item.cartQuantity} ${item.displayUnit || item.unit}`;
     }
@@ -443,13 +452,21 @@ export const generateInvoice = (
     
     pdf.text(itemDescription, 17, yPos);
     
-    // Display quantity with fractional format for iron products
+    // Display quantity for iron products - ALWAYS show bars first
     let qtyDisplay = '';
     if (item.category === 'fer' && item.bars_per_ton) {
-      const tonnage = barresToTonnage(item.cartQuantity, item.bars_per_ton);
-      qtyDisplay = `${getTonnageLabel(tonnage)} (${item.cartQuantity.toFixed(1)}b)`;
-    } else if (item.category === 'fer' && item.unit === 'barre') {
-      qtyDisplay = item.cartQuantity.toString();
+      const barsQty = Math.round(item.cartQuantity);
+      if (item.sourceUnit === 'tonne') {
+        const tonnage = barresToTonnage(barsQty, item.bars_per_ton);
+        qtyDisplay = `${barsQty} barres (≈ ${getTonnageLabel(tonnage)})`;
+      } else if (barsQty % item.bars_per_ton === 0) {
+        const tonnes = barsQty / item.bars_per_ton;
+        qtyDisplay = `${barsQty} barres (= ${tonnes} T)`;
+      } else {
+        qtyDisplay = `${barsQty} barres`;
+      }
+    } else if (item.category === 'fer') {
+      qtyDisplay = `${Math.round(item.cartQuantity)} barres`;
     } else {
       qtyDisplay = item.cartQuantity.toString();
     }

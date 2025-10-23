@@ -76,6 +76,8 @@ interface CartItem extends Product {
   cartQuantity: number;
   displayUnit?: string; // For ceramics: "m²", For iron: "barre"
   actualPrice?: number; // Calculated price for ceramics
+  sourceUnit?: 'barre' | 'tonne'; // Track original input unit for iron
+  sourceValue?: number; // Track original input value for iron
 }
 
 type WorkflowStep = 'products' | 'cart' | 'checkout' | 'success';
@@ -103,6 +105,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [customQuantityDialog, setCustomQuantityDialog] = useState<{open: boolean, product: Product | null}>({open: false, product: null});
   const [customQuantityValue, setCustomQuantityValue] = useState('');
+  const [quantityUnit, setQuantityUnit] = useState<'barre' | 'tonne'>('barre'); // Track selected unit for iron
   const [paymentMethod, setPaymentMethod] = useState<'espece' | 'cheque' | 'virement'>('espece');
   const [companySettings, setCompanySettings] = useState<any>(null);
 
@@ -139,9 +142,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     }
   };
 
-  // Convert tonnage to number of bars based on bars_per_ton
+  // Convert tonnage to number of bars based on bars_per_ton (ROUNDED TO INTEGER)
   const tonnageToBarres = (tonnage: number, barsPerTon: number): number => {
-    return tonnage * barsPerTon;
+    return Math.round(tonnage * barsPerTon); // Always return integer bars
   };
 
   // Convert bars to tonnage for display
@@ -273,22 +276,26 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     }
   };
 
-  const addToCart = (product: Product, customQty?: number) => {
+  const addToCart = (product: Product, customQty?: number, inputUnit?: 'barre' | 'tonne') => {
     // For ceramics, open dialog to get m² needed
     if (product.category === 'ceramique' && !customQty) {
       setCustomQuantityDialog({open: true, product});
+      setQuantityUnit('barre'); // Reset unit
       return;
     }
 
-    // For iron bars, add directly in barres
+    // For iron bars, open dialog if no custom quantity provided
     if (product.category === 'fer' && !customQty) {
       setCustomQuantityDialog({open: true, product});
+      setQuantityUnit('barre'); // Default to barre
       return;
     }
 
     let quantityToAdd = customQty || 1;
     let actualPrice = product.price;
     let displayUnit = product.unit;
+    let sourceUnit: 'barre' | 'tonne' | undefined;
+    let sourceValue: number | undefined;
 
     // Calculate for ceramics
     if (product.category === 'ceramique' && product.surface_par_boite && product.prix_m2) {
@@ -300,18 +307,32 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       displayUnit = `m² (${boxesNeeded} boîtes)`;
     }
 
-    // Calculate for iron bars - convert tonnage input to actual bars
-    if (product.category === 'fer' && product.prix_par_barre && product.bars_per_ton) {
-      // customQty is in TONNES, we need to convert to BARS
-      const tonnageInput = customQty || 0;
-      quantityToAdd = tonnageToBarres(tonnageInput, product.bars_per_ton); // Convert to bars
-      actualPrice = product.prix_par_barre * quantityToAdd; // Price per bar * number of bars
-      displayUnit = getTonnageLabel(tonnageInput); // Display as fractional tonnage
-    } else if (product.category === 'fer' && product.prix_par_barre) {
-      // Fallback if bars_per_ton is not defined
-      quantityToAdd = customQty || 1;
-      actualPrice = product.prix_par_barre * quantityToAdd;
-      displayUnit = 'barre';
+    // Calculate for iron bars - handle BOTH barre and tonne inputs
+    if (product.category === 'fer' && product.prix_par_barre) {
+      if (inputUnit === 'tonne') {
+        // User selected tonnage input
+        if (!product.bars_per_ton) {
+          toast({
+            title: "Configuration manquante",
+            description: "Barres/tonne non défini pour ce diamètre. Impossible d'utiliser l'unité tonne.",
+            variant: "destructive"
+          });
+          return;
+        }
+        const tonnageInput = customQty || 0;
+        quantityToAdd = tonnageToBarres(tonnageInput, product.bars_per_ton); // Convert to INTEGER bars
+        actualPrice = product.prix_par_barre * quantityToAdd; // Price per bar * number of bars
+        displayUnit = 'barre'; // Standardize display unit
+        sourceUnit = 'tonne';
+        sourceValue = tonnageInput;
+      } else {
+        // User selected barres input (default)
+        quantityToAdd = Math.max(1, Math.round(customQty || 1)); // Ensure integer
+        actualPrice = product.prix_par_barre * quantityToAdd;
+        displayUnit = 'barre';
+        sourceUnit = 'barre';
+        sourceValue = quantityToAdd;
+      }
     }
     
     // Calculate for vêtements - standard pricing
@@ -326,6 +347,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                           product.category === 'fer' ? (product.stock_barre || 0) : 
                           product.quantity;
 
+    // For iron, validate against stock in bars
+    if (product.category === 'fer' && quantityToAdd > availableStock) {
+      toast({
+        title: "Stock insuffisant",
+        description: `Stock disponible: ${availableStock} barres`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
       
@@ -335,7 +366,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         if (newCartQuantity > availableStock) {
           toast({
             title: "Stock insuffisant",
-            description: `Stock disponible : ${availableStock} ${displayUnit}`,
+            description: `Stock disponible : ${availableStock} ${product.category === 'fer' ? 'barres' : displayUnit}`,
             variant: "destructive"
           });
           return prevCart;
@@ -343,7 +374,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         
         return prevCart.map(item =>
           item.id === product.id
-            ? { ...item, cartQuantity: newCartQuantity, actualPrice, displayUnit }
+            ? { 
+                ...item, 
+                cartQuantity: newCartQuantity, 
+                actualPrice: product.category === 'fer' && product.prix_par_barre 
+                  ? product.prix_par_barre * newCartQuantity 
+                  : actualPrice,
+                displayUnit,
+                sourceUnit,
+                sourceValue
+              }
             : item
         );
       } else {
@@ -351,7 +391,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         if (quantityToAdd > availableStock) {
           toast({
             title: "Stock insuffisant",
-            description: `Quantité demandée : ${quantityToAdd} ${displayUnit}\nStock disponible : ${availableStock} ${displayUnit}`,
+            description: `Quantité demandée : ${quantityToAdd}\nStock disponible : ${availableStock} ${product.category === 'fer' ? 'barres' : displayUnit}`,
             variant: "destructive"
           });
           return prevCart;
@@ -361,13 +401,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           ...product, 
           cartQuantity: quantityToAdd,
           actualPrice,
-          displayUnit
+          displayUnit,
+          sourceUnit,
+          sourceValue
         }];
       }
     });
 
     setCustomQuantityDialog({open: false, product: null});
     setCustomQuantityValue('');
+    setQuantityUnit('barre'); // Reset to default
   };
 
   const handleCustomQuantitySubmit = () => {
@@ -384,7 +427,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       return;
     }
 
-    addToCart(product, qty);
+    // Pass the selected unit for iron products
+    if (product.category === 'fer') {
+      addToCart(product, qty, quantityUnit);
+    } else {
+      addToCart(product, qty);
+    }
   };
 
   const removeFromCart = (productId: string) => {
@@ -429,10 +477,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             displayUnit = `m² (${newQuantity} boîtes)`;
           }
           
-          // Recalculate for iron bars
+          // Recalculate for iron bars (always work with integer bars)
           else if (item.category === 'fer' && item.prix_par_barre) {
             actualPrice = item.prix_par_barre * newQuantity;
             displayUnit = 'barre';
+            // Preserve source unit info if it exists
           }
           
           // Recalculate for clothing - standard pricing
@@ -520,12 +569,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         items: cart.map(item => ({
           product_id: item.id,
           product_name: item.name,
-          quantity: item.cartQuantity,
-          unit: item.displayUnit || item.unit,
+          quantity: Math.round(item.cartQuantity), // ALWAYS INTEGER for database
+          unit: item.category === 'fer' ? 'barre' : (item.displayUnit || item.unit), // Force 'barre' for iron
           unit_price: item.actualPrice !== undefined ? item.actualPrice / item.cartQuantity : item.price,
           subtotal: item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity)
         }))
       };
+
+      console.log('📦 Sale payload:', JSON.stringify(saleRequest, null, 2));
 
       // Get the current session to pass auth token
       const { data: { session } } = await supabase.auth.getSession();
@@ -598,8 +649,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       if (error instanceof Error) {
         const errorMsg = error.message.toLowerCase();
         
+        // Quantité invalide (22P02 error)
+        if (errorMsg.includes('22p02') || errorMsg.includes('invalid input syntax for type integer')) {
+          errorTitle = "❌ Quantité invalide";
+          errorDescription = "Quantité invalide (décimale) détectée. Les barres doivent être entières. Utilisez les boutons tonne: ils arrondissent automatiquement au nombre de barres.";
+        }
         // Stock insuffisant
-        if (errorMsg.includes('stock') || errorMsg.includes('insufficient')) {
+        else if (errorMsg.includes('stock') || errorMsg.includes('insufficient')) {
           errorTitle = "❌ Stock insuffisant";
           errorDescription = `Un ou plusieurs produits n'ont pas assez de stock disponible.\n\nDétails: ${error.message}`;
         } 
@@ -1065,11 +1121,15 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                     const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
                     return (
                       <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex-1">
+                         <div className="flex-1">
                           <h5 className="font-medium">{item.name}</h5>
                           <p className="text-sm text-muted-foreground">
                             {item.category === 'fer' && item.bars_per_ton 
-                              ? `${item.displayUnit} (${item.cartQuantity.toFixed(2)} barres)`
+                              ? item.sourceUnit === 'tonne' 
+                                ? `${item.cartQuantity} barres (≈ ${getTonnageLabel(barresToTonnage(item.cartQuantity, item.bars_per_ton))})`
+                                : item.cartQuantity % item.bars_per_ton === 0
+                                  ? `${item.cartQuantity} barres (= ${item.cartQuantity / item.bars_per_ton} tonne${item.cartQuantity / item.bars_per_ton > 1 ? 's' : ''})`
+                                  : `${item.cartQuantity} barres`
                               : `${item.cartQuantity} ${item.displayUnit || item.unit}`
                             } = {formatAmount(itemTotal)}
                           </p>
@@ -1336,6 +1396,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         if (!open) {
           setCustomQuantityDialog({open: false, product: null});
           setCustomQuantityValue('');
+          setQuantityUnit('barre'); // Reset unit
         }
       }}>
         <DialogContent>
@@ -1343,7 +1404,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             <DialogTitle>
               {customQuantityDialog.product?.category === 'ceramique' 
                 ? 'Entrer la surface nécessaire' 
-                : 'Entrer le nombre de barres'}
+                : 'Entrer la quantité'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
@@ -1383,17 +1444,45 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 )}
               </div>
             )}
+            
+            {/* Unit selector for iron products */}
+            {customQuantityDialog.product?.category === 'fer' && customQuantityDialog.product.bars_per_ton && (
+              <div className="space-y-2">
+                <Label>Unité</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={quantityUnit === 'barre' ? 'default' : 'outline'}
+                    onClick={() => setQuantityUnit('barre')}
+                    className="flex-1"
+                  >
+                    Barres
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={quantityUnit === 'tonne' ? 'default' : 'outline'}
+                    onClick={() => setQuantityUnit('tonne')}
+                    className="flex-1"
+                  >
+                    Tonnes
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="custom-quantity">
                 {customQuantityDialog.product?.category === 'ceramique' 
                   ? 'Surface nécessaire (m²)' 
                   : customQuantityDialog.product?.category === 'fer'
-                    ? 'Tonnage (tonnes)'
+                    ? quantityUnit === 'barre' ? 'Quantité (barres)' : 'Quantité (tonnes)'
                     : 'Quantité'}
               </Label>
               
-              {/* Quick fraction buttons for iron (tonnage) */}
-              {customQuantityDialog.product?.category === 'fer' && (
+              {/* Quick fraction buttons for iron (only when tonne is selected) */}
+              {customQuantityDialog.product?.category === 'fer' && quantityUnit === 'tonne' && (
                 <div className="grid grid-cols-4 gap-2 mb-3">
                   <Button
                     type="button"
@@ -1437,11 +1526,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               <Input
                 id="custom-quantity"
                 type="number"
-                step={customQuantityDialog.product?.category === 'ceramique' ? '0.01' : '0.01'}
+                step={customQuantityDialog.product?.category === 'fer' && quantityUnit === 'barre' ? '1' : '0.01'}
                 min="0"
                 value={customQuantityValue}
                 onChange={(e) => setCustomQuantityValue(e.target.value)}
-                placeholder={customQuantityDialog.product?.category === 'ceramique' ? 'Ex: 15.5' : 'Ex: 10'}
+                placeholder={
+                  customQuantityDialog.product?.category === 'ceramique' 
+                    ? 'Ex: 15.5' 
+                    : quantityUnit === 'barre' 
+                      ? 'Ex: 10' 
+                      : 'Ex: 0.5'
+                }
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     handleCustomQuantitySubmit();
@@ -1460,10 +1555,23 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               )}
               {customQuantityDialog.product?.category === 'fer' && customQuantityValue && customQuantityDialog.product.bars_per_ton && (
                 <p className="text-xs text-muted-foreground">
-                  Quantité sélectionnée: {getTonnageLabel(parseFloat(customQuantityValue))}
-                  <span className="block">
-                    ≈ {tonnageToBarres(parseFloat(customQuantityValue), customQuantityDialog.product.bars_per_ton).toFixed(2)} barres
-                  </span>
+                  {quantityUnit === 'tonne' ? (
+                    <>
+                      <span className="block font-medium">{getTonnageLabel(parseFloat(customQuantityValue))}</span>
+                      <span className="block">
+                        ≈ {tonnageToBarres(parseFloat(customQuantityValue), customQuantityDialog.product.bars_per_ton)} barres (arrondi)
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="block">{parseFloat(customQuantityValue)} barres</span>
+                      {parseFloat(customQuantityValue) % customQuantityDialog.product.bars_per_ton === 0 && (
+                        <span className="block">
+                          = {parseFloat(customQuantityValue) / customQuantityDialog.product.bars_per_ton} tonne{parseFloat(customQuantityValue) / customQuantityDialog.product.bars_per_ton > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </>
+                  )}
                 </p>
               )}
             </div>
@@ -1473,6 +1581,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 onClick={() => {
                   setCustomQuantityDialog({open: false, product: null});
                   setCustomQuantityValue('');
+                  setQuantityUnit('barre');
                 }}
               >
                 Annuler
