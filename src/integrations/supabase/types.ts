@@ -499,6 +499,7 @@ export type Database = {
         | "user_signup"
         | "user_update_password"
         | "connection_failed"
+        | "product_deactivated"
       app_role: "admin" | "seller"
       product_category:
         | "alimentaires"
@@ -654,6 +655,7 @@ export const Constants = {
         "user_signup",
         "user_update_password",
         "connection_failed",
+        "product_deactivated",
       ],
       app_role: ["admin", "seller"],
       product_category: [
