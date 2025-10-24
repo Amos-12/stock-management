@@ -86,9 +86,9 @@ export const generateReceipt = (
   width: number = 80 // Default 80mm, can be 58mm or 80mm
 ) => {
   // Calculate approximate height needed based on content
-  const baseHeight = 80; // Header and footer
-  const itemHeight = 8; // Approximate height per item
-  const estimatedHeight = Math.min(baseHeight + (items.length * itemHeight), 297);
+  const baseHeight = 120; // Header and footer (increased for safety)
+  const itemHeight = 10; // Approximate height per item (increased)
+  const estimatedHeight = Math.max(150, baseHeight + (items.length * itemHeight)); // Min 150mm, no max limit
   
   const pdf = new jsPDF({
     unit: 'mm',
