@@ -25,7 +25,7 @@ import {
   FileSpreadsheet,
   FileText
 } from 'lucide-react';
-import { utils, writeFile } from 'xlsx';
+import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -334,13 +334,13 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
     ];
 
     // Créer le workbook
-    const wb = utils.book_new();
+    const wb = XLSX.utils.book_new();
     
-    const ws1 = utils.aoa_to_sheet(summaryData);
-    const ws2 = utils.aoa_to_sheet(categoryData);
-    const ws3 = utils.aoa_to_sheet(productsData);
-    const ws4 = utils.aoa_to_sheet(paymentData);
-    const ws5 = utils.aoa_to_sheet(historyData);
+    const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
+    const ws2 = XLSX.utils.aoa_to_sheet(categoryData);
+    const ws3 = XLSX.utils.aoa_to_sheet(productsData);
+    const ws4 = XLSX.utils.aoa_to_sheet(paymentData);
+    const ws5 = XLSX.utils.aoa_to_sheet(historyData);
     
     // Définir la largeur des colonnes pour meilleure lisibilité
     ws1['!cols'] = [{ wch: 30 }, { wch: 30 }];
@@ -349,15 +349,15 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
     ws4['!cols'] = [{ wch: 25 }, { wch: 22 }, { wch: 15 }];
     ws5['!cols'] = [{ wch: 15 }, { wch: 18 }, { wch: 18 }];
     
-    utils.book_append_sheet(wb, ws1, 'Résumé');
-    utils.book_append_sheet(wb, ws2, 'Catégories');
-    utils.book_append_sheet(wb, ws3, 'Top Produits');
-    utils.book_append_sheet(wb, ws4, 'Méthodes Paiement');
-    utils.book_append_sheet(wb, ws5, 'Historique');
+    XLSX.utils.book_append_sheet(wb, ws1, 'Résumé');
+    XLSX.utils.book_append_sheet(wb, ws2, 'Catégories');
+    XLSX.utils.book_append_sheet(wb, ws3, 'Top Produits');
+    XLSX.utils.book_append_sheet(wb, ws4, 'Méthodes Paiement');
+    XLSX.utils.book_append_sheet(wb, ws5, 'Historique');
     
     // Télécharger le fichier
     const fileName = `rapport_complet_${format(dateRange.from, 'yyyyMMdd')}_${format(dateRange.to, 'yyyyMMdd')}.xlsx`;
-    writeFile(wb, fileName);
+    XLSX.writeFile(wb, fileName);
     
     toast({
       title: "Export réussi",
