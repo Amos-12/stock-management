@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Package, 
   ShoppingCart, 
@@ -130,10 +131,10 @@ export const ResponsiveDashboardLayout = ({
   };
 
   const SidebarContent = ({ isDesktop = false }: { isDesktop?: boolean }) => (
-    <div className={cn("p-6 space-y-6 h-full flex flex-col", isDesktop && sidebarCollapsed && "p-3")}>
+    <div className={cn("h-full flex flex-col", isDesktop && sidebarCollapsed && "")}>
       <div className={cn(
-        "border-b border-border pb-4",
-        isDesktop && sidebarCollapsed ? "text-center" : "text-center"
+        "border-b border-border pb-4 pt-6 px-6",
+        isDesktop && sidebarCollapsed ? "text-center px-3" : "text-center"
       )}>
         {companySettings?.logo_url ? (
           <img 
@@ -169,52 +170,56 @@ export const ResponsiveDashboardLayout = ({
         )}
       </div>
       
-      <nav className="space-y-2 flex-1">
-        {navItems.map((item: any) => {
-          const Icon = item.icon;
-          return (
-            <Button
-              key={item.value}
-              variant={currentSection === item.value ? 'default' : 'ghost'}
-              className={cn(
-                "w-full transition-smooth",
-                isDesktop && sidebarCollapsed ? "justify-center px-2" : "justify-start",
-                currentSection === item.value 
-                  ? "bg-primary text-primary-foreground shadow-primary" 
-                  : "hover:bg-primary/10 hover:text-primary"
-              )}
-              onClick={() => handleNavClick(item.value, item.route)}
-              title={isDesktop && sidebarCollapsed ? item.label : undefined}
-            >
-              <Icon className={cn("w-4 h-4", !(isDesktop && sidebarCollapsed) && "mr-3")} />
-              {!(isDesktop && sidebarCollapsed) && item.label}
-            </Button>
-          );
-        })}
-      </nav>
+      <ScrollArea className="flex-1 px-6 py-4">
+        <nav className="space-y-2">
+          {navItems.map((item: any) => {
+            const Icon = item.icon;
+            return (
+              <Button
+                key={item.value}
+                variant={currentSection === item.value ? 'default' : 'ghost'}
+                className={cn(
+                  "w-full transition-smooth",
+                  isDesktop && sidebarCollapsed ? "justify-center px-2" : "justify-start",
+                  currentSection === item.value 
+                    ? "bg-primary text-primary-foreground shadow-primary" 
+                    : "hover:bg-primary/10 hover:text-primary"
+                )}
+                onClick={() => handleNavClick(item.value, item.route)}
+                title={isDesktop && sidebarCollapsed ? item.label : undefined}
+              >
+                <Icon className={cn("w-4 h-4", !(isDesktop && sidebarCollapsed) && "mr-3")} />
+                {!(isDesktop && sidebarCollapsed) && item.label}
+              </Button>
+            );
+          })}
+        </nav>
+      </ScrollArea>
 
       {/* Toggle Button for Desktop */}
       {isDesktop && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="w-full mt-auto"
-          title={sidebarCollapsed ? 'Étendre le menu' : 'Réduire le menu'}
-        >
-          {sidebarCollapsed ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          ) : (
-            <>
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                <polyline points="15 18 9 12 15 6"/>
+        <div className="px-6 pb-6 pt-4 border-t border-border">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="w-full"
+            title={sidebarCollapsed ? 'Étendre le menu' : 'Réduire le menu'}
+          >
+            {sidebarCollapsed ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
               </svg>
-              Réduire
-            </>
-          )}
-        </Button>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+                Réduire
+              </>
+            )}
+          </Button>
+        </div>
       )}
     </div>
   );
