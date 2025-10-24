@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Package, ShoppingCart, UserCheck, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 import logo from '@/assets/logo.png';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 const signInSchema = z.object({
   email: z.string().email('Email invalide').max(255, 'Email trop long'),
@@ -31,6 +33,9 @@ const Auth = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [companySettings, setCompanySettings] = useState<any>(null);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isResetSubmitting, setIsResetSubmitting] = useState(false);
 
   // Form states
   const [signInForm, setSignInForm] = useState({
@@ -124,6 +129,46 @@ const Auth = () => {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsResetSubmitting(true);
+
+    try {
+      const emailSchema = z.string().email('Email invalide');
+      emailSchema.parse(resetEmail);
+
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Email envoyé',
+        description: 'Vérifiez votre boîte de réception pour réinitialiser votre mot de passe.',
+      });
+      
+      setIsResetDialogOpen(false);
+      setResetEmail('');
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: 'Erreur',
+          description: 'Veuillez entrer un email valide.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Erreur',
+          description: error.message || 'Une erreur est survenue.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setIsResetSubmitting(false);
     }
   };
 
@@ -223,6 +268,40 @@ const Auth = () => {
                   <Button type="submit" className="w-full" disabled={isSubmitting} variant="hero">
                     {isSubmitting ? 'Connexion...' : 'Se connecter'}
                   </Button>
+
+                  <div className="text-center">
+                    <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="link" className="text-sm text-muted-foreground hover:text-primary">
+                          Mot de passe oublié ?
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Réinitialiser le mot de passe</DialogTitle>
+                          <DialogDescription>
+                            Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handlePasswordReset} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="reset-email">Email</Label>
+                            <Input
+                              id="reset-email"
+                              type="email"
+                              placeholder="votre@email.com"
+                              value={resetEmail}
+                              onChange={(e) => setResetEmail(e.target.value)}
+                              required
+                            />
+                          </div>
+                          <Button type="submit" className="w-full" disabled={isResetSubmitting}>
+                            {isResetSubmitting ? 'Envoi...' : 'Envoyer le lien'}
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </form>
               </TabsContent>
 
