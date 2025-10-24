@@ -73,8 +73,9 @@ const barresToTonnage = (barres: number, barsPerTon: number): number => {
   return barres / barsPerTon;
 };
 
-const formatAmount = (amount: number, currency = true): string => {
-  const formatted = amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const formatAmount = (amount: number, currency = true, compact = false): string => {
+  const separator = compact ? '' : ' '; // No space in compact mode
+  const formatted = amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, separator);
   return currency ? `${formatted} HTG` : formatted;
 };
 
@@ -104,7 +105,7 @@ export const generateReceipt = (
   const contentWidth = width - (margin * 2);
   const logoSize = width === 58 ? 20 : 30;
   const titleFontSize = width === 58 ? 10 : 12;
-  const regularFontSize = width === 58 ? 6 : 7; // Reduced for better spacing
+  const regularFontSize = width === 58 ? 5.5 : 6.5; // Further reduced for compact spacing
   
   // Add logo if available (centered)
   if (companySettings.logo_url) {
@@ -233,9 +234,9 @@ export const generateReceipt = (
   yPos += 5;
   
   // Items header - responsive column positioning (4 columns with improved spacing)
-  const qtyCol = width === 58 ? 26 : 38;
-  const priceCol = width === 58 ? 36 : 50;
-  const amountCol = width === 58 ? 53 : 75; // Use more space until right margin
+  const qtyCol = width === 58 ? 22 : 32;   // Closer to article
+  const priceCol = width === 58 ? 34 : 48; // Reasonable spacing
+  const amountCol = width === 58 ? 52 : 72; // Aligned to the right with margin
   
   pdf.setFont('helvetica', 'bold');
   pdf.text('Article', margin, yPos);
@@ -248,7 +249,7 @@ export const generateReceipt = (
   
   // Items
   pdf.setFont('helvetica', 'normal');
-  const maxNameLength = width === 58 ? 12 : 18; // Increased due to smaller font
+  const maxNameLength = width === 58 ? 10 : 15; // Reduced to free up space for columns
   
   items.forEach(item => {
     // Build item description with details
@@ -285,11 +286,11 @@ export const generateReceipt = (
     
     // Unit price
     const unitPrice = item.actualPrice ? item.actualPrice / item.cartQuantity : item.price;
-    pdf.text(formatAmount(unitPrice, false), priceCol, yPos);
+    pdf.text(formatAmount(unitPrice, false, true), priceCol, yPos);
     
     // Item total
     const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
-    pdf.text(formatAmount(itemTotal, false), amountCol, yPos, { align: 'right' });
+    pdf.text(formatAmount(itemTotal, false, true), amountCol, yPos, { align: 'right' });
     yPos += 5;
     
     if (yPos > 270) {
@@ -305,7 +306,7 @@ export const generateReceipt = (
   // Totals
   pdf.setFont('helvetica', 'bold');
   pdf.text('Sous-total HT:', margin, yPos);
-  pdf.text(formatAmount(saleData.subtotal, false), width - margin, yPos, { align: 'right' });
+  pdf.text(formatAmount(saleData.subtotal, false, true), width - margin, yPos, { align: 'right' });
   yPos += 5;
   
   if (saleData.discount_amount > 0) {
@@ -314,7 +315,7 @@ export const generateReceipt = (
       ? `Remise (${saleData.discount_value}%):`
       : 'Remise:';
     pdf.text(discountLabel, margin, yPos);
-    pdf.text(`-${formatAmount(saleData.discount_amount, false)}`, width - margin, yPos, { align: 'right' });
+    pdf.text(`-${formatAmount(saleData.discount_amount, false, true)}`, width - margin, yPos, { align: 'right' });
     yPos += 5;
   }
   
@@ -322,14 +323,14 @@ export const generateReceipt = (
   pdf.setFont('helvetica', 'normal');
   const tvaAmount = saleData.total_amount * (companySettings.tva_rate / 100);
   pdf.text(`TVA (${companySettings.tva_rate}%):`, margin, yPos);
-  pdf.text(formatAmount(tvaAmount, false), width - margin, yPos, { align: 'right' });
+  pdf.text(formatAmount(tvaAmount, false, true), width - margin, yPos, { align: 'right' });
   yPos += 5;
   
   // Total TTC
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(titleFontSize - 1);
   pdf.text('TOTAL TTC:', margin, yPos);
-  pdf.text(formatAmount(saleData.total_amount + tvaAmount), width - margin, yPos, { align: 'right' });
+  pdf.text(formatAmount(saleData.total_amount + tvaAmount, true, true), width - margin, yPos, { align: 'right' });
   yPos += 6;
   
   // Payment method
