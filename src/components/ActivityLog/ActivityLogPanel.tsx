@@ -31,8 +31,14 @@ const ACTION_TYPES = [
   { value: 'product_added', label: 'Produit ajouté', icon: Package, color: 'bg-blue-500' },
   { value: 'product_updated', label: 'Produit modifié', icon: Edit, color: 'bg-yellow-500' },
   { value: 'product_deactivated', label: 'Produit désactivé', icon: Trash2, color: 'bg-red-500' },
+  { value: 'product_deleted', label: 'Produit supprimé', icon: Trash2, color: 'bg-red-500' },
   { value: 'user_approved', label: 'Utilisateur approuvé', icon: UserCheck, color: 'bg-green-500' },
   { value: 'user_deactivated', label: 'Utilisateur désactivé', icon: UserX, color: 'bg-red-500' },
+  { value: 'user_login', label: 'Connexion', icon: UserCheck, color: 'bg-blue-500' },
+  { value: 'user_logout', label: 'Déconnexion', icon: UserX, color: 'bg-gray-500' },
+  { value: 'user_signup', label: 'Inscription', icon: UserCheck, color: 'bg-green-500' },
+  { value: 'user_update_password', label: 'Changement mot de passe', icon: Edit, color: 'bg-orange-500' },
+  { value: 'connection_failed', label: 'Échec connexion', icon: UserX, color: 'bg-red-500' },
 ];
 
 export const ActivityLogPanel = () => {
@@ -214,7 +220,7 @@ export const ActivityLogPanel = () => {
             </div>
 
             {/* Search and actions */}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1">
                 <Input
                   placeholder="Rechercher dans les descriptions..."
@@ -223,14 +229,16 @@ export const ActivityLogPanel = () => {
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 />
               </div>
-              <Button onClick={handleSearch}>
-                <Search className="w-4 h-4 mr-2" />
-                Rechercher
-              </Button>
-              <Button variant="outline" onClick={handleReset}>
-                <RefreshCcw className="w-4 h-4 mr-2" />
-                Réinitialiser
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={handleSearch} className="flex-1 sm:flex-none">
+                  <Search className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Rechercher</span>
+                </Button>
+                <Button variant="outline" onClick={handleReset} className="flex-1 sm:flex-none">
+                  <RefreshCcw className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Réinitialiser</span>
+                </Button>
+              </div>
             </div>
 
             {/* Results count */}
@@ -239,14 +247,14 @@ export const ActivityLogPanel = () => {
             </div>
 
             {/* Table */}
-            <div className="border rounded-lg">
+            <div className="border rounded-lg overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[180px]">Date</TableHead>
-                    <TableHead className="w-[200px]">Utilisateur</TableHead>
-                    <TableHead className="w-[180px]">Action</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead className="min-w-[140px] sm:w-[180px]">Date</TableHead>
+                    <TableHead className="min-w-[150px] sm:w-[200px]">Utilisateur</TableHead>
+                    <TableHead className="min-w-[140px] sm:w-[180px]">Action</TableHead>
+                    <TableHead className="min-w-[200px]">Description</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

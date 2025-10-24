@@ -95,6 +95,16 @@ const Profile = () => {
     try {
       const { error } = await supabase.auth.updateUser({ password: passwordData.newPassword });
       if (error) throw error;
+
+      // Log password update
+      await (supabase as any).from('activity_logs').insert({
+        user_id: user.id,
+        action_type: 'user_update_password',
+        entity_type: 'auth',
+        description: `Mot de passe modifié`,
+        metadata: { email: user.email }
+      });
+
       toast({
         title: 'Mot de passe mis à jour',
         description: 'Votre mot de passe a été modifié avec succès'

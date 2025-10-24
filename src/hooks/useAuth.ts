@@ -123,7 +123,7 @@ export const useAuth = () => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -152,6 +152,17 @@ export const useAuth = () => {
         return { error };
       }
 
+      // Log successful signup
+      if (data.user) {
+        await (supabase as any).from('activity_logs').insert({
+          user_id: data.user.id,
+          action_type: 'user_signup',
+          entity_type: 'auth',
+          description: `Nouvelle inscription: ${fullName}`,
+          metadata: { email, full_name: fullName }
+        });
+      }
+
       toast({
         title: "Inscription réussie",
         description: "Votre compte a été créé avec succès !",
@@ -166,12 +177,23 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (error) {
+        // Log failed connection attempt
+        if (data?.user) {
+          await (supabase as any).from('activity_logs').insert({
+            user_id: data.user.id,
+            action_type: 'connection_failed',
+            entity_type: 'auth',
+            description: `Tentative de connexion échouée: ${error.message}`,
+            metadata: { email }
+          });
+        }
+
         if (error.message.includes('Invalid login credentials')) {
           toast({
             title: "Erreur de connexion",
@@ -188,6 +210,17 @@ export const useAuth = () => {
         return { error };
       }
 
+      // Log successful login
+      if (data.user) {
+        await (supabase as any).from('activity_logs').insert({
+          user_id: data.user.id,
+          action_type: 'user_login',
+          entity_type: 'auth',
+          description: `Connexion réussie`,
+          metadata: { email }
+        });
+      }
+
       toast({
         title: "Connexion réussie",
         description: "Bienvenue sur Complexe Petit Pas !",
@@ -202,6 +235,19 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
+      const currentUser = user;
+      
+      // Log logout before signing out
+      if (currentUser) {
+        await (supabase as any).from('activity_logs').insert({
+          user_id: currentUser.id,
+          action_type: 'user_logout',
+          entity_type: 'auth',
+          description: `Déconnexion`,
+          metadata: { email: currentUser.email }
+        });
+      }
+
       const { error } = await supabase.auth.signOut();
       if (error) {
         toast({
