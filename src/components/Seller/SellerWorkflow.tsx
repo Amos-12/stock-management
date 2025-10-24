@@ -1364,11 +1364,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={printReceipt58mm}>
                         <Printer className="w-4 h-4 mr-2" />
-                        Format 58mm
+                        Format 58 mm
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={printReceipt80mm}>
                         <Printer className="w-4 h-4 mr-2" />
-                        Format 80mm
+                        Format 80 mm
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
