@@ -104,7 +104,7 @@ export const generateReceipt = (
   const contentWidth = width - (margin * 2);
   const logoSize = width === 58 ? 20 : 30;
   const titleFontSize = width === 58 ? 10 : 12;
-  const regularFontSize = width === 58 ? 7 : 8;
+  const regularFontSize = width === 58 ? 6 : 7; // Reduced for better spacing
   
   // Add logo if available (centered)
   if (companySettings.logo_url) {
@@ -248,7 +248,7 @@ export const generateReceipt = (
   
   // Items
   pdf.setFont('helvetica', 'normal');
-  const maxNameLength = width === 58 ? 10 : 16; // Reduced for 4-column layout
+  const maxNameLength = width === 58 ? 12 : 18; // Increased due to smaller font
   
   items.forEach(item => {
     // Build item description with details
