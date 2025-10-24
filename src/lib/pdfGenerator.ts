@@ -209,7 +209,11 @@ export const generateReceipt = (
   });
   pdf.text(`Date: ${date}`, margin, yPos);
   yPos += 4;
-  pdf.text(`N° Reçu: ${saleData.id.substring(0, 8)}`, margin, yPos);
+  
+  // Generate receipt number: REC + YYYYMMDDHHMMSS
+  const receiptDate = new Date(saleData.created_at);
+  const receiptNumber = `REC${receiptDate.getFullYear()}${String(receiptDate.getMonth() + 1).padStart(2, '0')}${String(receiptDate.getDate()).padStart(2, '0')}${String(receiptDate.getHours()).padStart(2, '0')}${String(receiptDate.getMinutes()).padStart(2, '0')}${String(receiptDate.getSeconds()).padStart(2, '0')}`;
+  pdf.text(`N° Reçu: ${receiptNumber}`, margin, yPos);
   yPos += 4;
   pdf.text(`Vendeur: ${sellerName}`, margin, yPos);
   yPos += 4;
@@ -219,14 +223,19 @@ export const generateReceipt = (
     yPos += 4;
   }
   
+  if (saleData.customer_address) {
+    pdf.text(`Adresse: ${saleData.customer_address}`, margin, yPos);
+    yPos += 4;
+  }
+  
   yPos += 2;
   pdf.line(margin, yPos, width - margin, yPos);
   yPos += 5;
   
-  // Items header - responsive column positioning (4 columns)
-  const qtyCol = width === 58 ? 28 : 40;
+  // Items header - responsive column positioning (4 columns with better spacing)
+  const qtyCol = width === 58 ? 26 : 38;
   const priceCol = width === 58 ? 38 : 52;
-  const amountCol = width === 58 ? 50 : 68;
+  const amountCol = width === 58 ? 52 : 70;
   
   pdf.setFont('helvetica', 'bold');
   pdf.text('Article', margin, yPos);
@@ -253,7 +262,6 @@ export const generateReceipt = (
     
     const itemName = itemDescription.length > maxNameLength ? itemDescription.substring(0, maxNameLength - 2) + '..' : itemDescription;
     pdf.text(itemName, margin, yPos);
-    yPos += 3;
     
     // Quantity display for iron products - ALWAYS show bars first
     let qtyText = '';
@@ -418,7 +426,11 @@ export const generateInvoice = (
   pdf.setFont('helvetica', 'normal');
   const invoiceDate = new Date(saleData.created_at).toLocaleDateString('fr-FR');
   pdf.text(`Date: ${invoiceDate}`, 15, yPos);
-  pdf.text(`N° Facture: ${saleData.id.substring(0, 8).toUpperCase()}`, 15, yPos + 6);
+  
+  // Generate invoice number: FAC + YYYYMMDDHHMMSS
+  const invoiceDateTime = new Date(saleData.created_at);
+  const invoiceNumber = `FAC${invoiceDateTime.getFullYear()}${String(invoiceDateTime.getMonth() + 1).padStart(2, '0')}${String(invoiceDateTime.getDate()).padStart(2, '0')}${String(invoiceDateTime.getHours()).padStart(2, '0')}${String(invoiceDateTime.getMinutes()).padStart(2, '0')}${String(invoiceDateTime.getSeconds()).padStart(2, '0')}`;
+  pdf.text(`N° Facture: ${invoiceNumber}`, 15, yPos + 6);
   yPos += 18;
   
   // Customer info
