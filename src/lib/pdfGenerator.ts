@@ -223,13 +223,15 @@ export const generateReceipt = (
   pdf.line(margin, yPos, width - margin, yPos);
   yPos += 5;
   
-  // Items header - responsive column positioning
-  const qtyCol = width === 58 ? 33 : 48;
-  const amountCol = width === 58 ? 42 : 60;
+  // Items header - responsive column positioning (4 columns)
+  const qtyCol = width === 58 ? 28 : 40;
+  const priceCol = width === 58 ? 38 : 52;
+  const amountCol = width === 58 ? 50 : 68;
   
   pdf.setFont('helvetica', 'bold');
   pdf.text('Article', margin, yPos);
   pdf.text('Qté', qtyCol, yPos);
+  pdf.text('P.U.', priceCol, yPos);
   pdf.text('Montant', amountCol, yPos, { align: 'right' });
   yPos += 4;
   pdf.line(margin, yPos, width - margin, yPos);
@@ -237,7 +239,7 @@ export const generateReceipt = (
   
   // Items
   pdf.setFont('helvetica', 'normal');
-  const maxNameLength = width === 58 ? 12 : 20; // Reduced for better overflow protection
+  const maxNameLength = width === 58 ? 10 : 16; // Reduced for 4-column layout
   
   items.forEach(item => {
     // Build item description with details
@@ -274,8 +276,13 @@ export const generateReceipt = (
     
     pdf.text(qtyText, qtyCol, yPos);
     
+    // Unit price
+    const unitPrice = item.actualPrice ? item.actualPrice / item.cartQuantity : item.price;
+    pdf.text(formatAmount(unitPrice, false), priceCol, yPos);
+    
+    // Item total
     const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
-    pdf.text(formatAmount(itemTotal, false), width - margin, yPos, { align: 'right' });
+    pdf.text(formatAmount(itemTotal, false), amountCol, yPos, { align: 'right' });
     yPos += 5;
     
     if (yPos > 270) {
@@ -304,10 +311,18 @@ export const generateReceipt = (
     yPos += 5;
   }
   
+  // TVA
+  pdf.setFont('helvetica', 'normal');
+  const tvaAmount = saleData.total_amount * (companySettings.tva_rate / 100);
+  pdf.text(`TVA (${companySettings.tva_rate}%):`, margin, yPos);
+  pdf.text(formatAmount(tvaAmount, false), width - margin, yPos, { align: 'right' });
+  yPos += 5;
+  
+  // Total TTC
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(titleFontSize - 1);
-  pdf.text('TOTAL:', margin, yPos);
-  pdf.text(formatAmount(saleData.total_amount), width - margin, yPos, { align: 'right' });
+  pdf.text('TOTAL TTC:', margin, yPos);
+  pdf.text(formatAmount(saleData.total_amount + tvaAmount), width - margin, yPos, { align: 'right' });
   yPos += 6;
   
   // Payment method
