@@ -465,6 +465,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_database_size: { Args: never; Returns: Json }
+      cleanup_old_data: { Args: never; Returns: Json }
+      delete_user_account: { Args: { target_user_id: string }; Returns: Json }
       get_seller_authorized_categories: {
         Args: { _user_id: string }
         Returns: {
