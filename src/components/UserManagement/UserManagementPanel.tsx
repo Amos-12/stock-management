@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Users, UserCheck, Mail, Calendar, Search, UserPlus, RefreshCcw, Settings } from 'lucide-react';
+import { Users, UserCheck, Mail, Calendar, Search, UserPlus, RefreshCcw, Settings, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -274,6 +275,51 @@ export const UserManagementPanel = () => {
     }
   };
 
+  const handleDeleteUser = async (userId: string, userName: string, userRole: string, isActive: boolean) => {
+    try {
+      // Double vérification côté client
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (currentUser?.id === userId) {
+        toast({
+          title: "Erreur",
+          description: "Vous ne pouvez pas supprimer votre propre compte",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (userRole === 'seller' && isActive) {
+        toast({
+          title: "Erreur",
+          description: "Veuillez d'abord désactiver ce vendeur",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const { data, error } = await supabase.rpc('delete_user_account', {
+        target_user_id: userId
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Succès",
+        description: `Compte de ${userName} supprimé. Les données historiques ont été conservées.`
+      });
+      
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de supprimer le compte",
+        variant: "destructive"
+      });
+    }
+  };
+
   const filteredUsers = users.filter(user =>
     user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -444,16 +490,49 @@ export const UserManagementPanel = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      {user.role === 'seller' && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => loadUserCategories(user.id, user.full_name)}
-                        >
-                          <Settings className="w-4 h-4 mr-1" />
-                          Catégories
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {user.role === 'seller' && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => loadUserCategories(user.id, user.full_name)}
+                          >
+                            <Settings className="w-4 h-4 mr-1" />
+                            Catégories
+                          </Button>
+                        )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              disabled={user.role === 'seller' && user.is_active}
+                              title={user.role === 'seller' && user.is_active ? "Désactivez d'abord ce vendeur" : "Supprimer le compte"}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Voulez-vous vraiment supprimer le compte de <strong>{user.full_name}</strong> ?
+                                <br /><br />
+                                ⚠️ Cette action est irréversible mais les données historiques (ventes, transactions) seront conservées.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteUser(user.id, user.full_name, user.role, user.is_active)}
+                                className="bg-destructive hover:bg-destructive/90"
+                              >
+                                Supprimer
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center text-sm text-muted-foreground">

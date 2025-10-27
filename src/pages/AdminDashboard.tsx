@@ -9,6 +9,7 @@ import { ProductManagement } from '@/components/Products/ProductManagement';
 import { SalesManagement } from '@/components/Sales/SalesManagement';
 import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { ActivityLogPanel } from '@/components/ActivityLog/ActivityLogPanel';
+import { DatabaseMonitoring } from '@/components/Settings/DatabaseMonitoring';
 
 const AdminDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -31,6 +32,8 @@ const AdminDashboard = () => {
         return <StockAlerts />;
       case 'settings':
         return <CompanySettings />;
+      case 'database':
+        return <DatabaseMonitoring />;
       default:
         return <AdminDashboardCharts />;
     }

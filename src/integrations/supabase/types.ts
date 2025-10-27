@@ -465,6 +465,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_database_size: { Args: never; Returns: Json }
+      cleanup_old_data: { Args: never; Returns: Json }
+      delete_user_account: { Args: { target_user_id: string }; Returns: Json }
       get_seller_authorized_categories: {
         Args: { _user_id: string }
         Returns: {
@@ -500,6 +503,8 @@ export type Database = {
         | "user_update_password"
         | "connection_failed"
         | "product_deactivated"
+        | "user_deleted"
+        | "system_cleanup"
       app_role: "admin" | "seller"
       product_category:
         | "alimentaires"
@@ -656,6 +661,8 @@ export const Constants = {
         "user_update_password",
         "connection_failed",
         "product_deactivated",
+        "user_deleted",
+        "system_cleanup",
       ],
       app_role: ["admin", "seller"],
       product_category: [
