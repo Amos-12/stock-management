@@ -1546,8 +1546,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 <p className="text-xs text-muted-foreground">
                   {customQuantityDialog.product.surface_par_boite && (
                     <>
-                      Boîtes nécessaires: {Math.ceil(parseFloat(customQuantityValue) / customQuantityDialog.product.surface_par_boite)}
-                      {' '}(≈ {(Math.ceil(parseFloat(customQuantityValue) / customQuantityDialog.product.surface_par_boite) * customQuantityDialog.product.surface_par_boite).toFixed(2)} m²)
+                      Boîtes nécessaires: {(parseFloat(customQuantityValue) / customQuantityDialog.product.surface_par_boite).toFixed(2)}
+                      {' '}(≈ {parseFloat(customQuantityValue).toFixed(2)} m²)
                     </>
                   )}
                 </p>
