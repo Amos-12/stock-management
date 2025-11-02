@@ -297,14 +297,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     let sourceUnit: 'barre' | 'tonne' | undefined;
     let sourceValue: number | undefined;
 
-    // Calculate for ceramics
+    // Calculate for ceramics - keep exact decimal quantities
     if (product.category === 'ceramique' && product.surface_par_boite && product.prix_m2) {
       const surfaceNeeded = customQty || 0;
-      const boxesNeeded = Math.ceil(surfaceNeeded / product.surface_par_boite);
-      const actualSurface = boxesNeeded * product.surface_par_boite;
+      const boxesNeeded = surfaceNeeded / product.surface_par_boite; // Keep exact decimal
       quantityToAdd = boxesNeeded;
-      actualPrice = actualSurface * product.prix_m2;
-      displayUnit = `m² (${boxesNeeded} boîtes)`;
+      actualPrice = surfaceNeeded * product.prix_m2; // Price based on exact surface needed
+      displayUnit = `m² (${boxesNeeded.toFixed(2)} boîtes)`;
     }
 
     // Calculate for iron bars - handle BOTH barre and tonne inputs

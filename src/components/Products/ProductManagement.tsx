@@ -5,6 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Package, Plus, Edit, Trash2, AlertCircle, Search } from 'lucide-react';
@@ -65,6 +75,11 @@ export const ProductManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{open: boolean, productId: string | null, productName: string}>({
+    open: false, 
+    productId: null,
+    productName: ''
+  });
   
   const [formData, setFormData] = useState<{
     name: string;
@@ -467,7 +482,7 @@ export const ProductManagement = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteClick = (id: string, name: string) => {
     if (!isAdmin) {
       toast({
         title: "Action non autorisée",
@@ -477,44 +492,78 @@ export const ProductManagement = () => {
       return;
     }
     
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+    setDeleteDialog({ open: true, productId: id, productName: name });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteDialog.productId || !user) return;
 
     try {
-      // Get product name before deletion
-      const product = products.find(p => p.id === id);
-      const productName = product?.name || 'Produit';
+      const productId = deleteDialog.productId;
+      const productName = deleteDialog.productName;
 
-      const { error } = await supabase
-        .from('products')
-        .update({ is_active: false })
-        .eq('id', id);
+      // Check if product is used in any sales
+      const { count, error: countError } = await supabase
+        .from('sale_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('product_id', productId);
 
-      if (error) throw error;
+      if (countError) throw countError;
 
-      toast({
-        title: "Produit désactivé",
-        description: "Le produit a été désactivé avec succès"
-      });
+      if (count && count > 0) {
+        // Product is used in sales - deactivate instead
+        const { error } = await supabase
+          .from('products')
+          .update({ is_active: false })
+          .eq('id', productId);
 
-      // Log deactivation
-      if (user) {
+        if (error) throw error;
+
+        toast({
+          title: "Produit désactivé",
+          description: `Ce produit est utilisé dans ${count} vente(s). Il a été désactivé au lieu d'être supprimé.`,
+        });
+
+        // Log deactivation
         await (supabase as any).from('activity_logs').insert({
           user_id: user.id,
           action_type: 'product_deactivated',
           entity_type: 'product',
-          entity_id: id,
-          description: `Produit "${productName}" désactivé`,
-          metadata: {
-            product_name: productName
-          }
+          entity_id: productId,
+          description: `Produit "${productName}" désactivé (utilisé dans des ventes)`,
+          metadata: { product_name: productName, reason: 'used_in_sales', sales_count: count }
+        });
+      } else {
+        // Product not used - delete permanently
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', productId);
+
+        if (error) throw error;
+
+        toast({
+          title: "Produit supprimé",
+          description: "Le produit a été définitivement supprimé"
+        });
+
+        // Log deletion
+        await (supabase as any).from('activity_logs').insert({
+          user_id: user.id,
+          action_type: 'product_deleted',
+          entity_type: 'product',
+          entity_id: productId,
+          description: `Produit "${productName}" supprimé définitivement`,
+          metadata: { product_name: productName }
         });
       }
 
+      setDeleteDialog({ open: false, productId: null, productName: '' });
       fetchProducts();
     } catch (error: any) {
       console.error('Error deleting product:', error);
       
-      // Check for RLS policy violation
+      
       if (error?.message?.includes('row-level security') || error?.message?.includes('policy')) {
         toast({
           title: "Action réservée aux administrateurs",
@@ -1201,7 +1250,7 @@ export const ProductManagement = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDelete(product.id)}
+                            onClick={() => handleDeleteClick(product.id, product.name)}
                             className="hover:bg-destructive hover:text-destructive-foreground"
                             title="Supprimer"
                           >
@@ -1219,6 +1268,30 @@ export const ProductManagement = () => {
           </Table>
         </div>
       </CardContent>
+      
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => 
+        setDeleteDialog({open, productId: null, productName: ''})
+      }>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce produit ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vous êtes sur le point de supprimer <strong>{deleteDialog.productName}</strong>.
+              {' '}Si ce produit est utilisé dans des ventes existantes, il sera désactivé au lieu d'être supprimé définitivement.
+              {' '}Sinon, cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
