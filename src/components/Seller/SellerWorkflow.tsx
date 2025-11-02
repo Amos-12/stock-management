@@ -300,10 +300,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     // Calculate for ceramics - keep exact decimal quantities
     if (product.category === 'ceramique' && product.surface_par_boite && product.prix_m2) {
       const surfaceNeeded = customQty || 0;
-      const boxesNeeded = surfaceNeeded / product.surface_par_boite; // Keep exact decimal
-      quantityToAdd = boxesNeeded;
+      quantityToAdd = surfaceNeeded; // Store m² directly in cartQuantity
       actualPrice = surfaceNeeded * product.prix_m2; // Price based on exact surface needed
-      displayUnit = `m² (${boxesNeeded.toFixed(2)} boîtes)`;
+      displayUnit = 'm²';
     }
 
     // Calculate for iron bars - handle BOTH barre and tonne inputs
@@ -446,15 +445,23 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     setCart(prevCart => {
       return prevCart.map(item => {
         if (item.id === productId) {
+          // For ceramics, prevent direct +/- as quantity is in m² - user should re-enter surface
+          if (item.category === 'ceramique') {
+            toast({
+              title: "Modification non autorisée",
+              description: "Pour les céramiques, veuillez supprimer et ajouter à nouveau avec la surface correcte",
+              variant: "destructive"
+            });
+            return item;
+          }
+          
           const newQuantity = Math.max(0, item.cartQuantity + change);
           if (newQuantity === 0) {
             return null; // Will be filtered out
           }
           
           // Check stock availability based on category
-          const availableStock = item.category === 'ceramique' ? (item.stock_boite || 0) : 
-                                item.category === 'fer' ? (item.stock_barre || 0) : 
-                                item.quantity;
+          const availableStock = item.category === 'fer' ? (item.stock_barre || 0) : item.quantity;
           
           if (newQuantity > availableStock) {
             toast({
@@ -469,18 +476,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           let actualPrice = item.price * newQuantity;
           let displayUnit = item.unit;
           
-          // Recalculate for ceramics
-          if (item.category === 'ceramique' && item.surface_par_boite && item.prix_m2) {
-            const actualSurface = newQuantity * item.surface_par_boite;
-            actualPrice = actualSurface * item.prix_m2;
-            displayUnit = `m² (${newQuantity} boîtes)`;
-          }
-          
           // Recalculate for iron bars (always work with integer bars)
-          else if (item.category === 'fer' && item.prix_par_barre) {
+          if (item.category === 'fer' && item.prix_par_barre) {
             actualPrice = item.prix_par_barre * newQuantity;
             displayUnit = 'barre';
-            // Preserve source unit info if it exists
           }
           
           // Recalculate for clothing - standard pricing
@@ -931,8 +930,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 // For ceramics, show boxes and m²
                 if (product.category === 'ceramique' && product.stock_boite !== undefined) {
                   availableStock = product.stock_boite;
-                  const cartQuantity = cartItem?.cartQuantity || 0;
-                  const remainingBoxes = product.stock_boite - cartQuantity;
+                  const cartQuantity = cartItem?.cartQuantity || 0; // cartQuantity is in m²
+                  const cartBoxes = product.surface_par_boite ? (cartQuantity / product.surface_par_boite) : 0;
+                  const remainingBoxes = product.stock_boite - cartBoxes;
                   const surfaceDisponible = product.surface_par_boite ? 
                     (remainingBoxes * product.surface_par_boite).toFixed(2) : 0;
                   stockLabel = `boîtes (${surfaceDisponible} m² restants)`;
@@ -945,7 +945,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 }
                 
                 const cartQuantity = cartItem?.cartQuantity || 0;
-                const remainingStock = availableStock - cartQuantity;
+                // For ceramics, cartQuantity is in m², need to convert to boxes for stock calculation
+                const remainingStock = product.category === 'ceramique' && product.surface_par_boite
+                  ? availableStock - (cartQuantity / product.surface_par_boite)
+                  : availableStock - cartQuantity;
                 
                 return (
                   <Card key={product.id} className="border hover:shadow-md transition-smooth">
@@ -1049,11 +1052,15 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                           <div className="flex items-center gap-2 text-sm mt-2">
                             <Package className="w-4 h-4 text-muted-foreground" />
                             <span className={remainingStock <= product.alert_threshold ? 'text-warning font-medium' : 'text-muted-foreground'}>
-                              {remainingStock} {stockLabel}
+                              {product.category === 'ceramique' && product.surface_par_boite 
+                                ? `${(remainingStock * product.surface_par_boite).toFixed(2)} m² restants`
+                                : `${remainingStock} ${stockLabel}`}
                             </span>
                             {cartQuantity > 0 && (
                               <Badge variant="secondary" className="text-xs">
-                                {cartQuantity} au panier
+                                {product.category === 'ceramique' 
+                                  ? `${cartQuantity.toFixed(2)} au panier`
+                                  : `${cartQuantity} au panier`}
                               </Badge>
                             )}
                             {remainingStock <= product.alert_threshold && (
@@ -1118,48 +1125,69 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                   {cart.map((item) => {
                     const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
+                    const displayQuantity = item.category === 'ceramique' ? item.cartQuantity.toFixed(2) : item.cartQuantity;
                     return (
-                      <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                         <div className="flex-1">
-                          <h5 className="font-medium">{item.name}</h5>
-                          <p className="text-sm text-muted-foreground">
+                      <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 border rounded-lg">
+                         <div className="flex-1 min-w-0">
+                          <h5 className="font-medium break-words">{item.name}</h5>
+                          <p className="text-sm text-muted-foreground break-words">
                             {item.category === 'fer' && item.bars_per_ton 
                               ? item.sourceUnit === 'tonne' 
                                 ? `${item.cartQuantity} barres (≈ ${getTonnageLabel(barresToTonnage(item.cartQuantity, item.bars_per_ton))})`
                                 : item.cartQuantity % item.bars_per_ton === 0
                                   ? `${item.cartQuantity} barres (= ${item.cartQuantity / item.bars_per_ton} tonne${item.cartQuantity / item.bars_per_ton > 1 ? 's' : ''})`
                                   : `${item.cartQuantity} barres`
-                              : `${item.cartQuantity} ${item.displayUnit || item.unit}`
-                            } = {formatAmount(itemTotal)}
+                              : item.category === 'ceramique' && item.surface_par_boite
+                                ? `${displayQuantity} m² (${(item.cartQuantity / item.surface_par_boite).toFixed(2)} boîtes)`
+                                : `${displayQuantity} ${item.unit}`
+                            }
+                          </p>
+                          <p className="text-sm font-medium text-success mt-1">
+                            {formatAmount(itemTotal)}
                           </p>
                         </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateQuantity(item.id, -1)}
-                      >
-                        <Minus className="w-3 h-3" />
-                      </Button>
-                      <span className="text-sm font-medium w-8 text-center">
-                        {item.cartQuantity}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateQuantity(item.id, 1)}
-                        disabled={item.cartQuantity >= item.quantity}
-                      >
-                        <Plus className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => removeFromCart(item.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {item.category === 'ceramique' ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => removeFromCart(item.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateQuantity(item.id, -1)}
+                          >
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <span className="text-sm font-medium min-w-[3rem] text-center">
+                            {item.cartQuantity}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateQuantity(item.id, 1)}
+                            disabled={item.cartQuantity >= item.quantity}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                        </>
+                      )}
+                      {item.category !== 'ceramique' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => removeFromCart(item.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                       </div>
                     );
@@ -1248,11 +1276,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               <h4 className="font-medium mb-3">Résumé de la commande</h4>
               {cart.map((item) => {
                 const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
-                const displayUnit = item.displayUnit || item.unit;
+                const displayQuantity = item.category === 'ceramique' ? `${item.cartQuantity.toFixed(2)} m²` : `${item.cartQuantity} ${item.unit}`;
                 return (
-                  <div key={item.id} className="flex justify-between text-sm mb-2">
-                    <span>{item.name} × {item.cartQuantity} {displayUnit}</span>
-                    <span>{formatAmount(itemTotal)}</span>
+                  <div key={item.id} className="flex justify-between text-sm mb-2 gap-2">
+                    <span className="break-words">{item.name} × {displayQuantity}</span>
+                    <span className="font-medium shrink-0">{formatAmount(itemTotal)}</span>
                   </div>
                 );
               })}
