@@ -340,6 +340,18 @@ export const ProductManagement = () => {
       }
     }
 
+    // Validation for energie
+    if (formData.category === 'energie') {
+      if (!formData.puissance && !formData.voltage && !formData.capacite) {
+        toast({
+          title: "Erreur de validation",
+          description: "Veuillez remplir au moins un champ technique (puissance, voltage ou capacité) pour les produits d'énergie",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     // Validation for standard products
     if (formData.category !== 'ceramique' && formData.category !== 'fer') {
       if (!formData.price || !formData.quantity) {
