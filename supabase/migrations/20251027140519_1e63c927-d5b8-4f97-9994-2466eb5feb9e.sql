@@ -255,8 +255,8 @@ SELECT cron.schedule(
   '0 3 * * *',
   $$
   SELECT net.http_post(
-    url:='https://xngppwphedaexwkgfjdv.supabase.co/functions/v1/database-cleanup',
-    headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuZ3Bwd3BoZWRhZXh3a2dmamR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NjI5NTYsImV4cCI6MjA3NDQzODk1Nn0.0s_-NT6KhQFVJkHY5-Glr3WqMD4-_k3xFgBjHqEoffk"}'::jsonb
+    url:='https://qxauhjxjqyesvqdzxbnh.supabase.co/functions/v1/database-cleanup',
+    headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4YXVoanhqcXllc3ZxZHp4Ym5oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNDczNTIsImV4cCI6MjA3NjcyMzM1Mn0.KWoIYTcVmI_X-2B4g5BhLnf75FktQrrV8LDZoHEr8-w"}'::jsonb
   ) as request_id;
   $$
 );
