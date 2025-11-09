@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
@@ -983,7 +984,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-32">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[60vh] md:max-h-[65vh] lg:max-h-[70vh] overflow-y-auto">
               {filteredProducts.map((product) => {
                 const cartItem = cart.find(item => item.id === product.id);
@@ -1149,14 +1150,6 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               })}
             </div>
             
-            {cart.length > 0 && (
-              <div className="mt-6 flex flex-col sm:flex-row justify-end gap-2">
-                <Button onClick={() => setCurrentStep('cart')} className="gap-2 w-full sm:w-auto">
-                  Voir le panier ({cart.length})
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
@@ -1688,6 +1681,51 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bouton flottant du panier - visible uniquement sur l'étape produits */}
+      {cart.length > 0 && currentStep === 'products' && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
+          <div className="max-w-7xl mx-auto pointer-events-auto">
+            <Card className="shadow-2xl border-2 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                  {/* Résumé du panier */}
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="flex items-center gap-2">
+                      <ShoppingCart className="w-5 h-5 text-primary" />
+                      <Badge variant="default" className="text-sm">
+                        {cart.length} article{cart.length > 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                    <Separator orientation="vertical" className="h-6 hidden sm:block" />
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Total : </span>
+                      <span className="font-bold text-lg text-success">
+                        {formatAmount(cart.reduce((total, item) => {
+                          const itemPrice = item.actualPrice !== undefined 
+                            ? item.actualPrice 
+                            : (item.price * item.cartQuantity);
+                          return total + itemPrice;
+                        }, 0))}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Bouton Voir le panier */}
+                  <Button 
+                    onClick={() => setCurrentStep('cart')} 
+                    className="gap-2 w-full sm:w-auto shadow-lg"
+                    size="lg"
+                  >
+                    Voir le panier
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
      </div>
    );
  };
