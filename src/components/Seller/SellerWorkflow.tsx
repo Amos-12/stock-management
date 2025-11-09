@@ -447,6 +447,63 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     });
   };
 
+  const handleDirectQuantityChange = (productId: string, newValue: string) => {
+    const newQty = parseInt(newValue) || 0;
+    
+    // Validation minimum
+    if (newQty < 1) {
+      toast({
+        title: "Quantité invalide",
+        description: "La quantité doit être au moins 1",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setCart(prevCart => {
+      return prevCart.map(item => {
+        if (item.id !== productId) return item;
+        
+        // Déterminer le stock disponible selon la catégorie
+        let availableStock: number;
+        if (item.category === 'ceramique') {
+          availableStock = item.stock_boite || 0;
+        } else if (item.category === 'fer') {
+          availableStock = item.stock_barre || 0;
+        } else {
+          availableStock = item.quantity;
+        }
+        
+        // Vérifier si la quantité demandée est disponible
+        if (newQty > availableStock) {
+          toast({
+            title: "Stock insuffisant",
+            description: `Stock disponible : ${availableStock} ${item.unit}`,
+            variant: "destructive"
+          });
+          return item; // Ne pas modifier
+        }
+        
+        // Calculer le nouveau prix selon la catégorie
+        let actualPrice: number;
+        
+        if (item.category === 'ceramique') {
+          actualPrice = (item.prix_m2 || item.price) * newQty;
+        } else if (item.category === 'fer') {
+          actualPrice = (item.prix_par_barre || item.price) * newQty;
+        } else {
+          actualPrice = item.price * newQty;
+        }
+        
+        return {
+          ...item,
+          cartQuantity: newQty,
+          actualPrice: actualPrice
+        };
+      });
+    });
+  };
+
   const updateQuantity = (productId: string, change: number) => {
     setCart(prevCart => {
       return prevCart.map(item => {
@@ -1171,9 +1228,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                           >
                             <Minus className="w-3 h-3" />
                           </Button>
-                          <span className="text-sm font-medium min-w-[3rem] text-center">
-                            {item.cartQuantity}
-                          </span>
+                          <Input
+                            type="number"
+                            min="1"
+                            max={item.category === 'fer' ? item.stock_barre : item.quantity}
+                            value={item.cartQuantity}
+                            onChange={(e) => handleDirectQuantityChange(item.id, e.target.value)}
+                            className="w-16 text-center text-sm font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
                           <Button
                             size="sm"
                             variant="outline"
