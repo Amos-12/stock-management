@@ -339,6 +339,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       actualPrice = product.price * quantityToAdd;
       displayUnit = product.unit;
     }
+    // Calculate for all other categories (électroménager, blocs, énergie, etc.)
+    else if (product.category !== 'ceramique' && product.category !== 'fer') {
+      quantityToAdd = customQty || 1;
+      actualPrice = product.price * quantityToAdd;
+      displayUnit = product.unit;
+    }
 
     // Get available stock based on category
     const availableStock = product.category === 'ceramique' ? (product.stock_boite || 0) : 
