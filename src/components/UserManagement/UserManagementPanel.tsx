@@ -277,10 +277,13 @@ export const UserManagementPanel = () => {
 
   const handleDeleteUser = async (userId: string, userName: string, userRole: string, isActive: boolean) => {
     try {
+      console.log('🗑️ Tentative de suppression:', { userId, userName, userRole, isActive });
+      
       // Double vérification côté client
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       
       if (currentUser?.id === userId) {
+        console.error('❌ Tentative de suppression de son propre compte');
         toast({
           title: "Erreur",
           description: "Vous ne pouvez pas supprimer votre propre compte",
@@ -290,31 +293,60 @@ export const UserManagementPanel = () => {
       }
       
       if (userRole === 'seller' && isActive) {
+        console.error('❌ Tentative de suppression d\'un vendeur actif');
         toast({
           title: "Erreur",
-          description: "Veuillez d'abord désactiver ce vendeur",
+          description: "Veuillez d'abord désactiver ce vendeur avant de le supprimer",
           variant: "destructive"
         });
         return;
       }
       
+      console.log('📞 Appel de la fonction delete_user_account...');
       const { data, error } = await supabase.rpc('delete_user_account', {
         target_user_id: userId
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erreur RPC delete_user_account:', error);
+        throw error;
+      }
+      
+      console.log('✅ Réponse de delete_user_account:', data);
       
       toast({
         title: "Succès",
-        description: `Compte de ${userName} supprimé. Les données historiques ont été conservées.`
+        description: `Compte de ${userName} supprimé avec succès. Les données historiques ont été conservées.`
       });
       
       fetchUsers();
     } catch (error: any) {
-      console.error('Error deleting user:', error);
+      console.error('❌ Erreur lors de la suppression:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        fullError: error
+      });
+      
+      // Messages d'erreur plus descriptifs
+      let errorMessage = "Impossible de supprimer le compte";
+      
+      if (error.message?.includes('Seuls les administrateurs')) {
+        errorMessage = "Vous n'avez pas les permissions nécessaires";
+      } else if (error.message?.includes('propre compte')) {
+        errorMessage = "Vous ne pouvez pas supprimer votre propre compte";
+      } else if (error.message?.includes('vendeur actif')) {
+        errorMessage = "Désactivez d'abord ce vendeur avant de le supprimer";
+      } else if (error.message?.includes('non trouvé')) {
+        errorMessage = "Utilisateur introuvable";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
-        title: "Erreur",
-        description: error.message || "Impossible de supprimer le compte",
+        title: "Erreur de suppression",
+        description: errorMessage,
         variant: "destructive"
       });
     }
