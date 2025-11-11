@@ -348,9 +348,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     }
 
     // Get available stock based on category
-    const availableStock = product.category === 'ceramique' ? (product.stock_boite || 0) : 
-                          product.category === 'fer' ? (product.stock_barre || 0) : 
-                          product.quantity;
+    const availableStock = product.category === 'ceramique' 
+                          ? (product.stock_boite || 0) * (product.surface_par_boite || 0)
+                          : product.category === 'fer' 
+                            ? (product.stock_barre || 0) 
+                            : product.quantity;
 
     // For iron, validate against stock in bars
     if (product.category === 'fer' && quantityToAdd > availableStock) {
@@ -382,9 +384,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             ? { 
                 ...item, 
                 cartQuantity: newCartQuantity, 
-                actualPrice: product.category === 'fer' && product.prix_par_barre 
-                  ? product.prix_par_barre * newCartQuantity 
-                  : actualPrice,
+                actualPrice: product.category === 'ceramique' && product.prix_m2
+                  ? product.prix_m2 * newCartQuantity
+                  : product.category === 'fer' && product.prix_par_barre 
+                    ? product.prix_par_barre * newCartQuantity
+                    : product.price * newCartQuantity,
                 displayUnit,
                 sourceUnit,
                 sourceValue
@@ -1682,47 +1686,51 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         </DialogContent>
       </Dialog>
 
-      {/* Bouton flottant du panier - visible uniquement sur l'étape produits */}
+      {/* Bouton flottant compact du panier */}
       {cart.length > 0 && currentStep === 'products' && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
-          <div className="max-w-7xl mx-auto pointer-events-auto">
-            <Card className="shadow-2xl border-2 border-primary/20">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                  {/* Résumé du panier */}
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="flex items-center gap-2">
-                      <ShoppingCart className="w-5 h-5 text-primary" />
-                      <Badge variant="default" className="text-sm">
-                        {cart.length} article{cart.length > 1 ? 's' : ''}
-                      </Badge>
-                    </div>
-                    <Separator orientation="vertical" className="h-6 hidden sm:block" />
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Total : </span>
-                      <span className="font-bold text-lg text-success">
-                        {formatAmount(cart.reduce((total, item) => {
-                          const itemPrice = item.actualPrice !== undefined 
-                            ? item.actualPrice 
-                            : (item.price * item.cartQuantity);
-                          return total + itemPrice;
-                        }, 0))}
-                      </span>
-                    </div>
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="relative">
+            {/* Badge avec nombre d'articles */}
+            <Badge 
+              variant="destructive" 
+              className="absolute -top-2 -right-2 z-10 min-w-[24px] h-6 flex items-center justify-center rounded-full px-2 shadow-lg"
+            >
+              {cart.length}
+            </Badge>
+            
+            {/* Bouton circulaire principal */}
+            <Button
+              onClick={() => setCurrentStep('cart')}
+              size="lg"
+              className="h-16 w-16 rounded-full shadow-2xl hover:scale-110 transition-transform duration-200 bg-primary hover:bg-primary/90 relative group p-0"
+            >
+              <div className="flex flex-col items-center gap-0.5">
+                <ShoppingCart className="w-6 h-6" />
+                <span className="text-[10px] font-semibold leading-none">
+                  {formatAmount(cart.reduce((total, item) => {
+                    const itemPrice = item.actualPrice !== undefined 
+                      ? item.actualPrice 
+                      : (item.price * item.cartQuantity);
+                    return total + itemPrice;
+                  }, 0)).replace(/\s/g, '').substring(0, 8)}
+                </span>
+              </div>
+              
+              {/* Tooltip au survol */}
+              <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                <div className="bg-popover text-popover-foreground px-3 py-2 rounded-lg shadow-lg whitespace-nowrap text-sm border">
+                  <div className="font-semibold mb-1">Panier ({cart.length} article{cart.length > 1 ? 's' : ''})</div>
+                  <div className="text-success font-bold">
+                    Total : {formatAmount(cart.reduce((total, item) => {
+                      const itemPrice = item.actualPrice !== undefined 
+                        ? item.actualPrice 
+                        : (item.price * item.cartQuantity);
+                      return total + itemPrice;
+                    }, 0))}
                   </div>
-                  
-                  {/* Bouton Voir le panier */}
-                  <Button 
-                    onClick={() => setCurrentStep('cart')} 
-                    className="gap-2 w-full sm:w-auto shadow-lg"
-                    size="lg"
-                  >
-                    Voir le panier
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </Button>
           </div>
         </div>
       )}
