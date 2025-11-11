@@ -1573,7 +1573,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               {customQuantityDialog.product?.category === 'ceramique' && customQuantityValue && (
                 <p className="text-xs text-muted-foreground">
                   {customQuantityDialog.product.surface_par_boite && (
-                    <>
+                    <> 
                       Boîtes nécessaires: {(parseFloat(customQuantityValue) / customQuantityDialog.product.surface_par_boite).toFixed(2)}
                       {' '}(≈ {parseFloat(customQuantityValue).toFixed(2)} m²)
                     </>
