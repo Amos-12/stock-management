@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.database-cleanup]
 verify_jwt = false
+
+[functions.delete-sale]
+verify_jwt = true
