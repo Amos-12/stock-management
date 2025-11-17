@@ -130,16 +130,30 @@ export const SalesManagement = () => {
 
   const handleDeleteSale = async (saleId: string) => {
     try {
-      const { error } = await supabase
-        .from('sales')
-        .delete()
-        .eq('id', saleId);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Non authentifié');
+      }
 
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke('delete-sale', {
+        body: { saleId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Erreur lors de la suppression');
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Erreur lors de la suppression');
+      }
 
       toast({
         title: "Vente supprimée",
-        description: "La vente et ses articles ont été supprimés avec succès",
+        description: data.message || `${data.restoredProducts || 0} produit(s) remis en stock`,
       });
 
       // Recharger la liste
@@ -148,7 +162,7 @@ export const SalesManagement = () => {
       console.error('Error deleting sale:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de supprimer la vente. Vérifiez vos permissions.",
+        description: error instanceof Error ? error.message : "Impossible de supprimer la vente",
         variant: "destructive"
       });
     }

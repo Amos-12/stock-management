@@ -71,10 +71,28 @@ export const AdminDashboardCharts = () => {
   const [weekProfit, setWeekProfit] = useState(0);
   const [monthProfit, setMonthProfit] = useState(0);
   const [yearProfit, setYearProfit] = useState(0);
+  
+  // Trending data
+  const [yesterdayRevenue, setYesterdayRevenue] = useState(0);
+  const [yesterdayProfit, setYesterdayProfit] = useState(0);
+  const [prevWeekRevenue, setPrevWeekRevenue] = useState(0);
+  const [prevWeekProfit, setPrevWeekProfit] = useState(0);
 
   useEffect(() => {
     fetchChartData();
   }, [period]);
+
+  const calcTrend = (current: number, previous: number) => {
+    if (previous === 0) {
+      if (current > 0) return { value: 100, isPositive: true };
+      return { value: 0, isPositive: false };
+    }
+    const percent = ((current - previous) / previous) * 100;
+    return {
+      value: Math.abs(Math.round(percent * 10) / 10),
+      isPositive: current >= previous
+    };
+  };
 
   const fetchChartData = async () => {
     try {
@@ -123,9 +141,31 @@ export const AdminDashboardCharts = () => {
         .gte('sales.created_at', today.toISOString());
       
       if (!todayItemsError) {
-        const todayPft = todayItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
+      const todayPft = todayItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
         setTodayProfit(todayPft);
       }
+
+      // Yesterday's revenue and profit
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const { data: yesterdayData } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .gte('created_at', yesterday.toISOString())
+        .lt('created_at', today.toISOString());
+      
+      const yesterdayRev = yesterdayData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0;
+      setYesterdayRevenue(yesterdayRev);
+
+      const { data: yesterdayItems } = await supabase
+        .from('sale_items')
+        .select('profit_amount, sales!inner(created_at)')
+        .gte('sales.created_at', yesterday.toISOString())
+        .lt('sales.created_at', today.toISOString());
+      
+      const yesterdayPft = yesterdayItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
+      setYesterdayProfit(yesterdayPft);
 
       // Week revenue and profit
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -146,6 +186,27 @@ export const AdminDashboardCharts = () => {
         const weekPft = weekItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
         setWeekProfit(weekPft);
       }
+
+      // Previous week revenue and profit (7-14 days ago)
+      const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+      
+      const { data: prevWeekData } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .gte('created_at', twoWeeksAgo.toISOString())
+        .lt('created_at', weekAgo.toISOString());
+      
+      const prevWeekRev = prevWeekData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0;
+      setPrevWeekRevenue(prevWeekRev);
+
+      const { data: prevWeekItems } = await supabase
+        .from('sale_items')
+        .select('profit_amount, sales!inner(created_at)')
+        .gte('sales.created_at', twoWeeksAgo.toISOString())
+        .lt('sales.created_at', weekAgo.toISOString());
+      
+      const prevWeekPft = prevWeekItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
+      setPrevWeekProfit(prevWeekPft);
 
       // Month revenue and profit
       const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -406,8 +467,8 @@ export const AdminDashboardCharts = () => {
           value={`${todayRevenue.toFixed(2)} HTG`}
           icon={DollarSign}
           change={{
-            value: 12.5,
-            isPositive: true,
+            value: calcTrend(todayRevenue, yesterdayRevenue).value,
+            isPositive: calcTrend(todayRevenue, yesterdayRevenue).isPositive,
             label: "vs hier"
           }}
           variant="default"
@@ -417,8 +478,8 @@ export const AdminDashboardCharts = () => {
           value={`${todayProfit.toFixed(2)} HTG`}
           icon={TrendingUp}
           change={{
-            value: 15.3,
-            isPositive: true,
+            value: calcTrend(todayProfit, yesterdayProfit).value,
+            isPositive: calcTrend(todayProfit, yesterdayProfit).isPositive,
             label: "vs hier"
           }}
           variant="success"
@@ -427,6 +488,11 @@ export const AdminDashboardCharts = () => {
           title="Ventes cette Semaine"
           value={`${weekRevenue.toFixed(2)} HTG`}
           icon={DollarSign}
+          change={{
+            value: calcTrend(weekRevenue, prevWeekRevenue).value,
+            isPositive: calcTrend(weekRevenue, prevWeekRevenue).isPositive,
+            label: "vs 7j précédents"
+          }}
           variant="default"
         />
         <StatsCard
@@ -434,9 +500,9 @@ export const AdminDashboardCharts = () => {
           value={`${weekProfit.toFixed(2)} HTG`}
           icon={TrendingUp}
           change={{
-            value: 8.2,
-            isPositive: true,
-            label: "vs semaine dernière"
+            value: calcTrend(weekProfit, prevWeekProfit).value,
+            isPositive: calcTrend(weekProfit, prevWeekProfit).isPositive,
+            label: "vs 7j précédents"
           }}
           variant="success"
         />
