@@ -142,7 +142,10 @@ export const SalesManagement = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Erreur lors de la suppression');
+      }
 
       if (!data?.success) {
         throw new Error(data?.error || 'Erreur lors de la suppression');
