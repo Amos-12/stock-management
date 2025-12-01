@@ -33,45 +33,84 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          persistSession: false,
-        },
-      }
-    )
+    // STEP 1: Validate environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    
+    console.log('🔧 Environment check:', {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      urlPrefix: supabaseUrl?.substring(0, 30) + '...'
+    })
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Missing environment variables!')
+      console.error('SUPABASE_URL present:', !!supabaseUrl)
+      console.error('SUPABASE_SERVICE_ROLE_KEY present:', !!supabaseServiceKey)
+      throw new Error('Configuration error: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. Please configure these secrets in your Supabase project settings.')
+    }
 
-    // Get user from JWT
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+      },
+    })
+
+    // STEP 2: Validate authorization
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
+      console.error('❌ No authorization header provided')
       throw new Error('Missing authorization header')
     }
 
     const jwt = authHeader.replace('Bearer ', '')
+    console.log('🔐 Validating JWT...')
+    
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(jwt)
     
-    if (authError || !user) {
-      throw new Error('Unauthorized')
+    if (authError) {
+      console.error('❌ Auth error:', authError.message)
+      throw new Error(`Authentication failed: ${authError.message}`)
+    }
+    
+    if (!user) {
+      console.error('❌ No user found from JWT')
+      throw new Error('Unauthorized: Invalid token')
     }
 
-    const saleData: SaleRequest = await req.json()
+    console.log('✅ User authenticated:', user.id)
 
-    console.log('Processing sale for user:', user.id)
-    console.log('Sale items:', saleData.items.length)
-    console.log('📦 Items to process:', JSON.stringify(saleData.items, null, 2))
+    // STEP 3: Parse and validate request body
+    let saleData: SaleRequest
+    try {
+      saleData = await req.json()
+    } catch (parseError) {
+      console.error('❌ Failed to parse request body:', parseError)
+      throw new Error('Invalid request body: Expected JSON')
+    }
 
-    // Validate stock availability for all items before processing
+    if (!saleData.items || saleData.items.length === 0) {
+      throw new Error('Invalid sale: No items provided')
+    }
+
+    console.log('📦 Processing sale:', {
+      itemCount: saleData.items.length,
+      totalAmount: saleData.total_amount,
+      customer: saleData.customer_name || 'Anonymous'
+    })
+
+    // STEP 4: Validate stock availability for all items before processing
+    console.log('🔍 Validating stock for all items...')
     for (const item of saleData.items) {
       const { data: product, error: productError } = await supabaseClient
         .from('products')
-        .select('quantity, stock_boite, stock_barre, category')
+        .select('quantity, stock_boite, stock_barre, category, name')
         .eq('id', item.product_id)
         .single()
 
       if (productError) {
-        throw new Error(`Product ${item.product_name} not found`)
+        console.error('❌ Product fetch error:', productError)
+        throw new Error(`Product ${item.product_name} not found: ${productError.message}`)
       }
 
       // Check the appropriate stock field based on product category
@@ -81,20 +120,20 @@ Deno.serve(async (req) => {
       } else if (product.category === 'fer' && product.stock_barre !== null) {
         availableStock = product.stock_barre
       } else if (product.stock_barre !== null && product.stock_barre > 0) {
-        // Fallback: if stock_barre is present and positive, treat as iron bars
         availableStock = product.stock_barre
       } else {
         availableStock = product.quantity
       }
 
       if (availableStock < item.quantity) {
-        throw new Error(`Stock insuffisant pour ${item.product_name}. Disponible: ${availableStock}`)
+        throw new Error(`Stock insuffisant pour ${item.product_name}. Disponible: ${availableStock}, Demandé: ${item.quantity}`)
       }
     }
 
     console.log('✅ Stock validation passed for all items')
 
-    // Create sale record
+    // STEP 5: Create sale record
+    console.log('📝 Creating sale record...')
     const { data: sale, error: saleError } = await supabaseClient
       .from('sales')
       .insert([{
@@ -112,14 +151,16 @@ Deno.serve(async (req) => {
       .single()
 
     if (saleError) {
-      console.error('Sale creation error:', saleError)
-      throw new Error('Failed to create sale')
+      console.error('❌ Sale creation error:', saleError)
+      throw new Error(`Failed to create sale: ${saleError.message}`)
     }
 
     console.log('✅ Sale created:', sale.id)
 
-    // Process each item: create sale_item, update stock, and create stock_movement
+    // STEP 6: Process each item
     for (const item of saleData.items) {
+      console.log(`📦 Processing item: ${item.product_name}`)
+      
       // Get current product with all fields including purchase_price
       const { data: currentProduct, error: fetchError } = await supabaseClient
         .from('products')
@@ -128,7 +169,8 @@ Deno.serve(async (req) => {
         .single()
 
       if (fetchError) {
-        throw new Error(`Failed to fetch product ${item.product_name}`)
+        console.error('❌ Product fetch error:', fetchError)
+        throw new Error(`Failed to fetch product ${item.product_name}: ${fetchError.message}`)
       }
 
       // Calculate profit
@@ -150,43 +192,39 @@ Deno.serve(async (req) => {
         }])
 
       if (itemError) {
-        console.error('Sale item error:', itemError)
-        throw new Error(`Failed to create sale item for ${item.product_name}`)
+        console.error('❌ Sale item error:', itemError)
+        throw new Error(`Failed to create sale item for ${item.product_name}: ${itemError.message}`)
       }
 
       // Determine which stock field to update based on category
       let previousQuantity: number
       let newQuantity: number
-      let updateData: any = {}
-      let stockField: string // Track which field we're updating
+      let updateData: Record<string, number> = {}
+      let stockField: string
 
       if (currentProduct.category === 'ceramique' && currentProduct.stock_boite !== null) {
-        // For ceramics, update stock_boite
         previousQuantity = currentProduct.stock_boite
         newQuantity = previousQuantity - item.quantity
         updateData = { stock_boite: newQuantity }
         stockField = 'stock_boite'
       } else if (currentProduct.category === 'fer' && currentProduct.stock_barre !== null) {
-        // For iron bars, update stock_barre
         previousQuantity = currentProduct.stock_barre
         newQuantity = previousQuantity - item.quantity
         updateData = { stock_barre: newQuantity }
         stockField = 'stock_barre'
       } else if (currentProduct.stock_barre !== null && currentProduct.stock_barre > 0) {
-        // Fallback: treat as iron bars if stock_barre is present and positive
         previousQuantity = currentProduct.stock_barre
         newQuantity = previousQuantity - item.quantity
         updateData = { stock_barre: newQuantity }
         stockField = 'stock_barre'
       } else {
-        // For all other products, update quantity
         previousQuantity = currentProduct.quantity
         newQuantity = previousQuantity - item.quantity
         updateData = { quantity: newQuantity }
         stockField = 'quantity'
       }
 
-      console.log(`Updating ${stockField} for ${item.product_name}: ${previousQuantity} -> ${newQuantity}`)
+      console.log(`📊 Updating ${stockField}: ${previousQuantity} -> ${newQuantity}`)
 
       // Update product stock
       const { error: updateError } = await supabaseClient
@@ -195,8 +233,8 @@ Deno.serve(async (req) => {
         .eq('id', item.product_id)
 
       if (updateError) {
-        console.error('Product update error:', updateError)
-        throw new Error(`Failed to update stock for ${item.product_name}`)
+        console.error('❌ Product update error:', updateError)
+        throw new Error(`Failed to update stock for ${item.product_name}: ${updateError.message}`)
       }
 
       // Record stock movement
@@ -214,15 +252,14 @@ Deno.serve(async (req) => {
         }])
 
       if (movementError) {
-        console.error('Stock movement error:', movementError)
-        throw new Error(`Failed to record stock movement for ${item.product_name}`)
+        console.error('❌ Stock movement error:', movementError)
+        throw new Error(`Failed to record stock movement for ${item.product_name}: ${movementError.message}`)
       }
 
-      console.log(`Stock updated for ${item.product_name}: ${previousQuantity} -> ${newQuantity}`)
-      console.log(`Profit recorded: ${profitAmount.toFixed(2)} HTG (purchase: ${purchasePriceAtSale}, sale: ${item.unit_price})`)
+      console.log(`✅ Item processed: ${item.product_name}`)
     }
 
-    // Create activity log
+    // STEP 7: Create activity log (non-blocking)
     try {
       const { data: profile } = await supabaseClient
         .from('profiles')
@@ -245,8 +282,10 @@ Deno.serve(async (req) => {
           }
         })
     } catch (logError) {
-      console.error('Failed to create activity log:', logError)
+      console.error('⚠️ Failed to create activity log (non-critical):', logError)
     }
+
+    console.log('🎉 Sale completed successfully!')
 
     return new Response(
       JSON.stringify({
@@ -260,12 +299,19 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('🔴 Error processing sale:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
+    console.error('🔴 SALE PROCESSING FAILED')
+    console.error('Error message:', errorMessage)
+    console.error('Error stack:', errorStack)
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error',
-        details: error instanceof Error ? error.stack : undefined
+        error: errorMessage,
+        details: errorStack,
+        timestamp: new Date().toISOString()
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
