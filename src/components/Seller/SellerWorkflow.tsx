@@ -352,9 +352,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       displayUnit = product.unit;
     }
 
-    // Get available stock based on category (with precision fix for ceramics)
+    // Get available stock based on category (use Math.floor for ceramics - only whole boxes can be sold)
     const availableStock = product.category === 'ceramique' 
-                          ? roundTo2Decimals((product.stock_boite || 0) * (product.surface_par_boite || 0))
+                          ? roundTo2Decimals(Math.floor(product.stock_boite || 0) * (product.surface_par_boite || 0))
                           : product.category === 'fer' 
                             ? (product.stock_barre || 0) 
                             : product.quantity;
@@ -1010,14 +1010,15 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 let availableStock = product.quantity;
                 let stockLabel = product.unit;
                 
-                // For ceramics, show boxes and m² (with precision fix)
+                // For ceramics, show boxes and m² (use Math.floor because we can only sell whole boxes)
                 if (product.category === 'ceramique' && product.stock_boite !== undefined) {
-                  availableStock = product.stock_boite;
+                  const wholeBoxes = Math.floor(product.stock_boite); // Only whole boxes can be sold
+                  availableStock = wholeBoxes;
                   const cartQuantity = cartItem?.cartQuantity || 0; // cartQuantity is in m²
                   const cartBoxes = product.surface_par_boite ? Math.ceil(cartQuantity / product.surface_par_boite) : 0;
-                  const remainingBoxes = product.stock_boite - cartBoxes;
+                  const remainingBoxes = wholeBoxes - cartBoxes;
                   const surfaceDisponible = product.surface_par_boite ? 
-                    roundTo2Decimals(remainingBoxes * product.surface_par_boite) : 0;
+                    roundTo2Decimals(Math.max(0, remainingBoxes) * product.surface_par_boite) : 0;
                   stockLabel = `boîtes (${surfaceDisponible.toFixed(2)} m² restants)`;
                 }
                 
