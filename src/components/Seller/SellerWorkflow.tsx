@@ -1010,15 +1010,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 let availableStock = product.quantity;
                 let stockLabel = product.unit;
                 
-                // For ceramics, show boxes and m² (use Math.floor because we can only sell whole boxes)
+                // For ceramics, show m² directly (more intuitive for users)
                 if (product.category === 'ceramique' && product.stock_boite !== undefined) {
-                  const wholeBoxes = Math.floor(product.stock_boite); // Only whole boxes can be sold
-                  availableStock = wholeBoxes;
-                  const cartQuantity = cartItem?.cartQuantity || 0; // cartQuantity is in m²
-                  const cartBoxes = product.surface_par_boite ? Math.ceil(cartQuantity / product.surface_par_boite) : 0;
-                  const remainingBoxes = wholeBoxes - cartBoxes;
-                  const surfaceDisponible = product.surface_par_boite ? 
-                    roundTo2Decimals(Math.max(0, remainingBoxes) * product.surface_par_boite) : 0;
+                  const totalM2 = roundTo2Decimals((product.stock_boite || 0) * (product.surface_par_boite || 0));
+                  const cartQuantityM2 = cartItem?.cartQuantity || 0; // cartQuantity is already in m²
+                  const surfaceDisponible = roundTo2Decimals(Math.max(0, totalM2 - cartQuantityM2));
+                  availableStock = Math.floor(product.stock_boite); // For button disable logic (whole boxes)
                   stockLabel = `boîtes (${surfaceDisponible.toFixed(2)} m² restants)`;
                 }
                 
@@ -1029,9 +1026,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 }
                 
                 const cartQuantity = cartItem?.cartQuantity || 0;
-                // For ceramics, cartQuantity is in m², need to convert to boxes for stock calculation (use Math.ceil to match sale processing)
+                // For ceramics, calculate remaining stock in m² directly for intuitive display
                 const remainingStock = product.category === 'ceramique' && product.surface_par_boite
-                  ? availableStock - Math.ceil(cartQuantity / product.surface_par_boite)
+                  ? roundTo2Decimals((product.stock_boite || 0) * product.surface_par_boite - cartQuantity)
                   : availableStock - cartQuantity;
                 
                 return (
