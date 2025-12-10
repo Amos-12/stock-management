@@ -148,6 +148,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     return Math.round(tonnage * barsPerTon); // Always return integer bars
   };
 
+  // Utility function to round to 2 decimals (fixes floating point precision issues)
+  const roundTo2Decimals = (value: number): number => {
+    return Math.round(value * 100) / 100;
+  };
+
   // Convert bars to tonnage for display
   const barresToTonnage = (barres: number, barsPerTon: number): number => {
     return barres / barsPerTon;
@@ -347,9 +352,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       displayUnit = product.unit;
     }
 
-    // Get available stock based on category
+    // Get available stock based on category (with precision fix for ceramics)
     const availableStock = product.category === 'ceramique' 
-                          ? (product.stock_boite || 0) * (product.surface_par_boite || 0)
+                          ? roundTo2Decimals((product.stock_boite || 0) * (product.surface_par_boite || 0))
                           : product.category === 'fer' 
                             ? (product.stock_barre || 0) 
                             : product.quantity;
@@ -1005,15 +1010,15 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 let availableStock = product.quantity;
                 let stockLabel = product.unit;
                 
-                // For ceramics, show boxes and m²
+                // For ceramics, show boxes and m² (with precision fix)
                 if (product.category === 'ceramique' && product.stock_boite !== undefined) {
                   availableStock = product.stock_boite;
                   const cartQuantity = cartItem?.cartQuantity || 0; // cartQuantity is in m²
-                  const cartBoxes = product.surface_par_boite ? (cartQuantity / product.surface_par_boite) : 0;
+                  const cartBoxes = product.surface_par_boite ? Math.ceil(cartQuantity / product.surface_par_boite) : 0;
                   const remainingBoxes = product.stock_boite - cartBoxes;
                   const surfaceDisponible = product.surface_par_boite ? 
-                    (remainingBoxes * product.surface_par_boite).toFixed(2) : 0;
-                  stockLabel = `boîtes (${surfaceDisponible} m² restants)`;
+                    roundTo2Decimals(remainingBoxes * product.surface_par_boite) : 0;
+                  stockLabel = `boîtes (${surfaceDisponible.toFixed(2)} m² restants)`;
                 }
                 
                 // For iron bars
@@ -1023,9 +1028,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 }
                 
                 const cartQuantity = cartItem?.cartQuantity || 0;
-                // For ceramics, cartQuantity is in m², need to convert to boxes for stock calculation
+                // For ceramics, cartQuantity is in m², need to convert to boxes for stock calculation (use Math.ceil to match sale processing)
                 const remainingStock = product.category === 'ceramique' && product.surface_par_boite
-                  ? availableStock - (cartQuantity / product.surface_par_boite)
+                  ? availableStock - Math.ceil(cartQuantity / product.surface_par_boite)
                   : availableStock - cartQuantity;
                 
                 return (
