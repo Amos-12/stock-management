@@ -352,9 +352,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       displayUnit = product.unit;
     }
 
-    // Get available stock based on category (stock_boite IS ALREADY in m² for ceramics)
+    // Get available stock based on category (stock_boite is in BOXES, multiply by surface_par_boite to get m²)
     const availableStock = product.category === 'ceramique' 
-                          ? roundTo2Decimals(product.stock_boite || 0)
+                          ? roundTo2Decimals((product.stock_boite || 0) * (product.surface_par_boite || 1))
                           : product.category === 'fer' 
                             ? (product.stock_barre || 0) 
                             : product.quantity;
@@ -480,10 +480,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       return prevCart.map(cartItem => {
         if (cartItem.id !== productId) return cartItem;
         
-        // Déterminer le stock disponible selon la catégorie (stock_boite EST DÉJÀ en m²)
+        // Déterminer le stock disponible selon la catégorie (stock_boite en BOÎTES × surface_par_boite = m²)
         let availableStock: number;
         if (cartItem.category === 'ceramique') {
-          availableStock = roundTo2Decimals(cartItem.stock_boite || 0);
+          availableStock = roundTo2Decimals((cartItem.stock_boite || 0) * (cartItem.surface_par_boite || 1));
         } else if (cartItem.category === 'fer') {
           availableStock = cartItem.stock_barre || 0;
         } else {
@@ -1016,9 +1016,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 let availableStock = product.quantity;
                 let stockLabel = product.unit;
                 
-                // For ceramics, stock_boite IS ALREADY in m²
+                // For ceramics, stock_boite is in BOXES - multiply by surface_par_boite to get m²
                 if (product.category === 'ceramique' && product.stock_boite !== undefined) {
-                  const totalM2 = roundTo2Decimals(product.stock_boite || 0);
+                  const totalM2 = roundTo2Decimals((product.stock_boite || 0) * (product.surface_par_boite || 1));
                   const cartQuantityM2 = cartItem?.cartQuantity || 0;
                   const surfaceDisponible = roundTo2Decimals(Math.max(0, totalM2 - cartQuantityM2));
                   availableStock = surfaceDisponible;
@@ -1032,9 +1032,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 }
                 
                 const cartQuantity = cartItem?.cartQuantity || 0;
-                // For ceramics, stock_boite IS ALREADY in m² - simple subtraction
+                // For ceramics, convert boxes to m² then subtract cart quantity
                 const remainingStock = product.category === 'ceramique'
-                  ? roundTo2Decimals((product.stock_boite || 0) - cartQuantity)
+                  ? roundTo2Decimals((product.stock_boite || 0) * (product.surface_par_boite || 1) - cartQuantity)
                   : availableStock - cartQuantity;
                 
                 return (
