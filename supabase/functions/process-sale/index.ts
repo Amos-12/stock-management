@@ -116,9 +116,10 @@ Deno.serve(async (req) => {
       // Check the appropriate stock field based on product category
       let availableStock: number
       if (product.category === 'ceramique' && product.stock_boite !== null) {
-        // stock_boite EST DÉJÀ en m² - pas de conversion nécessaire
-        const stockDisponibleM2 = product.stock_boite
-        console.log(`🔍 Céramique validation: stock=${stockDisponibleM2.toFixed(2)} m², demandé=${item.quantity} m²`)
+        // stock_boite est en BOÎTES - multiplier par surface_par_boite pour obtenir m²
+        const surfaceParBoite = product.surface_par_boite || 1
+        const stockDisponibleM2 = product.stock_boite * surfaceParBoite
+        console.log(`🔍 Céramique validation: ${product.stock_boite} boîtes × ${surfaceParBoite} m²/boîte = ${stockDisponibleM2.toFixed(2)} m² disponibles, demandé=${item.quantity} m²`)
         
         if (item.quantity > stockDisponibleM2) {
           throw new Error(`Stock insuffisant pour ${item.product_name}. Disponible: ${stockDisponibleM2.toFixed(2)} m², Demandé: ${item.quantity} m²`)
@@ -210,13 +211,19 @@ Deno.serve(async (req) => {
       let stockField: string
 
       if (currentProduct.category === 'ceramique' && currentProduct.stock_boite !== null) {
-        // stock_boite EST DÉJÀ en m² - simple soustraction
-        previousQuantity = currentProduct.stock_boite
-        newQuantity = previousQuantity - item.quantity
+        // stock_boite est en BOÎTES - convertir en m², soustraire, reconvertir en boîtes
+        const surfaceParBoite = currentProduct.surface_par_boite || 1
+        const stockActuelM2 = currentProduct.stock_boite * surfaceParBoite
+        const nouveauStockM2 = stockActuelM2 - item.quantity
+        const nouveauStockBoite = nouveauStockM2 / surfaceParBoite
         
-        console.log(`🔧 Céramique: ${previousQuantity.toFixed(2)} m² - ${item.quantity} m² = ${newQuantity.toFixed(2)} m²`)
+        previousQuantity = stockActuelM2  // Pour le log (en m²)
+        newQuantity = nouveauStockM2      // Pour le log (en m²)
         
-        updateData = { stock_boite: newQuantity }
+        console.log(`🔧 Céramique: ${stockActuelM2.toFixed(2)} m² - ${item.quantity} m² = ${nouveauStockM2.toFixed(2)} m²`)
+        console.log(`📦 Nouveau stock_boite: ${nouveauStockBoite.toFixed(4)} boîtes`)
+        
+        updateData = { stock_boite: nouveauStockBoite }
         stockField = 'stock_boite'
       } else if (currentProduct.category === 'fer' && currentProduct.stock_barre !== null) {
         previousQuantity = currentProduct.stock_barre
