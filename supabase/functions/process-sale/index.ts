@@ -216,8 +216,8 @@ Deno.serve(async (req) => {
         const stockActuelM2 = currentProduct.stock_boite * surfaceParBoite
         const nouveauStockM2 = stockActuelM2 - item.quantity
         
-        // CORRECTION: Arrondir à 4 décimales pour éviter l'accumulation d'erreurs de précision flottante
-        const nouveauStockBoite = Math.round((nouveauStockM2 / surfaceParBoite) * 10000) / 10000
+        // CORRECTION: Arrondir à 2 décimales (cohérent avec le trigger DB)
+        const nouveauStockBoite = Math.round((nouveauStockM2 / surfaceParBoite) * 100) / 100
         
         // Pour les logs, arrondir à 2 décimales (valeurs affichables)
         previousQuantity = Math.round(stockActuelM2 * 100) / 100
