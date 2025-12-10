@@ -638,19 +638,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         discount_amount: discountAmount,
         total_amount: totalAmount,
         items: cart.map(item => {
-          // Pour les céramiques : convertir m² en nombre de boîtes
+          // Pour les céramiques : envoyer directement les m² (pas de conversion en boîtes)
           let quantityToSend = item.cartQuantity;
-          if (item.category === 'ceramique' && item.surface_par_boite && item.surface_par_boite > 0) {
-            const boxesNeeded = Math.ceil(item.cartQuantity / item.surface_par_boite);
-            console.log(`🔄 Céramique conversion: ${item.cartQuantity} m² → ${boxesNeeded} boîtes (surface/boîte: ${item.surface_par_boite})`);
-            quantityToSend = boxesNeeded;
+          if (item.category === 'ceramique') {
+            console.log(`🔄 Céramique: envoi de ${quantityToSend} m² directement (pas de conversion)`);
           }
           
           return {
             product_id: item.id,
             product_name: item.name,
-            quantity: Math.round(quantityToSend), // En boîtes pour céramique, sinon quantité normale
-            unit: item.category === 'fer' ? 'barre' : (item.category === 'ceramique' ? 'boîte' : (item.displayUnit || item.unit)),
+            quantity: quantityToSend, // En m² pour céramique, sinon quantité normale
+            unit: item.category === 'fer' ? 'barre' : (item.category === 'ceramique' ? 'm²' : (item.displayUnit || item.unit)),
             unit_price: item.actualPrice !== undefined ? item.actualPrice / item.cartQuantity : item.price,
             subtotal: item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity)
           };

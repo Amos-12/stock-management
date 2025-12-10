@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     for (const item of saleData.items) {
       const { data: product, error: productError } = await supabaseClient
         .from('products')
-        .select('quantity, stock_boite, stock_barre, category, name')
+        .select('quantity, stock_boite, stock_barre, category, name, surface_par_boite')
         .eq('id', item.product_id)
         .single()
 
@@ -116,9 +116,15 @@ Deno.serve(async (req) => {
       // Check the appropriate stock field based on product category
       let availableStock: number
       if (product.category === 'ceramique' && product.stock_boite !== null) {
-        // For ceramics, use Math.floor because we can only sell whole boxes
-        availableStock = Math.floor(product.stock_boite)
-        console.log(`🔍 Céramique validation: stock_boite=${product.stock_boite}, boîtes entières=${availableStock}, demandé=${item.quantity}`)
+        // Pour céramique: item.quantity est en m², convertir stock_boite en m² pour comparer
+        const surfaceParBoite = product.surface_par_boite || 1
+        const stockDisponibleM2 = product.stock_boite * surfaceParBoite
+        console.log(`🔍 Céramique validation: stock_boite=${product.stock_boite}, surface/boîte=${surfaceParBoite}, stock en m²=${stockDisponibleM2.toFixed(2)}, demandé=${item.quantity} m²`)
+        
+        if (item.quantity > stockDisponibleM2) {
+          throw new Error(`Stock insuffisant pour ${item.product_name}. Disponible: ${stockDisponibleM2.toFixed(2)} m², Demandé: ${item.quantity} m²`)
+        }
+        continue // Skip the generic check below
       } else if (product.category === 'fer' && product.stock_barre !== null) {
         availableStock = product.stock_barre
       } else if (product.stock_barre !== null && product.stock_barre > 0) {
@@ -166,7 +172,7 @@ Deno.serve(async (req) => {
       // Get current product with all fields including purchase_price
       const { data: currentProduct, error: fetchError } = await supabaseClient
         .from('products')
-        .select('quantity, stock_boite, stock_barre, category, purchase_price')
+        .select('quantity, stock_boite, stock_barre, category, purchase_price, surface_par_boite')
         .eq('id', item.product_id)
         .single()
 
@@ -205,11 +211,18 @@ Deno.serve(async (req) => {
       let stockField: string
 
       if (currentProduct.category === 'ceramique' && currentProduct.stock_boite !== null) {
+        // item.quantity est en m² - calculer la nouvelle valeur de stock_boite
+        const surfaceParBoite = currentProduct.surface_par_boite || 1
+        const stockActuelM2 = currentProduct.stock_boite * surfaceParBoite
+        const nouveauStockM2 = stockActuelM2 - item.quantity
+        
+        // Reconvertir en boîtes pour le stockage
+        newQuantity = nouveauStockM2 / surfaceParBoite
         previousQuantity = currentProduct.stock_boite
-        // item.quantity est maintenant en BOÎTES (converti côté frontend)
-        console.log(`🔧 Céramique: stock_boite actuel = ${previousQuantity}, boîtes à déduire = ${item.quantity}`)
-        newQuantity = previousQuantity - item.quantity
-        console.log(`📉 Nouveau stock_boite = ${newQuantity}`)
+        
+        console.log(`🔧 Céramique: ${stockActuelM2.toFixed(2)} m² - ${item.quantity} m² = ${nouveauStockM2.toFixed(2)} m²`)
+        console.log(`📦 En boîtes: ${previousQuantity.toFixed(3)} → ${newQuantity.toFixed(3)}`)
+        
         updateData = { stock_boite: newQuantity }
         stockField = 'stock_boite'
       } else if (currentProduct.category === 'fer' && currentProduct.stock_barre !== null) {
