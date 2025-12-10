@@ -352,9 +352,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       displayUnit = product.unit;
     }
 
-    // Get available stock based on category (use Math.floor for ceramics - only whole boxes can be sold)
+    // Get available stock based on category (in m² for ceramics)
     const availableStock = product.category === 'ceramique' 
-                          ? roundTo2Decimals(Math.floor(product.stock_boite || 0) * (product.surface_par_boite || 0))
+                          ? roundTo2Decimals((product.stock_boite || 0) * (product.surface_par_boite || 0))
                           : product.category === 'fer' 
                             ? (product.stock_barre || 0) 
                             : product.quantity;
@@ -458,40 +458,48 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   };
 
   const handleDirectQuantityChange = (productId: string, newValue: string) => {
-    const newQty = parseInt(newValue) || 0;
-    
-    // Validation minimum
-    if (newQty < 1) {
-      toast({
-        title: "Quantité invalide",
-        description: "La quantité doit être au moins 1",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     setCart(prevCart => {
-      return prevCart.map(item => {
-        if (item.id !== productId) return item;
+      const item = prevCart.find(i => i.id === productId);
+      if (!item) return prevCart;
+      
+      // Use parseFloat for ceramics (m²), parseInt for others
+      const newQty = item.category === 'ceramique' 
+        ? parseFloat(newValue) || 0 
+        : parseInt(newValue) || 0;
+      
+      // Validation minimum
+      if (newQty < 0.01) {
+        toast({
+          title: "Quantité invalide",
+          description: "La quantité doit être supérieure à 0",
+          variant: "destructive"
+        });
+        return prevCart;
+      }
+      
+      return prevCart.map(cartItem => {
+        if (cartItem.id !== productId) return cartItem;
         
-        // Déterminer le stock disponible selon la catégorie
+        // Déterminer le stock disponible selon la catégorie (en m² pour céramiques)
         let availableStock: number;
-        if (item.category === 'ceramique') {
-          availableStock = item.stock_boite || 0;
-        } else if (item.category === 'fer') {
-          availableStock = item.stock_barre || 0;
+        if (cartItem.category === 'ceramique') {
+          availableStock = roundTo2Decimals((cartItem.stock_boite || 0) * (cartItem.surface_par_boite || 0));
+        } else if (cartItem.category === 'fer') {
+          availableStock = cartItem.stock_barre || 0;
         } else {
-          availableStock = item.quantity;
+          availableStock = cartItem.quantity;
         }
         
         // Vérifier si la quantité demandée est disponible
         if (newQty > availableStock) {
           toast({
             title: "Stock insuffisant",
-            description: `Stock disponible : ${availableStock} ${item.unit}`,
+            description: cartItem.category === 'ceramique' 
+              ? `Stock disponible : ${availableStock.toFixed(2)} m²`
+              : `Stock disponible : ${availableStock} ${cartItem.unit}`,
             variant: "destructive"
           });
-          return item; // Ne pas modifier
+          return cartItem; // Ne pas modifier
         }
         
         // Calculer le nouveau prix selon la catégorie
