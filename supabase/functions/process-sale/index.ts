@@ -116,10 +116,9 @@ Deno.serve(async (req) => {
       // Check the appropriate stock field based on product category
       let availableStock: number
       if (product.category === 'ceramique' && product.stock_boite !== null) {
-        // Pour céramique: item.quantity est en m², convertir stock_boite en m² pour comparer
-        const surfaceParBoite = product.surface_par_boite || 1
-        const stockDisponibleM2 = product.stock_boite * surfaceParBoite
-        console.log(`🔍 Céramique validation: stock_boite=${product.stock_boite}, surface/boîte=${surfaceParBoite}, stock en m²=${stockDisponibleM2.toFixed(2)}, demandé=${item.quantity} m²`)
+        // stock_boite EST DÉJÀ en m² - pas de conversion nécessaire
+        const stockDisponibleM2 = product.stock_boite
+        console.log(`🔍 Céramique validation: stock=${stockDisponibleM2.toFixed(2)} m², demandé=${item.quantity} m²`)
         
         if (item.quantity > stockDisponibleM2) {
           throw new Error(`Stock insuffisant pour ${item.product_name}. Disponible: ${stockDisponibleM2.toFixed(2)} m², Demandé: ${item.quantity} m²`)
@@ -211,17 +210,11 @@ Deno.serve(async (req) => {
       let stockField: string
 
       if (currentProduct.category === 'ceramique' && currentProduct.stock_boite !== null) {
-        // item.quantity est en m² - calculer la nouvelle valeur de stock_boite
-        const surfaceParBoite = currentProduct.surface_par_boite || 1
-        const stockActuelM2 = currentProduct.stock_boite * surfaceParBoite
-        const nouveauStockM2 = stockActuelM2 - item.quantity
-        
-        // Reconvertir en boîtes pour le stockage
-        newQuantity = nouveauStockM2 / surfaceParBoite
+        // stock_boite EST DÉJÀ en m² - simple soustraction
         previousQuantity = currentProduct.stock_boite
+        newQuantity = previousQuantity - item.quantity
         
-        console.log(`🔧 Céramique: ${stockActuelM2.toFixed(2)} m² - ${item.quantity} m² = ${nouveauStockM2.toFixed(2)} m²`)
-        console.log(`📦 En boîtes: ${previousQuantity.toFixed(3)} → ${newQuantity.toFixed(3)}`)
+        console.log(`🔧 Céramique: ${previousQuantity.toFixed(2)} m² - ${item.quantity} m² = ${newQuantity.toFixed(2)} m²`)
         
         updateData = { stock_boite: newQuantity }
         stockField = 'stock_boite'
