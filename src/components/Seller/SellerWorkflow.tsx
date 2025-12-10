@@ -1009,12 +1009,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 let stockLabel = product.unit;
                 
                 // For ceramics, show m² directly (more intuitive for users)
-                if (product.category === 'ceramique' && product.stock_boite !== undefined) {
+                if (product.category === 'ceramique' && product.stock_boite !== undefined && product.surface_par_boite) {
                   const totalM2 = roundTo2Decimals((product.stock_boite || 0) * (product.surface_par_boite || 0));
                   const cartQuantityM2 = cartItem?.cartQuantity || 0; // cartQuantity is already in m²
                   const surfaceDisponible = roundTo2Decimals(Math.max(0, totalM2 - cartQuantityM2));
-                  availableStock = Math.floor(product.stock_boite); // For button disable logic (whole boxes)
-                  stockLabel = `boîtes (${surfaceDisponible.toFixed(2)} m² restants)`;
+                  availableStock = surfaceDisponible; // Use m² for stock logic
+                  stockLabel = 'm²';
                 }
                 
                 // For iron bars
@@ -1127,20 +1127,31 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                             )}
                           </div>
                           
-                          {/* Stock info */}
-                          <div className="flex items-center gap-2 text-sm mt-2">
+                          {/* Stock info with clear movement display */}
+                          <div className="flex items-center gap-2 text-sm mt-2 flex-wrap">
                             <Package className="w-4 h-4 text-muted-foreground" />
-                            <span className={remainingStock <= product.alert_threshold ? 'text-warning font-medium' : 'text-muted-foreground'}>
-                              {product.category === 'ceramique' && product.surface_par_boite 
-                                ? `${(remainingStock * product.surface_par_boite).toFixed(2)} m² restants`
-                                : `${remainingStock} ${stockLabel}`}
-                            </span>
-                            {cartQuantity > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                {product.category === 'ceramique' 
-                                  ? `${cartQuantity.toFixed(2)} au panier`
-                                  : `${cartQuantity} au panier`}
-                              </Badge>
+                            {product.category === 'ceramique' && product.surface_par_boite ? (
+                              <>
+                                <span className={remainingStock <= product.alert_threshold ? 'text-warning font-medium' : 'text-muted-foreground'}>
+                                  {remainingStock.toFixed(2)} m² restants
+                                </span>
+                                {cartQuantity > 0 && (
+                                  <Badge variant="secondary" className="text-xs bg-primary/10">
+                                    -{cartQuantity.toFixed(2)} m² au panier
+                                  </Badge>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <span className={remainingStock <= product.alert_threshold ? 'text-warning font-medium' : 'text-muted-foreground'}>
+                                  {remainingStock} {stockLabel}
+                                </span>
+                                {cartQuantity > 0 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {cartQuantity} au panier
+                                  </Badge>
+                                )}
+                              </>
                             )}
                             {remainingStock <= product.alert_threshold && (
                               <AlertCircle className="w-4 h-4 text-warning" />
