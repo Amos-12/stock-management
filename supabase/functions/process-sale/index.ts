@@ -116,7 +116,9 @@ Deno.serve(async (req) => {
       // Check the appropriate stock field based on product category
       let availableStock: number
       if (product.category === 'ceramique' && product.stock_boite !== null) {
-        availableStock = product.stock_boite
+        // For ceramics, use Math.floor because we can only sell whole boxes
+        availableStock = Math.floor(product.stock_boite)
+        console.log(`🔍 Céramique validation: stock_boite=${product.stock_boite}, boîtes entières=${availableStock}, demandé=${item.quantity}`)
       } else if (product.category === 'fer' && product.stock_barre !== null) {
         availableStock = product.stock_barre
       } else if (product.stock_barre !== null && product.stock_barre > 0) {
