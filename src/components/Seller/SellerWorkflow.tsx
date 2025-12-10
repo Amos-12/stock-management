@@ -632,14 +632,24 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         discount_value: parseFloat(discountValue) || 0,
         discount_amount: discountAmount,
         total_amount: totalAmount,
-        items: cart.map(item => ({
-          product_id: item.id,
-          product_name: item.name,
-          quantity: Math.round(item.cartQuantity), // ALWAYS INTEGER for database
-          unit: item.category === 'fer' ? 'barre' : (item.displayUnit || item.unit), // Force 'barre' for iron
-          unit_price: item.actualPrice !== undefined ? item.actualPrice / item.cartQuantity : item.price,
-          subtotal: item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity)
-        }))
+        items: cart.map(item => {
+          // Pour les céramiques : convertir m² en nombre de boîtes
+          let quantityToSend = item.cartQuantity;
+          if (item.category === 'ceramique' && item.surface_par_boite && item.surface_par_boite > 0) {
+            const boxesNeeded = Math.ceil(item.cartQuantity / item.surface_par_boite);
+            console.log(`🔄 Céramique conversion: ${item.cartQuantity} m² → ${boxesNeeded} boîtes (surface/boîte: ${item.surface_par_boite})`);
+            quantityToSend = boxesNeeded;
+          }
+          
+          return {
+            product_id: item.id,
+            product_name: item.name,
+            quantity: Math.round(quantityToSend), // En boîtes pour céramique, sinon quantité normale
+            unit: item.category === 'fer' ? 'barre' : (item.category === 'ceramique' ? 'boîte' : (item.displayUnit || item.unit)),
+            unit_price: item.actualPrice !== undefined ? item.actualPrice / item.cartQuantity : item.price,
+            subtotal: item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity)
+          };
+        })
       };
 
       console.log('📦 Sale payload:', JSON.stringify(saleRequest, null, 2));

@@ -204,7 +204,10 @@ Deno.serve(async (req) => {
 
       if (currentProduct.category === 'ceramique' && currentProduct.stock_boite !== null) {
         previousQuantity = currentProduct.stock_boite
+        // item.quantity est maintenant en BOÎTES (converti côté frontend)
+        console.log(`🔧 Céramique: stock_boite actuel = ${previousQuantity}, boîtes à déduire = ${item.quantity}`)
         newQuantity = previousQuantity - item.quantity
+        console.log(`📉 Nouveau stock_boite = ${newQuantity}`)
         updateData = { stock_boite: newQuantity }
         stockField = 'stock_boite'
       } else if (currentProduct.category === 'fer' && currentProduct.stock_barre !== null) {
