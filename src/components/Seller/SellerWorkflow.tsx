@@ -635,6 +635,19 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         hasDiscount: discountType !== 'none'
       });
 
+      // DEBUG: Log détaillé pour les céramiques avant envoi
+      cart.forEach(item => {
+        if (item.category === 'ceramique') {
+          const stockM2 = (item.stock_boite || 0) * (item.surface_par_boite || 1);
+          console.log(`🧪 DEBUG Céramique "${item.name}":`);
+          console.log(`   - stock_boite (state): ${item.stock_boite}`);
+          console.log(`   - surface_par_boite: ${item.surface_par_boite}`);
+          console.log(`   - Stock m² calculé: ${stockM2.toFixed(4)} m²`);
+          console.log(`   - cartQuantity (m² à vendre): ${item.cartQuantity}`);
+          console.log(`   - Stock m² attendu après: ${(stockM2 - item.cartQuantity).toFixed(4)} m²`);
+        }
+      });
+
       // Prepare sale data for Edge Function
       const saleRequest = {
         customer_name: customerName.trim() || null,

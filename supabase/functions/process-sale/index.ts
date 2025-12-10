@@ -215,13 +215,21 @@ Deno.serve(async (req) => {
         const surfaceParBoite = currentProduct.surface_par_boite || 1
         const stockActuelM2 = currentProduct.stock_boite * surfaceParBoite
         const nouveauStockM2 = stockActuelM2 - item.quantity
-        const nouveauStockBoite = nouveauStockM2 / surfaceParBoite
         
-        previousQuantity = stockActuelM2  // Pour le log (en m²)
-        newQuantity = nouveauStockM2      // Pour le log (en m²)
+        // CORRECTION: Arrondir à 4 décimales pour éviter l'accumulation d'erreurs de précision flottante
+        const nouveauStockBoite = Math.round((nouveauStockM2 / surfaceParBoite) * 10000) / 10000
         
-        console.log(`🔧 Céramique: ${stockActuelM2.toFixed(2)} m² - ${item.quantity} m² = ${nouveauStockM2.toFixed(2)} m²`)
-        console.log(`📦 Nouveau stock_boite: ${nouveauStockBoite.toFixed(4)} boîtes`)
+        // Pour les logs, arrondir à 2 décimales (valeurs affichables)
+        previousQuantity = Math.round(stockActuelM2 * 100) / 100
+        newQuantity = Math.round(nouveauStockM2 * 100) / 100
+        
+        console.log(`🔧 Céramique "${item.product_name}":`)
+        console.log(`   - Stock DB (boîtes): ${currentProduct.stock_boite}`)
+        console.log(`   - Surface/boîte: ${surfaceParBoite} m²`)
+        console.log(`   - Stock actuel: ${stockActuelM2.toFixed(4)} m² (${previousQuantity.toFixed(2)} m² arrondi)`)
+        console.log(`   - Quantité vendue: ${item.quantity} m²`)
+        console.log(`   - Nouveau stock: ${nouveauStockM2.toFixed(4)} m² (${newQuantity.toFixed(2)} m² arrondi)`)
+        console.log(`   - Nouveau stock_boite: ${nouveauStockBoite} boîtes`)
         
         updateData = { stock_boite: nouveauStockBoite }
         stockField = 'stock_boite'
