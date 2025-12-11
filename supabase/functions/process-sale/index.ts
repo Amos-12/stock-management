@@ -113,11 +113,11 @@ Deno.serve(async (req) => {
         throw new Error(`Product ${item.product_name} not found: ${productError.message}`)
       }
 
-      // Check the appropriate stock field based on product category
+      // Check the appropriate stock field based on product category (aligné avec le frontend)
       let availableStock: number
-      if (product.category === 'ceramique' && product.stock_boite !== null) {
+      if (product.category === 'ceramique' && product.stock_boite !== null && product.stock_boite > 0 && product.surface_par_boite) {
         // stock_boite est en BOÎTES - multiplier par surface_par_boite pour obtenir m²
-        const surfaceParBoite = product.surface_par_boite || 1
+        const surfaceParBoite = product.surface_par_boite
         const stockDisponibleM2 = product.stock_boite * surfaceParBoite
         console.log(`🔍 Céramique validation: ${product.stock_boite} boîtes × ${surfaceParBoite} m²/boîte = ${stockDisponibleM2.toFixed(2)} m² disponibles, demandé=${item.quantity} m²`)
         
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
           throw new Error(`Stock insuffisant pour ${item.product_name}. Disponible: ${stockDisponibleM2.toFixed(2)} m², Demandé: ${item.quantity} m²`)
         }
         continue // Skip the generic check below
-      } else if (product.category === 'fer' && product.stock_barre !== null) {
+      } else if (product.category === 'fer' && product.stock_barre !== null && product.stock_barre > 0) {
         availableStock = product.stock_barre
       } else if (product.stock_barre !== null && product.stock_barre > 0) {
         availableStock = product.stock_barre
@@ -215,9 +215,10 @@ Deno.serve(async (req) => {
       let updateData: Record<string, number> = {}
       let stockField: string
 
-      if (currentProduct.category === 'ceramique' && currentProduct.stock_boite !== null) {
+      // Céramique: utiliser stock_boite seulement si > 0 et surface_par_boite défini
+      if (currentProduct.category === 'ceramique' && currentProduct.stock_boite !== null && currentProduct.stock_boite > 0 && currentProduct.surface_par_boite) {
         // stock_boite est en BOÎTES - convertir en m², soustraire, reconvertir en boîtes
-        const surfaceParBoite = currentProduct.surface_par_boite || 1
+        const surfaceParBoite = currentProduct.surface_par_boite
         const stockActuelM2 = currentProduct.stock_boite * surfaceParBoite
         const nouveauStockM2 = stockActuelM2 - item.quantity
         
@@ -238,7 +239,7 @@ Deno.serve(async (req) => {
         
         updateData = { stock_boite: nouveauStockBoite }
         stockField = 'stock_boite'
-      } else if (currentProduct.category === 'fer' && currentProduct.stock_barre !== null) {
+      } else if (currentProduct.category === 'fer' && currentProduct.stock_barre !== null && currentProduct.stock_barre > 0) {
         previousQuantity = currentProduct.stock_barre
         newQuantity = previousQuantity - item.quantity
         updateData = { stock_barre: newQuantity }
