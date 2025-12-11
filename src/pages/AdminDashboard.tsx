@@ -10,10 +10,12 @@ import { SalesManagement } from '@/components/Sales/SalesManagement';
 import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { ActivityLogPanel } from '@/components/ActivityLog/ActivityLogPanel';
 import { DatabaseMonitoring } from '@/components/Settings/DatabaseMonitoring';
+import { SellerPerformanceReport } from '@/components/Reports/SellerPerformanceReport';
 
 const AdminDashboard = () => {
   const [searchParams] = useSearchParams();
   const [currentSection, setCurrentSection] = useState(searchParams.get('section') || 'dashboard');
+  
   const renderContent = () => {
     switch (currentSection) {
       case 'dashboard':
@@ -24,6 +26,8 @@ const AdminDashboard = () => {
         return <SalesManagement />;
       case 'users':
         return <UserManagementPanel />;
+      case 'seller-reports':
+        return <SellerPerformanceReport />;
       case 'reports':
         return <AdvancedReports />;
       case 'activity':
