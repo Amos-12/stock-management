@@ -127,9 +127,12 @@ export const InventoryManagement = () => {
   }, []);
 
   const getStockDisplay = (product: Product) => {
+    // Arrondi à 2 décimales pour éviter les erreurs de virgule flottante
+    const round2 = (val: number) => Math.round(val * 100) / 100;
+    
     // Céramique: utiliser stock_boite seulement si > 0 et surface_par_boite défini
     if (product.category === 'ceramique' && product.stock_boite !== null && product.stock_boite > 0 && product.surface_par_boite) {
-      const m2 = product.stock_boite * product.surface_par_boite;
+      const m2 = round2(product.stock_boite * product.surface_par_boite);
       return { value: m2, unit: 'm²', raw: product.stock_boite };
     }
     // Fer: utiliser stock_barre seulement si > 0

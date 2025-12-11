@@ -217,17 +217,18 @@ Deno.serve(async (req) => {
 
       // Céramique: utiliser stock_boite seulement si > 0 et surface_par_boite défini
       if (currentProduct.category === 'ceramique' && currentProduct.stock_boite !== null && currentProduct.stock_boite > 0 && currentProduct.surface_par_boite) {
+        // Fonction d'arrondi pour éviter les erreurs de virgule flottante
+        const round2 = (val: number) => Math.round(val * 100) / 100
+        
         // stock_boite est en BOÎTES - convertir en m², soustraire, reconvertir en boîtes
         const surfaceParBoite = currentProduct.surface_par_boite
-        const stockActuelM2 = currentProduct.stock_boite * surfaceParBoite
-        const nouveauStockM2 = stockActuelM2 - item.quantity
+        // ARRONDIR CHAQUE VALEUR INTERMÉDIAIRE pour éviter accumulation d'erreurs
+        const stockActuelM2 = round2(currentProduct.stock_boite * surfaceParBoite)
+        const nouveauStockM2 = round2(stockActuelM2 - item.quantity)
+        const nouveauStockBoite = round2(nouveauStockM2 / surfaceParBoite)
         
-        // CORRECTION: Arrondir à 2 décimales (cohérent avec le trigger DB)
-        const nouveauStockBoite = Math.round((nouveauStockM2 / surfaceParBoite) * 100) / 100
-        
-        // Pour les logs, arrondir à 2 décimales (valeurs affichables)
-        previousQuantity = Math.round(stockActuelM2 * 100) / 100
-        newQuantity = Math.round(nouveauStockM2 * 100) / 100
+        previousQuantity = stockActuelM2
+        newQuantity = nouveauStockM2
         
         console.log(`🔧 Céramique "${item.product_name}":`)
         console.log(`   - Stock DB (boîtes): ${currentProduct.stock_boite}`)
