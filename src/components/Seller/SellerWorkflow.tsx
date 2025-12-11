@@ -175,6 +175,18 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     fetchProducts();
   }, [authorizedCategories]);
 
+  // Rafraîchissement périodique des produits (toutes les 30 secondes) pour sync multi-utilisateurs
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (currentStep === 'products' && !isProcessing) {
+        console.log('🔄 Rafraîchissement automatique des produits...');
+        fetchProducts();
+      }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [currentStep, isProcessing, authorizedCategories]);
+
   const loadAuthorizedCategories = async () => {
     if (!user?.id) {
       console.log('⚠️ No user ID available yet');
@@ -613,39 +625,65 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const discountAmount = getDiscountAmount();
       const totalAmount = getFinalTotal();
 
-      // Validate cart items before sending
-      const invalidItems = cart.filter(item => {
-        if (item.category === 'fer') {
-          const availableStock = item.stock_barre || 0;
-          if (item.cartQuantity > availableStock) {
-            return true;
-          }
-        }
-        return false;
-      });
+      // === VALIDATION EN TEMPS RÉEL DU STOCK ===
+      // Récupérer les données fraîches de la base pour tous les produits du panier
+      const productIds = cart.map(item => item.id);
+      const { data: freshProducts, error: fetchError } = await supabase
+        .from('products')
+        .select('id, name, category, stock_boite, surface_par_boite, stock_barre, quantity')
+        .in('id', productIds);
 
-      if (invalidItems.length > 0) {
-        const itemNames = invalidItems.map(i => i.name).join(', ');
-        throw new Error(`Stock insuffisant pour: ${itemNames}. Veuillez ajuster les quantités.`);
+      if (fetchError) {
+        throw new Error(`Erreur de vérification du stock: ${fetchError.message}`);
       }
 
-      console.log('✅ Cart validation passed:', {
+      // Créer une map pour accès rapide
+      const freshProductMap = new Map(freshProducts?.map(p => [p.id, p]) || []);
+
+      // Valider le stock en temps réel pour chaque article
+      const stockErrors: string[] = [];
+      
+      for (const cartItem of cart) {
+        const freshProduct = freshProductMap.get(cartItem.id);
+        
+        if (!freshProduct) {
+          stockErrors.push(`${cartItem.name}: produit introuvable`);
+          continue;
+        }
+
+        if (cartItem.category === 'ceramique') {
+          const stockActuelM2 = roundTo2Decimals(
+            (freshProduct.stock_boite || 0) * (freshProduct.surface_par_boite || 1)
+          );
+          
+          if (cartItem.cartQuantity > stockActuelM2) {
+            stockErrors.push(`${cartItem.name}: Stock actuel ${stockActuelM2} m², demandé ${cartItem.cartQuantity} m²`);
+          }
+          
+          console.log(`🔍 Validation temps réel "${cartItem.name}": DB=${stockActuelM2} m², Panier=${cartItem.cartQuantity} m²`);
+        } else if (cartItem.category === 'fer') {
+          const stockActuelBarres = freshProduct.stock_barre || 0;
+          
+          if (cartItem.cartQuantity > stockActuelBarres) {
+            stockErrors.push(`${cartItem.name}: Stock actuel ${stockActuelBarres} barres, demandé ${cartItem.cartQuantity} barres`);
+          }
+        } else {
+          const stockActuel = freshProduct.quantity || 0;
+          
+          if (cartItem.cartQuantity > stockActuel) {
+            stockErrors.push(`${cartItem.name}: Stock actuel ${stockActuel}, demandé ${cartItem.cartQuantity}`);
+          }
+        }
+      }
+
+      if (stockErrors.length > 0) {
+        throw new Error(`Stock insuffisant:\n${stockErrors.join('\n')}`);
+      }
+
+      console.log('✅ Validation temps réel du stock passée:', {
         itemCount: cart.length,
         totalAmount: totalAmount,
         hasDiscount: discountType !== 'none'
-      });
-
-      // DEBUG: Log détaillé pour les céramiques avant envoi
-      cart.forEach(item => {
-        if (item.category === 'ceramique') {
-          const stockM2 = (item.stock_boite || 0) * (item.surface_par_boite || 1);
-          console.log(`🧪 DEBUG Céramique "${item.name}":`);
-          console.log(`   - stock_boite (state): ${item.stock_boite}`);
-          console.log(`   - surface_par_boite: ${item.surface_par_boite}`);
-          console.log(`   - Stock m² calculé: ${stockM2.toFixed(4)} m²`);
-          console.log(`   - cartQuantity (m² à vendre): ${item.cartQuantity}`);
-          console.log(`   - Stock m² attendu après: ${(stockM2 - item.cartQuantity).toFixed(4)} m²`);
-        }
       });
 
       // Prepare sale data for Edge Function
