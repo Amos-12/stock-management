@@ -28,8 +28,10 @@ import {
   ArrowUpDown,
   Warehouse,
   TrendingDown,
-  DollarSign
+  DollarSign,
+  Info
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 
@@ -108,13 +110,16 @@ export const InventoryManagement = () => {
   }, []);
 
   const getStockDisplay = (product: Product) => {
-    if (product.category === 'ceramique' && product.stock_boite && product.surface_par_boite) {
+    // Céramique: utiliser stock_boite seulement si > 0 et surface_par_boite défini
+    if (product.category === 'ceramique' && product.stock_boite !== null && product.stock_boite > 0 && product.surface_par_boite) {
       const m2 = product.stock_boite * product.surface_par_boite;
       return { value: m2, unit: 'm²', raw: product.stock_boite };
     }
-    if (product.category === 'fer' && product.stock_barre !== null) {
+    // Fer: utiliser stock_barre seulement si > 0
+    if (product.category === 'fer' && product.stock_barre !== null && product.stock_barre > 0) {
       return { value: product.stock_barre, unit: 'barres', raw: product.stock_barre };
     }
+    // Par défaut: utiliser quantity
     return { value: product.quantity, unit: product.unit || 'unités', raw: product.quantity };
   };
 
@@ -326,7 +331,7 @@ export const InventoryManagement = () => {
     return new Intl.NumberFormat('fr-FR', { 
       minimumFractionDigits: 0,
       maximumFractionDigits: 0 
-    }).format(amount) + ' F';
+    }).format(amount) + ' HTG';
   };
 
   const getStatusBadge = (status: string) => {
@@ -370,7 +375,19 @@ export const InventoryManagement = () => {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Valeur du stock</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1 cursor-help">
+                        Valeur estimée
+                        <Info className="w-3 h-3" />
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Valeur théorique si tout le stock était vendu au prix actuel</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <p className="text-xl font-bold">{formatCurrency(stats.totalValue)}</p>
               </div>
               <DollarSign className="w-8 h-8 text-primary opacity-50" />

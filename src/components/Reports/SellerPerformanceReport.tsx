@@ -200,7 +200,7 @@ export const SellerPerformanceReport = () => {
     return new Intl.NumberFormat('fr-FR', { 
       minimumFractionDigits: 0,
       maximumFractionDigits: 0 
-    }).format(amount) + ' F';
+    }).format(amount) + ' HTG';
   };
 
   const totalRevenue = sellers.reduce((sum, s) => sum + s.total_revenue, 0);
