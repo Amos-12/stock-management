@@ -168,6 +168,11 @@ Deno.serve(async (req) => {
     // STEP 6: Process each item
     for (const item of saleData.items) {
       console.log(`📦 Processing item: ${item.product_name}`)
+      console.log(`   📥 Données reçues du frontend:`)
+      console.log(`      - quantity: ${item.quantity} (type: ${typeof item.quantity})`)
+      console.log(`      - unit: ${item.unit}`)
+      console.log(`      - unit_price: ${item.unit_price}`)
+      console.log(`      - subtotal: ${item.subtotal}`)
       
       // Get current product with all fields including purchase_price
       const { data: currentProduct, error: fetchError } = await supabaseClient
