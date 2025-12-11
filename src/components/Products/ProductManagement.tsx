@@ -149,9 +149,12 @@ export const ProductManagement = () => {
 
   // Fonction pour afficher le stock selon la catégorie du produit
   const getStockDisplay = (product: Product) => {
+    // Arrondi à 2 décimales pour éviter les erreurs de virgule flottante
+    const round2 = (val: number) => Math.round(val * 100) / 100;
+    
     // Céramique: utiliser stock_boite si défini et > 0
     if (product.category === 'ceramique' && product.stock_boite !== null && product.stock_boite !== undefined && product.stock_boite > 0 && product.surface_par_boite) {
-      const m2 = product.stock_boite * product.surface_par_boite;
+      const m2 = round2(product.stock_boite * product.surface_par_boite);
       return { value: m2.toFixed(2), unit: 'm²', raw: product.stock_boite };
     }
     // Fer: utiliser stock_barre si défini et > 0
