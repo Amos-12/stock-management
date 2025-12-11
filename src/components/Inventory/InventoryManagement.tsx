@@ -104,9 +104,26 @@ export const InventoryManagement = () => {
   useEffect(() => {
     fetchProducts();
     
-    // Auto-refresh every 30 seconds
+    // Écouter les changements en temps réel sur la table products
+    const channel = supabase
+      .channel('inventory-realtime-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        (payload) => {
+          console.log('🔄 Inventory updated:', payload);
+          fetchProducts();
+        }
+      )
+      .subscribe();
+    
+    // Auto-refresh every 30 seconds as backup
     const interval = setInterval(fetchProducts, 30000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, []);
 
   const getStockDisplay = (product: Product) => {

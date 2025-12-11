@@ -170,9 +170,26 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     }
   }, [user?.id]);
 
-  // Fetch products when authorized categories change
+  // Fetch products when authorized categories change + Realtime sync
   useEffect(() => {
     fetchProducts();
+    
+    // Écouter les changements en temps réel sur la table products
+    const channel = supabase
+      .channel('seller-products-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        (payload) => {
+          console.log('🔄 Stock updated (seller):', payload);
+          fetchProducts();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [authorizedCategories]);
 
   // Rafraîchissement périodique des produits (toutes les 30 secondes) pour sync multi-utilisateurs
