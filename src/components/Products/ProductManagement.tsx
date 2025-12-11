@@ -147,6 +147,21 @@ export const ProductManagement = () => {
     vetement_couleur: ''
   });
 
+  // Fonction pour afficher le stock selon la catégorie du produit
+  const getStockDisplay = (product: Product) => {
+    // Céramique: utiliser stock_boite si défini et > 0
+    if (product.category === 'ceramique' && product.stock_boite !== null && product.stock_boite !== undefined && product.stock_boite > 0 && product.surface_par_boite) {
+      const m2 = product.stock_boite * product.surface_par_boite;
+      return { value: m2.toFixed(2), unit: 'm²', raw: product.stock_boite };
+    }
+    // Fer: utiliser stock_barre si défini et > 0
+    if (product.category === 'fer' && product.stock_barre !== null && product.stock_barre !== undefined && product.stock_barre > 0) {
+      return { value: product.stock_barre.toString(), unit: 'barres', raw: product.stock_barre };
+    }
+    // Par défaut: utiliser quantity
+    return { value: product.quantity.toString(), unit: product.unit || 'unités', raw: product.quantity };
+  };
+
   const categories = [
     { value: 'alimentaires', label: 'Alimentaires' },
     { value: 'boissons', label: 'Boissons' },
@@ -1253,12 +1268,17 @@ export const ProductManagement = () => {
                       {product.price.toFixed(2)} HTG
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {product.quantity}
-                        {product.quantity <= product.alert_threshold && (
-                          <AlertCircle className="w-4 h-4 text-warning" />
-                        )}
-                      </div>
+                      {(() => {
+                        const stock = getStockDisplay(product);
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span>{stock.value} {stock.unit}</span>
+                            {stock.raw <= product.alert_threshold && (
+                              <AlertCircle className="w-4 h-4 text-warning" />
+                            )}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       <Badge variant={product.is_active ? "default" : "secondary"}>
