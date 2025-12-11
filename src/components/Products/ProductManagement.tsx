@@ -163,6 +163,23 @@ export const ProductManagement = () => {
 
   useEffect(() => {
     fetchProducts();
+    
+    // Écouter les changements en temps réel sur la table products
+    const channel = supabase
+      .channel('products-realtime-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        (payload) => {
+          console.log('🔄 Product change detected:', payload);
+          fetchProducts();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
