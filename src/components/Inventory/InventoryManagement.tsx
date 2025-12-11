@@ -632,54 +632,90 @@ export const InventoryManagement = () => {
             </DialogTitle>
           </DialogHeader>
           
-          {adjustmentModal.product && (
-            <div className="space-y-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="font-medium">{adjustmentModal.product.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  Stock actuel: {getStockDisplay(adjustmentModal.product).value.toFixed(2)} {getStockDisplay(adjustmentModal.product).unit}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="quantity">
-                  {adjustmentModal.type === 'adjust' ? 'Nouvelle quantité' : 'Quantité'}
-                </Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={adjustmentQuantity}
-                  onChange={(e) => setAdjustmentQuantity(e.target.value)}
-                  placeholder={adjustmentModal.type === 'adjust' ? 'Ex: 50' : 'Ex: 10'}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="reason">Raison *</Label>
-                <Textarea
-                  id="reason"
-                  value={adjustmentReason}
-                  onChange={(e) => setAdjustmentReason(e.target.value)}
-                  placeholder="Ex: Réception commande #123, Inventaire annuel, Perte/Casse..."
-                  rows={3}
-                />
-              </div>
-
-              {adjustmentQuantity && (
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <p className="text-sm">
-                    Nouveau stock: <span className="font-bold">
-                      {adjustmentModal.type === 'add' && (getStockDisplay(adjustmentModal.product).raw + parseFloat(adjustmentQuantity || '0')).toFixed(2)}
-                      {adjustmentModal.type === 'remove' && Math.max(0, getStockDisplay(adjustmentModal.product).raw - parseFloat(adjustmentQuantity || '0')).toFixed(2)}
-                      {adjustmentModal.type === 'adjust' && parseFloat(adjustmentQuantity || '0').toFixed(2)}
-                    </span> {getStockDisplay(adjustmentModal.product).unit}
+          {adjustmentModal.product && (() => {
+            const product = adjustmentModal.product;
+            const isCeramic = product.category === 'ceramique';
+            const isIron = product.category === 'fer';
+            
+            // Unité d'entrée: boîtes pour céramique, barres pour fer, unité standard sinon
+            const inputUnit = isCeramic ? 'boîtes' : (isIron ? 'barres' : (product.unit || 'unités'));
+            const currentRaw = isCeramic && product.stock_boite !== null && product.stock_boite > 0 
+              ? product.stock_boite 
+              : (isIron && product.stock_barre !== null && product.stock_barre > 0 
+                ? product.stock_barre 
+                : product.quantity);
+            
+            // Calcul du stock affiché (m² pour céramique)
+            const displayStock = getStockDisplay(product);
+            const qty = parseFloat(adjustmentQuantity || '0');
+            
+            const getNewRaw = () => {
+              if (adjustmentModal.type === 'add') return currentRaw + qty;
+              if (adjustmentModal.type === 'remove') return Math.max(0, currentRaw - qty);
+              return qty;
+            };
+            
+            const newRaw = getNewRaw();
+            const newDisplay = isCeramic && product.surface_par_boite 
+              ? newRaw * product.surface_par_boite 
+              : newRaw;
+            
+            return (
+              <div className="space-y-4">
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="font-medium">{product.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Stock actuel: {currentRaw.toFixed(2)} {inputUnit}
+                    {isCeramic && product.surface_par_boite && (
+                      <span className="ml-1">({displayStock.value.toFixed(2)} m²)</span>
+                    )}
                   </p>
                 </div>
-              )}
-            </div>
-          )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">
+                    {adjustmentModal.type === 'adjust' ? 'Nouvelle quantité' : 'Quantité'} ({inputUnit})
+                  </Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={adjustmentQuantity}
+                    onChange={(e) => setAdjustmentQuantity(e.target.value)}
+                    placeholder={adjustmentModal.type === 'adjust' ? 'Ex: 50' : 'Ex: 10'}
+                  />
+                  {isCeramic && product.surface_par_boite && (
+                    <p className="text-xs text-muted-foreground">
+                      1 boîte = {product.surface_par_boite} m²
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="reason">Raison *</Label>
+                  <Textarea
+                    id="reason"
+                    value={adjustmentReason}
+                    onChange={(e) => setAdjustmentReason(e.target.value)}
+                    placeholder="Ex: Réception commande #123, Inventaire annuel, Perte/Casse..."
+                    rows={3}
+                  />
+                </div>
+
+                {adjustmentQuantity && (
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <p className="text-sm">
+                      Nouveau stock: <span className="font-bold">{newRaw.toFixed(2)}</span> {inputUnit}
+                      {isCeramic && product.surface_par_boite && (
+                        <span className="ml-1">(<span className="font-bold">{newDisplay.toFixed(2)}</span> m²)</span>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setAdjustmentModal({ open: false, product: null, type: 'add' })}>
