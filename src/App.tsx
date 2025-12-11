@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
 import RestockPage from "./pages/RestockPage";
+import InventoryPage from "./pages/InventoryPage";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/seller" element={<SellerDashboard />} />
           <Route path="/restock" element={<RestockPage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/" element={<Index />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

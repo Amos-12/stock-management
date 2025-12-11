@@ -1,0 +1,680 @@
+import { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Constants } from '@/integrations/supabase/types';
+import { 
+  Package, 
+  Search, 
+  RefreshCw, 
+  Download,
+  AlertTriangle,
+  XCircle,
+  CheckCircle,
+  Plus,
+  Minus,
+  Edit,
+  Filter,
+  ArrowUpDown,
+  Warehouse,
+  TrendingDown,
+  DollarSign
+} from 'lucide-react';
+import { format } from 'date-fns';
+import * as XLSX from 'xlsx';
+
+type Product = {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  stock_boite: number | null;
+  stock_barre: number | null;
+  surface_par_boite: number | null;
+  alert_threshold: number;
+  is_active: boolean;
+  price: number;
+  purchase_price: number | null;
+  unit: string;
+  created_at: string;
+};
+
+type StockLevel = 'all' | 'rupture' | 'alerte' | 'normal' | 'eleve';
+type SortField = 'name' | 'quantity' | 'category' | 'price';
+type SortDirection = 'asc' | 'desc';
+
+export const InventoryManagement = () => {
+  const { toast } = useToast();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [stockLevel, setStockLevel] = useState<StockLevel>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  
+  // Adjustment modal state
+  const [adjustmentModal, setAdjustmentModal] = useState<{
+    open: boolean;
+    product: Product | null;
+    type: 'add' | 'remove' | 'adjust';
+  }>({ open: false, product: null, type: 'add' });
+  const [adjustmentQuantity, setAdjustmentQuantity] = useState('');
+  const [adjustmentReason, setAdjustmentReason] = useState('');
+  const [adjustmentLoading, setAdjustmentLoading] = useState(false);
+
+  const categories = Constants.public.Enums.product_category;
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de charger les produits',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchProducts, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getStockDisplay = (product: Product) => {
+    if (product.category === 'ceramique' && product.stock_boite && product.surface_par_boite) {
+      const m2 = product.stock_boite * product.surface_par_boite;
+      return { value: m2, unit: 'm²', raw: product.stock_boite };
+    }
+    if (product.category === 'fer' && product.stock_barre !== null) {
+      return { value: product.stock_barre, unit: 'barres', raw: product.stock_barre };
+    }
+    return { value: product.quantity, unit: product.unit || 'unités', raw: product.quantity };
+  };
+
+  const getStockStatus = (product: Product) => {
+    const stock = getStockDisplay(product);
+    if (stock.value <= 0) return 'rupture';
+    if (stock.value <= product.alert_threshold) return 'alerte';
+    if (stock.value > product.alert_threshold * 3) return 'eleve';
+    return 'normal';
+  };
+
+  const filteredProducts = useMemo(() => {
+    return products
+      .filter(p => {
+        // Search filter
+        if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+          return false;
+        }
+        // Category filter
+        if (selectedCategory !== 'all' && p.category !== selectedCategory) {
+          return false;
+        }
+        // Stock level filter
+        if (stockLevel !== 'all' && getStockStatus(p) !== stockLevel) {
+          return false;
+        }
+        // Status filter
+        if (statusFilter === 'active' && !p.is_active) return false;
+        if (statusFilter === 'inactive' && p.is_active) return false;
+        
+        return true;
+      })
+      .sort((a, b) => {
+        let comparison = 0;
+        switch (sortField) {
+          case 'name':
+            comparison = a.name.localeCompare(b.name);
+            break;
+          case 'quantity':
+            comparison = getStockDisplay(a).value - getStockDisplay(b).value;
+            break;
+          case 'category':
+            comparison = a.category.localeCompare(b.category);
+            break;
+          case 'price':
+            comparison = a.price - b.price;
+            break;
+        }
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+  }, [products, searchQuery, selectedCategory, stockLevel, statusFilter, sortField, sortDirection]);
+
+  const stats = useMemo(() => {
+    const totalValue = products.reduce((sum, p) => {
+      const stock = getStockDisplay(p);
+      return sum + (stock.value * p.price);
+    }, 0);
+    
+    const ruptureCount = products.filter(p => getStockStatus(p) === 'rupture').length;
+    const alerteCount = products.filter(p => getStockStatus(p) === 'alerte').length;
+    
+    return { totalValue, ruptureCount, alerteCount, totalProducts: products.length };
+  }, [products]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const toggleProductSelection = (productId: string) => {
+    const newSelection = new Set(selectedProducts);
+    if (newSelection.has(productId)) {
+      newSelection.delete(productId);
+    } else {
+      newSelection.add(productId);
+    }
+    setSelectedProducts(newSelection);
+  };
+
+  const toggleAllSelection = () => {
+    if (selectedProducts.size === filteredProducts.length) {
+      setSelectedProducts(new Set());
+    } else {
+      setSelectedProducts(new Set(filteredProducts.map(p => p.id)));
+    }
+  };
+
+  const openAdjustmentModal = (product: Product, type: 'add' | 'remove' | 'adjust') => {
+    setAdjustmentModal({ open: true, product, type });
+    setAdjustmentQuantity('');
+    setAdjustmentReason('');
+  };
+
+  const handleAdjustment = async () => {
+    if (!adjustmentModal.product || !adjustmentQuantity || !adjustmentReason) {
+      toast({
+        title: 'Erreur',
+        description: 'Veuillez remplir tous les champs',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setAdjustmentLoading(true);
+    try {
+      const product = adjustmentModal.product;
+      const qty = parseFloat(adjustmentQuantity);
+      const stock = getStockDisplay(product);
+      
+      let newQuantity: number;
+      let movementType: string;
+      
+      switch (adjustmentModal.type) {
+        case 'add':
+          newQuantity = stock.raw + qty;
+          movementType = 'restock';
+          break;
+        case 'remove':
+          newQuantity = Math.max(0, stock.raw - qty);
+          movementType = 'adjustment_out';
+          break;
+        case 'adjust':
+          newQuantity = qty;
+          movementType = 'adjustment';
+          break;
+        default:
+          return;
+      }
+
+      // Update the appropriate stock field
+      const updateData: any = {};
+      if (product.category === 'ceramique') {
+        updateData.stock_boite = newQuantity;
+      } else if (product.category === 'fer') {
+        updateData.stock_barre = newQuantity;
+      } else {
+        updateData.quantity = newQuantity;
+      }
+
+      const { error: updateError } = await supabase
+        .from('products')
+        .update(updateData)
+        .eq('id', product.id);
+
+      if (updateError) throw updateError;
+
+      // Record stock movement
+      const { error: movementError } = await supabase
+        .from('stock_movements')
+        .insert({
+          product_id: product.id,
+          movement_type: movementType,
+          quantity: qty,
+          previous_quantity: stock.raw,
+          new_quantity: newQuantity,
+          reason: adjustmentReason,
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        });
+
+      if (movementError) console.error('Error recording movement:', movementError);
+
+      toast({
+        title: 'Stock mis à jour',
+        description: `Le stock de ${product.name} a été mis à jour`,
+      });
+
+      setAdjustmentModal({ open: false, product: null, type: 'add' });
+      fetchProducts();
+    } catch (error) {
+      console.error('Error adjusting stock:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de mettre à jour le stock',
+        variant: 'destructive'
+      });
+    } finally {
+      setAdjustmentLoading(false);
+    }
+  };
+
+  const exportToExcel = () => {
+    const data = filteredProducts.map(p => {
+      const stock = getStockDisplay(p);
+      return {
+        'Produit': p.name,
+        'Catégorie': p.category,
+        'Stock': stock.value,
+        'Unité': stock.unit,
+        'Seuil d\'alerte': p.alert_threshold,
+        'Prix de vente': p.price,
+        'Prix d\'achat': p.purchase_price || 'N/A',
+        'Valeur stock': stock.value * p.price,
+        'Statut': getStockStatus(p),
+        'Actif': p.is_active ? 'Oui' : 'Non'
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventaire');
+    XLSX.writeFile(wb, `inventaire_${format(new Date(), 'yyyy-MM-dd_HHmm')}.xlsx`);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', { 
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0 
+    }).format(amount) + ' F';
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'rupture':
+        return <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="w-3 h-3" /> Rupture</Badge>;
+      case 'alerte':
+        return <Badge variant="outline" className="flex items-center gap-1 border-orange-500 text-orange-500"><AlertTriangle className="w-3 h-3" /> Alerte</Badge>;
+      case 'eleve':
+        return <Badge variant="outline" className="flex items-center gap-1 border-blue-500 text-blue-500"><CheckCircle className="w-3 h-3" /> Élevé</Badge>;
+      default:
+        return <Badge variant="secondary" className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Normal</Badge>;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Warehouse className="w-7 h-7" />
+            Gestion d'Inventaire
+          </h2>
+          <p className="text-muted-foreground">Vue en temps réel du stock</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={fetchProducts} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="outline" onClick={exportToExcel}>
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Valeur du stock</p>
+                <p className="text-xl font-bold">{formatCurrency(stats.totalValue)}</p>
+              </div>
+              <DollarSign className="w-8 h-8 text-primary opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Produits totaux</p>
+                <p className="text-xl font-bold">{stats.totalProducts}</p>
+              </div>
+              <Package className="w-8 h-8 text-blue-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={stats.alerteCount > 0 ? 'border-orange-500' : ''}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">En alerte</p>
+                <p className="text-xl font-bold text-orange-500">{stats.alerteCount}</p>
+              </div>
+              <AlertTriangle className="w-8 h-8 text-orange-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={stats.ruptureCount > 0 ? 'border-destructive' : ''}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">En rupture</p>
+                <p className="text-xl font-bold text-destructive">{stats.ruptureCount}</p>
+              </div>
+              <TrendingDown className="w-8 h-8 text-destructive opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher un produit..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full lg:w-48">
+                <SelectValue placeholder="Catégorie" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes catégories</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={stockLevel} onValueChange={(v) => setStockLevel(v as StockLevel)}>
+              <SelectTrigger className="w-full lg:w-40">
+                <SelectValue placeholder="Niveau stock" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous niveaux</SelectItem>
+                <SelectItem value="rupture">Rupture</SelectItem>
+                <SelectItem value="alerte">Alerte</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="eleve">Élevé</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full lg:w-36">
+                <SelectValue placeholder="Statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="active">Actifs</SelectItem>
+                <SelectItem value="inactive">Inactifs</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Products Table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-center">
+            <CardTitle>
+              {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
+            </CardTitle>
+            {selectedProducts.size > 0 && (
+              <Badge variant="secondary">
+                {selectedProducts.size} sélectionné{selectedProducts.size > 1 ? 's' : ''}
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[500px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={selectedProducts.size === filteredProducts.length && filteredProducts.length > 0}
+                      onCheckedChange={toggleAllSelection}
+                    />
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
+                    <div className="flex items-center gap-1">
+                      Produit
+                      <ArrowUpDown className="w-3 h-3" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
+                    <div className="flex items-center gap-1">
+                      Catégorie
+                      <ArrowUpDown className="w-3 h-3" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer text-right" onClick={() => handleSort('quantity')}>
+                    <div className="flex items-center justify-end gap-1">
+                      Stock
+                      <ArrowUpDown className="w-3 h-3" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-right">Seuil</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <RefreshCw className="w-6 h-6 animate-spin mx-auto text-primary" />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Aucun produit trouvé
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredProducts.map(product => {
+                    const stock = getStockDisplay(product);
+                    const status = getStockStatus(product);
+                    
+                    return (
+                      <TableRow 
+                        key={product.id} 
+                        className={!product.is_active ? 'opacity-50' : ''}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedProducts.has(product.id)}
+                            onCheckedChange={() => toggleProductSelection(product.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {product.name}
+                          {!product.is_active && (
+                            <Badge variant="outline" className="ml-2 text-xs">Inactif</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{product.category}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          <span className={
+                            status === 'rupture' ? 'text-destructive font-bold' :
+                            status === 'alerte' ? 'text-orange-500 font-semibold' : ''
+                          }>
+                            {stock.value.toFixed(stock.unit === 'm²' ? 2 : 0)}
+                          </span>
+                          <span className="text-muted-foreground text-sm ml-1">{stock.unit}</span>
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {product.alert_threshold}
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(status)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => openAdjustmentModal(product, 'add')}
+                              title="Ajouter du stock"
+                            >
+                              <Plus className="w-4 h-4 text-green-500" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => openAdjustmentModal(product, 'remove')}
+                              title="Retirer du stock"
+                            >
+                              <Minus className="w-4 h-4 text-red-500" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => openAdjustmentModal(product, 'adjust')}
+                              title="Ajuster le stock"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Adjustment Modal */}
+      <Dialog open={adjustmentModal.open} onOpenChange={(open) => !open && setAdjustmentModal({ open: false, product: null, type: 'add' })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {adjustmentModal.type === 'add' && 'Ajouter du stock'}
+              {adjustmentModal.type === 'remove' && 'Retirer du stock'}
+              {adjustmentModal.type === 'adjust' && 'Ajuster le stock'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {adjustmentModal.product && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{adjustmentModal.product.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  Stock actuel: {getStockDisplay(adjustmentModal.product).value.toFixed(2)} {getStockDisplay(adjustmentModal.product).unit}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="quantity">
+                  {adjustmentModal.type === 'adjust' ? 'Nouvelle quantité' : 'Quantité'}
+                </Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={adjustmentQuantity}
+                  onChange={(e) => setAdjustmentQuantity(e.target.value)}
+                  placeholder={adjustmentModal.type === 'adjust' ? 'Ex: 50' : 'Ex: 10'}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reason">Raison *</Label>
+                <Textarea
+                  id="reason"
+                  value={adjustmentReason}
+                  onChange={(e) => setAdjustmentReason(e.target.value)}
+                  placeholder="Ex: Réception commande #123, Inventaire annuel, Perte/Casse..."
+                  rows={3}
+                />
+              </div>
+
+              {adjustmentQuantity && (
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <p className="text-sm">
+                    Nouveau stock: <span className="font-bold">
+                      {adjustmentModal.type === 'add' && (getStockDisplay(adjustmentModal.product).raw + parseFloat(adjustmentQuantity || '0')).toFixed(2)}
+                      {adjustmentModal.type === 'remove' && Math.max(0, getStockDisplay(adjustmentModal.product).raw - parseFloat(adjustmentQuantity || '0')).toFixed(2)}
+                      {adjustmentModal.type === 'adjust' && parseFloat(adjustmentQuantity || '0').toFixed(2)}
+                    </span> {getStockDisplay(adjustmentModal.product).unit}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdjustmentModal({ open: false, product: null, type: 'add' })}>
+              Annuler
+            </Button>
+            <Button onClick={handleAdjustment} disabled={adjustmentLoading || !adjustmentQuantity || !adjustmentReason}>
+              {adjustmentLoading ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : null}
+              Confirmer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};

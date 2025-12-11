@@ -18,7 +18,9 @@ import {
   Home,
   PackagePlus,
   ClipboardList,
-  Database
+  Database,
+  Warehouse,
+  UserCheck
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -98,10 +100,12 @@ export const ResponsiveDashboardLayout = ({
     { icon: Home, label: 'Dashboard', value: 'dashboard' },
     { icon: Package, label: 'Produits', value: 'products' },
     { icon: ShoppingCart, label: 'Ventes', value: 'sales' },
+    { icon: Warehouse, label: 'Inventaire', value: 'inventory', route: '/inventory' },
     { icon: Users, label: 'Utilisateurs', value: 'users' },
-    { icon: PackagePlus, label: 'Réapprovisionnement', value: 'restock', route: '/restock' },
+    { icon: UserCheck, label: 'Perf. Vendeurs', value: 'seller-reports' },
+    { icon: PackagePlus, label: 'Réappro.', value: 'restock', route: '/restock' },
     { icon: TrendingUp, label: 'Rapports', value: 'reports' },
-    { icon: ClipboardList, label: "Logs d'activité", value: 'activity' },
+    { icon: ClipboardList, label: "Logs", value: 'activity' },
     { icon: Bell, label: 'Notifications', value: 'notifications' },
     { icon: Settings, label: 'Paramètres', value: 'settings' },
     { icon: Database, label: 'Base de données', value: 'database' }
