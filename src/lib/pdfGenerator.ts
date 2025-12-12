@@ -338,6 +338,11 @@ export const generateReceipt = (
   const rate = companySettings.usd_htg_rate || 132;
   const displayCurrency = companySettings.default_display_currency || 'HTG';
   
+  // Calculate unified subtotal (before discount)
+  const unifiedSubtotal = displayCurrency === 'HTG' 
+    ? totalHTG + (totalUSD * rate)
+    : totalUSD + (totalHTG / rate);
+  
   // Totals by currency if multi-currency
   pdf.setFont('helvetica', 'bold');
   if (hasMultipleCurrencies) {
@@ -358,48 +363,47 @@ export const generateReceipt = (
     yPos += 5;
     pdf.setFontSize(regularFontSize);
     pdf.setFont('helvetica', 'bold');
+    
+    // Unified subtotal HT
+    pdf.text('Sous-total HT:', margin, yPos);
+    pdf.text(formatAmount(unifiedSubtotal, displayCurrency, true), width - margin, yPos, { align: 'right' });
+    yPos += 5;
   } else {
     pdf.text('Sous-total HT:', margin, yPos);
-    pdf.text(formatAmount(saleData.subtotal, false, true), width - margin, yPos, { align: 'right' });
+    pdf.text(formatAmount(saleData.subtotal, displayCurrency, true), width - margin, yPos, { align: 'right' });
     yPos += 5;
   }
   
-  if (saleData.discount_amount > 0) {
+  // Discount amount (use stored value directly)
+  const discountAmount = saleData.discount_amount || 0;
+  if (discountAmount > 0) {
     pdf.setFont('helvetica', 'normal');
     const discountLabel = saleData.discount_type === 'percentage' 
       ? `Remise (${saleData.discount_value}%):`
       : 'Remise:';
     pdf.text(discountLabel, margin, yPos);
-    pdf.text(`-${formatAmount(saleData.discount_amount, false, true)}`, width - margin, yPos, { align: 'right' });
+    pdf.text(`-${formatAmount(discountAmount, displayCurrency, true)}`, width - margin, yPos, { align: 'right' });
     yPos += 5;
   }
   
+  // Calculate after discount and TVA (same logic as invoice)
+  const baseSubtotal = hasMultipleCurrencies ? unifiedSubtotal : saleData.subtotal;
+  const afterDiscount = baseSubtotal - discountAmount;
+  const tvaAmount = afterDiscount * (companySettings.tva_rate / 100);
+  
   // TVA
   pdf.setFont('helvetica', 'normal');
-  const tvaAmount = saleData.total_amount * (companySettings.tva_rate / 100);
   pdf.text(`TVA (${companySettings.tva_rate}%):`, margin, yPos);
-  pdf.text(formatAmount(tvaAmount, false, true), width - margin, yPos, { align: 'right' });
+  pdf.text(formatAmount(tvaAmount, displayCurrency, true), width - margin, yPos, { align: 'right' });
   yPos += 5;
   
-  // Unified total for multi-currency
-  if (hasMultipleCurrencies) {
-    const unifiedAmount = displayCurrency === 'HTG' 
-      ? totalHTG + (totalUSD * rate) + tvaAmount
-      : totalUSD + (totalHTG / rate) + (tvaAmount / rate);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(titleFontSize - 1);
-    pdf.text('TOTAL UNIFIÉ:', margin, yPos);
-    pdf.text(formatAmount(unifiedAmount, displayCurrency, true), width - margin, yPos, { align: 'right' });
-    yPos += 6;
-  } else {
-    // Total TTC
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(titleFontSize - 1);
-    pdf.text('TOTAL TTC:', margin, yPos);
-    pdf.text(formatAmount(saleData.total_amount + tvaAmount, true, true), width - margin, yPos, { align: 'right' });
-    yPos += 6;
-  }
+  // Final total TTC
+  const finalTotal = afterDiscount + tvaAmount;
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(titleFontSize - 1);
+  pdf.text('TOTAL TTC:', margin, yPos);
+  pdf.text(formatAmount(finalTotal, displayCurrency, true), width - margin, yPos, { align: 'right' });
+  yPos += 6;
   
   // Payment method
   pdf.setFontSize(regularFontSize);
