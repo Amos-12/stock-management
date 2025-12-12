@@ -1632,6 +1632,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                             <span>Sous-total HTG</span>
                             <span>{formatAmount(totalHTG, 'HTG')}</span>
                           </div>
+                          <div className="text-xs text-muted-foreground italic">
+                            Taux: 1 USD = {(companySettings?.usd_htg_rate || 132).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG
+                          </div>
                         </>
                       )}
                       

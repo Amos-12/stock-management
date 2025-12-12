@@ -76,6 +76,24 @@ const barresToTonnage = (barres: number, barsPerTon: number): number => {
   return barres / barsPerTon;
 };
 
+// Check if bars quantity corresponds to a clean tonnage fraction
+const shouldDisplayAsTonnage = (barres: number, barsPerTon: number): boolean => {
+  const tonnage = barres / barsPerTon;
+  const fractions = [0, 0.25, 0.5, 0.75];
+  const decimalPart = tonnage - Math.floor(tonnage);
+  return fractions.some(f => Math.abs(decimalPart - f) < 0.01);
+};
+
+// Intelligent format for iron quantity - display EITHER tonne OR barre
+const formatIronQuantity = (barres: number, barsPerTon: number, compact: boolean = false): string => {
+  if (shouldDisplayAsTonnage(barres, barsPerTon)) {
+    const tonnage = barres / barsPerTon;
+    return getTonnageLabel(tonnage);
+  } else {
+    return compact ? `${barres} br` : `${barres} barres`;
+  }
+};
+
 const formatAmount = (amount: number, currency: 'USD' | 'HTG' | boolean = true, compact = false): string => {
   const separator = compact ? '' : ' '; // No space in compact mode
   const formatted = amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, separator);
@@ -238,58 +256,49 @@ export const generateReceipt = (
   pdf.line(margin, yPos, width - margin, yPos);
   yPos += 5;
   
-  // Items header - responsive column positioning (4 columns with improved spacing)
-  const qtyCol = width === 58 ? 22 : 32;   // Closer to article
-  const priceCol = width === 58 ? 34 : 48; // Reasonable spacing
-  const amountCol = width === 58 ? 52 : 72; // Aligned to the right with margin
+  // Items header - responsive column positioning with better spacing
+  const qtyCol = width === 58 ? 25 : 38;
+  const priceCol = width === 58 ? 40 : 55;
+  const amountCol = width - margin - 2;
   
   pdf.setFont('helvetica', 'bold');
   pdf.text('Article', margin, yPos);
   pdf.text('Qté', qtyCol, yPos);
   pdf.text('P.U.', priceCol, yPos);
-  pdf.text('Montant', amountCol, yPos, { align: 'right' });
+  pdf.text('Total', amountCol, yPos, { align: 'right' });
   yPos += 4;
   pdf.line(margin, yPos, width - margin, yPos);
   yPos += 4;
   
   // Items
   pdf.setFont('helvetica', 'normal');
-  const maxNameLength = width === 58 ? 10 : 15; // Reduced to free up space for columns
+  const maxNameLength = width === 58 ? 9 : 14;
   
   items.forEach(item => {
     // Build item description with details
     let itemDescription = item.name;
     if (item.category === 'fer' && item.diametre) {
-      itemDescription = `${item.name} Ø${item.diametre}`;
-      if (item.longueur_barre) {
-        itemDescription += ` L:${item.longueur_barre}m`;
-      }
+      itemDescription = `Fer Ø${item.diametre}`;
     }
     
-    const itemName = itemDescription.length > maxNameLength ? itemDescription.substring(0, maxNameLength - 2) + '..' : itemDescription;
+    const itemName = itemDescription.length > maxNameLength ? itemDescription.substring(0, maxNameLength - 1) + '.' : itemDescription;
     pdf.text(itemName, margin, yPos);
     
-    // Quantity display - simplified to show only one unit type
+    // Quantity display - INTELLIGENT: show tonne OR barre based on quantity
     let qtyText = '';
     if (item.category === 'fer' && item.bars_per_ton) {
       const barsQty = Math.round(item.cartQuantity);
-      if (item.sourceUnit === 'tonne') {
-        // If input was in tonnes, display in tonnes only
-        const tonnage = barresToTonnage(barsQty, item.bars_per_ton);
-        qtyText = getTonnageLabel(tonnage);
-      } else {
-        // Otherwise, display in bars only
-        qtyText = `${barsQty} barres`;
-      }
+      qtyText = formatIronQuantity(barsQty, item.bars_per_ton, true);
     } else if (item.category === 'fer') {
-      qtyText = `${Math.round(item.cartQuantity)} barres`;
+      qtyText = `${Math.round(item.cartQuantity)} br`;
     } else {
-      qtyText = `${item.cartQuantity} ${item.displayUnit || item.unit}`;
+      const unit = item.displayUnit || item.unit;
+      qtyText = `${item.cartQuantity} ${unit}`;
     }
     
     pdf.text(qtyText, qtyCol, yPos);
     
-    // Unit price with currency
+    // Unit price with currency (compact)
     const unitPrice = item.actualPrice ? item.actualPrice / item.cartQuantity : item.price;
     const itemCurrency = item.currency || 'HTG';
     pdf.text(formatAmount(unitPrice, itemCurrency, true), priceCol, yPos);
@@ -506,16 +515,16 @@ export const generateInvoice = (
   
   yPos += 10;
   
-  // Table header
+  // Table header - improved column positions
   pdf.setFillColor(240, 240, 240);
   pdf.rect(15, yPos, 180, 8, 'F');
   
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
   pdf.text('Description', 17, yPos + 5);
-  pdf.text('Qté', 120, yPos + 5, { align: 'right' });
-  pdf.text('Unité', 140, yPos + 5, { align: 'right' });
-  pdf.text('Prix unit.', 160, yPos + 5, { align: 'right' });
+  pdf.text('Qté', 95, yPos + 5, { align: 'right' });
+  pdf.text('Unité', 115, yPos + 5, { align: 'right' });
+  pdf.text('Prix unit.', 150, yPos + 5, { align: 'right' });
   pdf.text('Montant', 188, yPos + 5, { align: 'right' });
   yPos += 10;
   
@@ -532,45 +541,48 @@ export const generateInvoice = (
     if (item.category === 'fer' && item.diametre) {
       itemDescription = `${item.name} Ø${item.diametre}`;
       if (item.longueur_barre) {
-        itemDescription += ` - Longueur: ${item.longueur_barre}m`;
+        itemDescription += ` - L:${item.longueur_barre}m`;
       }
     }
     
-    pdf.text(itemDescription, 17, yPos);
+    // Truncate description if too long
+    const maxDescLength = 45;
+    const displayDesc = itemDescription.length > maxDescLength 
+      ? itemDescription.substring(0, maxDescLength - 2) + '..' 
+      : itemDescription;
+    pdf.text(displayDesc, 17, yPos);
     
-    // Display quantity for iron products - ALWAYS show bars first
+    // Quantity display - INTELLIGENT: show EITHER tonne OR barre
     let qtyDisplay = '';
+    let unitText = '';
+    
     if (item.category === 'fer' && item.bars_per_ton) {
       const barsQty = Math.round(item.cartQuantity);
-      if (item.sourceUnit === 'tonne') {
-        const tonnage = barresToTonnage(barsQty, item.bars_per_ton);
-        qtyDisplay = `${barsQty} barres (≈ ${getTonnageLabel(tonnage)})`;
-      } else if (barsQty % item.bars_per_ton === 0) {
-        const tonnes = barsQty / item.bars_per_ton;
-        qtyDisplay = `${barsQty} barres (= ${tonnes} T)`;
+      if (shouldDisplayAsTonnage(barsQty, item.bars_per_ton)) {
+        // Clean tonnage - display as tonne
+        const tonnage = barsQty / item.bars_per_ton;
+        qtyDisplay = getTonnageLabel(tonnage);
+        unitText = '';
       } else {
-        qtyDisplay = `${barsQty} barres`;
+        // Not a clean tonnage - display as barres
+        qtyDisplay = barsQty.toString();
+        unitText = 'barres';
       }
     } else if (item.category === 'fer') {
-      qtyDisplay = `${Math.round(item.cartQuantity)} barres`;
+      qtyDisplay = Math.round(item.cartQuantity).toString();
+      unitText = 'barres';
     } else {
       qtyDisplay = item.cartQuantity.toString();
+      unitText = item.displayUnit || item.unit;
     }
-    pdf.text(qtyDisplay, 120, yPos, { align: 'right' });
     
-    // Unit column
-    let unitText = item.displayUnit || item.unit;
-    if (item.category === 'fer' && item.bars_per_ton) {
-      unitText = ''; // Already included in quantity display
-    } else if (item.category === 'fer' && item.unit === 'barre') {
-      unitText = 'barre'; // Show unit for bars without bars_per_ton
-    }
-    pdf.text(unitText, 140, yPos, { align: 'right' });
+    pdf.text(qtyDisplay, 95, yPos, { align: 'right' });
+    pdf.text(unitText, 115, yPos, { align: 'right' });
     
     // Unit price and total with currency
     const itemCurrency = item.currency || 'HTG';
     const unitPrice = item.actualPrice ? item.actualPrice / item.cartQuantity : item.price;
-    pdf.text(formatAmount(unitPrice, itemCurrency), 160, yPos, { align: 'right' });
+    pdf.text(formatAmount(unitPrice, itemCurrency), 150, yPos, { align: 'right' });
     
     const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
     pdf.text(formatAmount(itemTotal, itemCurrency), 188, yPos, { align: 'right' });
