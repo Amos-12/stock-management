@@ -1094,13 +1094,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 </Button>
               </div>
               
-              <div className="flex flex-wrap gap-2 items-center mt-2">
-                <div className="flex gap-2 items-center">
-                  <Label htmlFor="category-filter" className="text-sm font-medium text-muted-foreground">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3 mt-2">
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <Label htmlFor="category-filter" className="text-sm font-medium text-muted-foreground hidden sm:block self-center">
                     Catégorie:
                   </Label>
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger id="category-filter" className="w-[180px]">
+                    <SelectTrigger id="category-filter" className="w-full sm:w-[180px]">
                       <SelectValue placeholder="Catégorie" />
                     </SelectTrigger>
                     <SelectContent className="z-50 bg-popover">
@@ -1113,12 +1113,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   </Select>
                 </div>
                 
-                <div className="flex gap-2 items-center">
-                  <Label htmlFor="subcategory-filter" className="text-sm font-medium text-muted-foreground">
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <Label htmlFor="subcategory-filter" className="text-sm font-medium text-muted-foreground hidden sm:block self-center">
                     Sous-catégorie:
                   </Label>
                   <Select value={sousCategoryFilter} onValueChange={setSousCategoryFilter}>
-                    <SelectTrigger id="subcategory-filter" className="w-[180px]">
+                    <SelectTrigger id="subcategory-filter" className="w-full sm:w-[180px]">
                       <SelectValue placeholder="Sous-catégorie" />
                     </SelectTrigger>
                     <SelectContent className="z-50 bg-popover">

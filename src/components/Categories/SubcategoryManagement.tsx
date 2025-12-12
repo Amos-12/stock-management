@@ -223,17 +223,18 @@ export const SubcategoryManagement = ({
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4">
+        <CardHeader className="flex flex-col gap-4">
           <CardTitle className="flex items-center gap-2">
             <Layers className="h-5 w-5" />
-            Gestion des Sous-catégories
+            <span className="hidden sm:inline">Gestion des Sous-catégories</span>
+            <span className="sm:hidden">Sous-catégories</span>
           </CardTitle>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <Select 
               value={selectedCategoryId || 'all'} 
               onValueChange={(value) => onSelectCategory(value === 'all' ? null : value)}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Filtrer par catégorie" />
               </SelectTrigger>
               <SelectContent>
@@ -248,12 +249,13 @@ export const SubcategoryManagement = ({
               if (!open) resetForm();
             }}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
-                  Nouvelle Sous-catégorie
+                  <span className="hidden sm:inline">Nouvelle Sous-catégorie</span>
+                  <span className="sm:hidden">Nouvelle</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
                     {editingSousCategorie ? 'Modifier la Sous-catégorie' : 'Nouvelle Sous-catégorie'}
@@ -355,75 +357,77 @@ export const SubcategoryManagement = ({
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ordre</TableHead>
-                <TableHead>Nom</TableHead>
-                <TableHead>Catégorie</TableHead>
-                <TableHead>Type de stock</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sousCategories.length === 0 ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Aucune sous-catégorie trouvée
-                  </TableCell>
+                  <TableHead className="hidden sm:table-cell">Ordre</TableHead>
+                  <TableHead>Nom</TableHead>
+                  <TableHead className="hidden md:table-cell">Catégorie</TableHead>
+                  <TableHead className="hidden sm:table-cell">Type stock</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : (
-                sousCategories.map((sc) => (
-                  <TableRow key={sc.id}>
-                    <TableCell>{sc.ordre}</TableCell>
-                    <TableCell className="font-medium">{sc.nom}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{getCategoryName(sc.categorie_id)}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{getStockTypeLabel(sc.stock_type)}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={sc.is_active ? "default" : "secondary"}>
-                        {sc.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onSelectSubcategory(sc.id)}
-                          title="Gérer les spécifications"
-                        >
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(sc)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteDialog({
-                            open: true,
-                            id: sc.id,
-                            name: sc.nom
-                          })}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {sousCategories.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      Aucune sous-catégorie trouvée
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  sousCategories.map((sc) => (
+                    <TableRow key={sc.id}>
+                      <TableCell className="hidden sm:table-cell">{sc.ordre}</TableCell>
+                      <TableCell className="font-medium">{sc.nom}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Badge variant="outline">{getCategoryName(sc.categorie_id)}</Badge>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <Badge variant="secondary" className="text-xs">{getStockTypeLabel(sc.stock_type)}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={sc.is_active ? "default" : "secondary"}>
+                          {sc.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1 sm:gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onSelectSubcategory(sc.id)}
+                            title="Gérer les spécifications"
+                          >
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(sc)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteDialog({
+                              open: true,
+                              id: sc.id,
+                              name: sc.nom
+                            })}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

@@ -766,10 +766,11 @@ export const ProductManagement = () => {
             </p>
           </div>
         )}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle className="flex items-center gap-2">
             <Package className="w-5 h-5" />
-            Gestion des Produits
+            <span className="hidden sm:inline">Gestion des Produits</span>
+            <span className="sm:hidden">Produits</span>
           </CardTitle>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
@@ -777,15 +778,16 @@ export const ProductManagement = () => {
           }}>
             <DialogTrigger asChild>
               <Button 
-                className="gap-2" 
+                className="gap-2 w-full sm:w-auto" 
                 disabled={!isAdmin}
                 title={!isAdmin ? "Réservé aux administrateurs" : "Ajouter un nouveau produit"}
               >
                 <Plus className="w-4 h-4" />
-                Nouveau produit
+                <span className="hidden sm:inline">Nouveau produit</span>
+                <span className="sm:hidden">Nouveau</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingProduct ? 'Modifier le produit' : 'Nouveau produit'}
@@ -1638,13 +1640,13 @@ export const ProductManagement = () => {
               className="pl-9"
             />
           </div>
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
+            <div className="hidden sm:flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground" />
               <Label className="text-sm text-muted-foreground">Filtres:</Label>
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
               <SelectContent className="z-50 bg-popover">
@@ -1655,7 +1657,7 @@ export const ProductManagement = () => {
               </SelectContent>
             </Select>
             <Select value={sousCategoryFilter} onValueChange={setSousCategoryFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Sous-catégorie" />
               </SelectTrigger>
               <SelectContent className="z-50 bg-popover">
@@ -1665,7 +1667,7 @@ export const ProductManagement = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="self-start sm:self-auto">
               {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
             </Badge>
           </div>

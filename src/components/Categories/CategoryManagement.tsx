@@ -207,24 +207,27 @@ export const CategoryManagement = () => {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="categories" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
+          <TabsTrigger value="categories" className="flex items-center gap-2 py-2">
             <FolderTree className="h-4 w-4" />
-            Catégories
+            <span className="hidden sm:inline">Catégories</span>
+            <span className="sm:hidden">Cat.</span>
           </TabsTrigger>
-          <TabsTrigger value="subcategories" className="flex items-center gap-2">
+          <TabsTrigger value="subcategories" className="flex items-center gap-2 py-2">
             <Layers className="h-4 w-4" />
-            Sous-catégories
+            <span className="hidden sm:inline">Sous-catégories</span>
+            <span className="sm:hidden">Sous-cat.</span>
           </TabsTrigger>
-          <TabsTrigger value="specifications" className="flex items-center gap-2">
+          <TabsTrigger value="specifications" className="flex items-center gap-2 py-2">
             <Settings className="h-4 w-4" />
-            Spécifications
+            <span className="hidden sm:inline">Spécifications</span>
+            <span className="sm:hidden">Specs</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="categories">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <CardTitle className="flex items-center gap-2">
                 <FolderTree className="h-5 w-5" />
                 Gestion des Catégories
@@ -234,12 +237,13 @@ export const CategoryManagement = () => {
                 if (!open) resetForm();
               }}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button className="w-full sm:w-auto">
                     <Plus className="h-4 w-4 mr-2" />
-                    Nouvelle Catégorie
+                    <span className="hidden sm:inline">Nouvelle Catégorie</span>
+                    <span className="sm:hidden">Nouvelle</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       {editingCategory ? 'Modifier la Catégorie' : 'Nouvelle Catégorie'}
@@ -303,69 +307,71 @@ export const CategoryManagement = () => {
               </Dialog>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Ordre</TableHead>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Slug</TableHead>
-                    <TableHead>Sous-catégories</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell>{category.ordre}</TableCell>
-                      <TableCell className="font-medium">{category.nom}</TableCell>
-                      <TableCell className="text-muted-foreground">{category.slug}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {getSousCategoriesCount(category.id)} sous-catégories
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={category.is_active ? "default" : "secondary"}>
-                          {category.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedCategoryId(category.id);
-                              setActiveTab('subcategories');
-                            }}
-                          >
-                            <Layers className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(category)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeleteDialog({
-                              open: true,
-                              categoryId: category.id,
-                              categoryName: category.nom
-                            })}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="hidden sm:table-cell">Ordre</TableHead>
+                      <TableHead>Nom</TableHead>
+                      <TableHead className="hidden md:table-cell">Slug</TableHead>
+                      <TableHead className="hidden sm:table-cell">Sous-cat.</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {categories.map((category) => (
+                      <TableRow key={category.id}>
+                        <TableCell className="hidden sm:table-cell">{category.ordre}</TableCell>
+                        <TableCell className="font-medium">{category.nom}</TableCell>
+                        <TableCell className="hidden md:table-cell text-muted-foreground">{category.slug}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge variant="secondary">
+                            {getSousCategoriesCount(category.id)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={category.is_active ? "default" : "secondary"}>
+                            {category.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1 sm:gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedCategoryId(category.id);
+                                setActiveTab('subcategories');
+                              }}
+                            >
+                              <Layers className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(category)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeleteDialog({
+                                open: true,
+                                categoryId: category.id,
+                                categoryName: category.nom
+                              })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
