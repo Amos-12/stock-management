@@ -126,6 +126,15 @@ export type Database = {
           description: string | null
           diametre: string | null
           dimension: string | null
+          electromenager_classe_energie: string | null
+          electromenager_couleur: string | null
+          electromenager_garantie_mois: number | null
+          electromenager_installation: string | null
+          electromenager_marque: string | null
+          electromenager_materiau: string | null
+          electromenager_modele: string | null
+          electromenager_niveau_sonore_db: number | null
+          electromenager_sous_categorie: string | null
           id: string
           is_active: boolean
           longueur_barre: number | null
@@ -164,6 +173,15 @@ export type Database = {
           description?: string | null
           diametre?: string | null
           dimension?: string | null
+          electromenager_classe_energie?: string | null
+          electromenager_couleur?: string | null
+          electromenager_garantie_mois?: number | null
+          electromenager_installation?: string | null
+          electromenager_marque?: string | null
+          electromenager_materiau?: string | null
+          electromenager_modele?: string | null
+          electromenager_niveau_sonore_db?: number | null
+          electromenager_sous_categorie?: string | null
           id?: string
           is_active?: boolean
           longueur_barre?: number | null
@@ -202,6 +220,15 @@ export type Database = {
           description?: string | null
           diametre?: string | null
           dimension?: string | null
+          electromenager_classe_energie?: string | null
+          electromenager_couleur?: string | null
+          electromenager_garantie_mois?: number | null
+          electromenager_installation?: string | null
+          electromenager_marque?: string | null
+          electromenager_materiau?: string | null
+          electromenager_modele?: string | null
+          electromenager_niveau_sonore_db?: number | null
+          electromenager_sous_categorie?: string | null
           id?: string
           is_active?: boolean
           longueur_barre?: number | null
@@ -518,6 +545,7 @@ export type Database = {
         | "materiaux_de_construction"
         | "blocs"
         | "vetements"
+        | "electromenager"
       sale_type: "retail" | "wholesale"
     }
     CompositeTypes: {
@@ -677,6 +705,7 @@ export const Constants = {
         "materiaux_de_construction",
         "blocs",
         "vetements",
+        "electromenager",
       ],
       sale_type: ["retail", "wholesale"],
     },
