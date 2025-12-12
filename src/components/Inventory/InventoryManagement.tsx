@@ -29,7 +29,9 @@ import {
   Warehouse,
   TrendingDown,
   DollarSign,
-  Info
+  Info,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
@@ -66,6 +68,7 @@ export const InventoryManagement = () => {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   
   // Adjustment modal state
   const [adjustmentModal, setAdjustmentModal] = useState<{
@@ -502,154 +505,262 @@ export const InventoryManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Products Table */}
+      {/* Products Table/Cards */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <CardTitle>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <CardTitle className="flex items-center gap-2">
               {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
+              {selectedProducts.size > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {selectedProducts.size} sélectionné{selectedProducts.size > 1 ? 's' : ''}
+                </Badge>
+              )}
             </CardTitle>
-            {selectedProducts.size > 0 && (
-              <Badge variant="secondary">
-                {selectedProducts.size} sélectionné{selectedProducts.size > 1 ? 's' : ''}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              <Button 
+                variant={viewMode === 'table' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="hidden sm:flex"
+              >
+                <List className="w-4 h-4 mr-1" />
+                Tableau
+              </Button>
+              <Button 
+                variant={viewMode === 'cards' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setViewMode('cards')}
+              >
+                <LayoutGrid className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Cartes</span>
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[500px]">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10 hidden sm:table-cell">
-                      <Checkbox
-                        checked={selectedProducts.size === filteredProducts.length && filteredProducts.length > 0}
-                        onCheckedChange={toggleAllSelection}
-                      />
-                    </TableHead>
-                    <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
-                      <div className="flex items-center gap-1">
-                        Produit
-                        <ArrowUpDown className="w-3 h-3" />
-                      </div>
-                    </TableHead>
-                    <TableHead className="cursor-pointer hidden md:table-cell" onClick={() => handleSort('category')}>
-                      <div className="flex items-center gap-1">
-                        Catégorie
-                        <ArrowUpDown className="w-3 h-3" />
-                      </div>
-                    </TableHead>
-                    <TableHead className="cursor-pointer text-right" onClick={() => handleSort('quantity')}>
-                      <div className="flex items-center justify-end gap-1">
-                        Stock
-                        <ArrowUpDown className="w-3 h-3" />
-                      </div>
-                    </TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">Seuil</TableHead>
-                    <TableHead className="hidden sm:table-cell">Statut</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
-                        <RefreshCw className="w-6 h-6 animate-spin mx-auto text-primary" />
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        Aucun produit trouvé
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredProducts.map(product => {
-                      const stock = getStockDisplay(product);
-                      const status = getStockStatus(product);
-                      
-                      return (
-                        <TableRow 
-                          key={product.id} 
-                          className={!product.is_active ? 'opacity-50' : ''}
-                        >
-                          <TableCell className="hidden sm:table-cell">
-                            <Checkbox
-                              checked={selectedProducts.has(product.id)}
-                              onCheckedChange={() => toggleProductSelection(product.id)}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            <div className="flex flex-col">
-                              <span>{product.name}</span>
-                              {!product.is_active && (
-                                <Badge variant="outline" className="mt-1 text-xs w-fit">Inactif</Badge>
-                              )}
-                              {/* Mobile: show category and status inline */}
-                              <div className="flex flex-wrap gap-1 mt-1 md:hidden">
+          {/* Cards View */}
+          {viewMode === 'cards' && (
+            <ScrollArea className="h-[500px]">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Aucun produit trouvé
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredProducts.map(product => {
+                    const stock = getStockDisplay(product);
+                    const status = getStockStatus(product);
+                    
+                    return (
+                      <Card 
+                        key={product.id} 
+                        className={`relative ${!product.is_active ? 'opacity-50' : ''} ${
+                          status === 'rupture' ? 'border-destructive' : 
+                          status === 'alerte' ? 'border-orange-500' : ''
+                        }`}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold truncate">{product.name}</h3>
+                              <div className="flex flex-wrap gap-1 mt-1">
                                 <Badge variant="outline" className="text-xs">{product.category}</Badge>
-                                {getStatusBadge(status)}
+                                {!product.is_active && (
+                                  <Badge variant="outline" className="text-xs">Inactif</Badge>
+                                )}
                               </div>
                             </div>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <Badge variant="outline">{product.category}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            <span className={
-                              status === 'rupture' ? 'text-destructive font-bold' :
-                              status === 'alerte' ? 'text-orange-500 font-semibold' : ''
-                            }>
-                              {stock.value.toFixed(stock.unit === 'm²' ? 2 : 0)}
-                            </span>
-                            <span className="text-muted-foreground text-sm ml-1">{stock.unit}</span>
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground hidden sm:table-cell">
-                            {product.alert_threshold}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
                             {getStatusBadge(status)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex justify-end gap-1">
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => openAdjustmentModal(product, 'add')}
-                                title="Ajouter du stock"
-                              >
-                                <Plus className="w-4 h-4 text-green-500" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => openAdjustmentModal(product, 'remove')}
-                                title="Retirer du stock"
-                              >
-                                <Minus className="w-4 h-4 text-red-500" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => openAdjustmentModal(product, 'adjust')}
-                                title="Ajuster le stock"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-muted-foreground">Stock</span>
+                              <span className={`font-mono font-semibold ${
+                                status === 'rupture' ? 'text-destructive' :
+                                status === 'alerte' ? 'text-orange-500' : ''
+                              }`}>
+                                {stock.value.toFixed(stock.unit === 'm²' ? 2 : 0)} {stock.unit}
+                              </span>
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </ScrollArea>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-muted-foreground">Seuil d'alerte</span>
+                              <span className="text-sm">{product.alert_threshold}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex justify-end gap-1 mt-4 pt-3 border-t">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openAdjustmentModal(product, 'add')}
+                            >
+                              <Plus className="w-4 h-4 text-green-500" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openAdjustmentModal(product, 'remove')}
+                            >
+                              <Minus className="w-4 h-4 text-red-500" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openAdjustmentModal(product, 'adjust')}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          )}
+
+          {/* Table View */}
+          {viewMode === 'table' && (
+            <ScrollArea className="h-[500px]">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10 hidden sm:table-cell">
+                        <Checkbox
+                          checked={selectedProducts.size === filteredProducts.length && filteredProducts.length > 0}
+                          onCheckedChange={toggleAllSelection}
+                        />
+                      </TableHead>
+                      <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
+                        <div className="flex items-center gap-1">
+                          Produit
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hidden md:table-cell" onClick={() => handleSort('category')}>
+                        <div className="flex items-center gap-1">
+                          Catégorie
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer text-right" onClick={() => handleSort('quantity')}>
+                        <div className="flex items-center justify-end gap-1">
+                          Stock
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-right hidden sm:table-cell">Seuil</TableHead>
+                      <TableHead className="hidden sm:table-cell">Statut</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8">
+                          <RefreshCw className="w-6 h-6 animate-spin mx-auto text-primary" />
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredProducts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          Aucun produit trouvé
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredProducts.map(product => {
+                        const stock = getStockDisplay(product);
+                        const status = getStockStatus(product);
+                        
+                        return (
+                          <TableRow 
+                            key={product.id} 
+                            className={!product.is_active ? 'opacity-50' : ''}
+                          >
+                            <TableCell className="hidden sm:table-cell">
+                              <Checkbox
+                                checked={selectedProducts.has(product.id)}
+                                onCheckedChange={() => toggleProductSelection(product.id)}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              <div className="flex flex-col">
+                                <span>{product.name}</span>
+                                {!product.is_active && (
+                                  <Badge variant="outline" className="mt-1 text-xs w-fit">Inactif</Badge>
+                                )}
+                                <div className="flex flex-wrap gap-1 mt-1 md:hidden">
+                                  <Badge variant="outline" className="text-xs">{product.category}</Badge>
+                                  {getStatusBadge(status)}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <Badge variant="outline">{product.category}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              <span className={
+                                status === 'rupture' ? 'text-destructive font-bold' :
+                                status === 'alerte' ? 'text-orange-500 font-semibold' : ''
+                              }>
+                                {stock.value.toFixed(stock.unit === 'm²' ? 2 : 0)}
+                              </span>
+                              <span className="text-muted-foreground text-sm ml-1">{stock.unit}</span>
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground hidden sm:table-cell">
+                              {product.alert_threshold}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {getStatusBadge(status)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-end gap-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => openAdjustmentModal(product, 'add')}
+                                  title="Ajouter du stock"
+                                >
+                                  <Plus className="w-4 h-4 text-green-500" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => openAdjustmentModal(product, 'remove')}
+                                  title="Retirer du stock"
+                                >
+                                  <Minus className="w-4 h-4 text-red-500" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => openAdjustmentModal(product, 'adjust')}
+                                  title="Ajuster le stock"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </ScrollArea>
+          )}
         </CardContent>
       </Card>
 
