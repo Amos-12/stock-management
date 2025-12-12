@@ -62,9 +62,19 @@ interface Product {
   vetement_taille?: string;
   vetement_genre?: string;
   vetement_couleur?: string;
+  // Électroménager-specific fields
+  electromenager_sous_categorie?: string;
+  electromenager_marque?: string;
+  electromenager_modele?: string;
+  electromenager_garantie_mois?: number;
+  electromenager_niveau_sonore_db?: number;
+  electromenager_classe_energie?: string;
+  electromenager_couleur?: string;
+  electromenager_materiau?: string;
+  electromenager_installation?: string;
 }
 
-type ProductCategory = 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres' | 'ceramique' | 'fer' | 'materiaux_de_construction' | 'energie' | 'blocs' | 'vetements';
+type ProductCategory = 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique' | 'autres' | 'ceramique' | 'fer' | 'materiaux_de_construction' | 'energie' | 'blocs' | 'vetements' | 'electromenager';
 
 export const ProductManagement = () => {
   const { user, role } = useAuth();
@@ -113,6 +123,15 @@ export const ProductManagement = () => {
     vetement_taille: string;
     vetement_genre: string;
     vetement_couleur: string;
+    electromenager_sous_categorie: string;
+    electromenager_marque: string;
+    electromenager_modele: string;
+    electromenager_garantie_mois: string;
+    electromenager_niveau_sonore_db: string;
+    electromenager_classe_energie: string;
+    electromenager_couleur: string;
+    electromenager_materiau: string;
+    electromenager_installation: string;
   }>({
     name: '',
     category: 'alimentaires',
@@ -144,7 +163,17 @@ export const ProductManagement = () => {
     bloc_poids: '',
     vetement_taille: '',
     vetement_genre: '',
-    vetement_couleur: ''
+    vetement_couleur: '',
+    // Électroménager fields
+    electromenager_sous_categorie: '',
+    electromenager_marque: '',
+    electromenager_modele: '',
+    electromenager_garantie_mois: '',
+    electromenager_niveau_sonore_db: '',
+    electromenager_classe_energie: '',
+    electromenager_couleur: '',
+    electromenager_materiau: '',
+    electromenager_installation: ''
   });
 
   // Fonction pour afficher le stock selon la catégorie du produit
@@ -176,6 +205,7 @@ export const ProductManagement = () => {
     { value: 'energie', label: 'Énergie' },
     { value: 'blocs', label: 'Blocs' },
     { value: 'vetements', label: 'Vêtements' },
+    { value: 'electromenager', label: 'Électroménager' },
     { value: 'autres', label: 'Autres' }
   ];
 
@@ -261,7 +291,16 @@ export const ProductManagement = () => {
       bloc_poids: '',
       vetement_taille: '',
       vetement_genre: '',
-      vetement_couleur: ''
+      vetement_couleur: '',
+      electromenager_sous_categorie: '',
+      electromenager_marque: '',
+      electromenager_modele: '',
+      electromenager_garantie_mois: '',
+      electromenager_niveau_sonore_db: '',
+      electromenager_classe_energie: '',
+      electromenager_couleur: '',
+      electromenager_materiau: '',
+      electromenager_installation: ''
     });
     setEditingProduct(null);
   };
@@ -308,7 +347,16 @@ export const ProductManagement = () => {
       bloc_poids: product.bloc_poids?.toString() || '',
       vetement_taille: product.vetement_taille || '',
       vetement_genre: product.vetement_genre || '',
-      vetement_couleur: product.vetement_couleur || ''
+      vetement_couleur: product.vetement_couleur || '',
+      electromenager_sous_categorie: product.electromenager_sous_categorie || '',
+      electromenager_marque: product.electromenager_marque || '',
+      electromenager_modele: product.electromenager_modele || '',
+      electromenager_garantie_mois: product.electromenager_garantie_mois?.toString() || '',
+      electromenager_niveau_sonore_db: product.electromenager_niveau_sonore_db?.toString() || '',
+      electromenager_classe_energie: product.electromenager_classe_energie || '',
+      electromenager_couleur: product.electromenager_couleur || '',
+      electromenager_materiau: product.electromenager_materiau || '',
+      electromenager_installation: product.electromenager_installation || ''
     });
     setIsDialogOpen(true);
   };
@@ -418,7 +466,16 @@ export const ProductManagement = () => {
         bloc_poids: formData.bloc_poids ? parseFloat(formData.bloc_poids) : null,
         vetement_taille: formData.vetement_taille || null,
         vetement_genre: formData.vetement_genre || null,
-        vetement_couleur: formData.vetement_couleur || null
+        vetement_couleur: formData.vetement_couleur || null,
+        electromenager_sous_categorie: formData.electromenager_sous_categorie || null,
+        electromenager_marque: formData.electromenager_marque || null,
+        electromenager_modele: formData.electromenager_modele || null,
+        electromenager_garantie_mois: formData.electromenager_garantie_mois ? parseInt(formData.electromenager_garantie_mois) : null,
+        electromenager_niveau_sonore_db: formData.electromenager_niveau_sonore_db ? parseFloat(formData.electromenager_niveau_sonore_db) : null,
+        electromenager_classe_energie: formData.electromenager_classe_energie || null,
+        electromenager_couleur: formData.electromenager_couleur || null,
+        electromenager_materiau: formData.electromenager_materiau || null,
+        electromenager_installation: formData.electromenager_installation || null
       };
 
       // Map values based on category
@@ -748,7 +805,14 @@ export const ProductManagement = () => {
                       </Badge>
                     </div>
                   )}
-                  {formData.category !== 'ceramique' && formData.category !== 'fer' && formData.category !== 'energie' && formData.category !== 'blocs' && formData.category !== 'vetements' && (
+                  {formData.category === 'electromenager' && (
+                    <div className="col-span-1 sm:col-span-2">
+                      <Badge variant="outline" className="text-xs">
+                        🔌 Électroménager : Ajoutez les spécifications techniques, la marque et la garantie
+                      </Badge>
+                    </div>
+                  )}
+                  {formData.category !== 'ceramique' && formData.category !== 'fer' && formData.category !== 'energie' && formData.category !== 'blocs' && formData.category !== 'vetements' && formData.category !== 'electromenager' && (
                     <div className="col-span-1 sm:col-span-2">
                       <Badge variant="outline" className="text-xs">
                         📦 Produit standard : Remplissez le prix unitaire et la quantité en stock
@@ -1192,6 +1256,173 @@ export const ProductManagement = () => {
                         onChange={(e) => setFormData({...formData, vetement_couleur: e.target.value})}
                         placeholder="Ex: Rouge, Bleu, Noir"
                       />
+                    </div>
+                  </div>
+                )}
+
+                {/* Électroménager-specific fields */}
+                {formData.category === 'electromenager' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
+                    <div className="col-span-1 sm:col-span-2">
+                      <h3 className="font-semibold text-sm mb-2">🔌 Configuration Électroménager</h3>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="electromenager_sous_categorie">Sous-catégorie *</Label>
+                      <Select
+                        value={formData.electromenager_sous_categorie}
+                        onValueChange={(value) => setFormData({...formData, electromenager_sous_categorie: value})}
+                      >
+                        <SelectTrigger className="pointer-events-auto">
+                          <SelectValue placeholder="Sélectionner la sous-catégorie" />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto z-[150]">
+                          <SelectItem value="gros_electromenager">Gros électroménager</SelectItem>
+                          <SelectItem value="petit_electromenager">Petit électroménager</SelectItem>
+                          <SelectItem value="cuisine">Cuisine</SelectItem>
+                          <SelectItem value="blanchisserie">Blanchisserie</SelectItem>
+                          <SelectItem value="climatisation_ventilation">Climatisation / Ventilation</SelectItem>
+                          <SelectItem value="entretien">Entretien</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="electromenager_marque">Marque</Label>
+                      <Input
+                        id="electromenager_marque"
+                        type="text"
+                        value={formData.electromenager_marque}
+                        onChange={(e) => setFormData({...formData, electromenager_marque: e.target.value})}
+                        placeholder="Ex: Samsung, LG, Haier"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="electromenager_modele">Modèle / Référence</Label>
+                      <Input
+                        id="electromenager_modele"
+                        type="text"
+                        value={formData.electromenager_modele}
+                        onChange={(e) => setFormData({...formData, electromenager_modele: e.target.value})}
+                        placeholder="Ex: WW90T554DAW"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="electromenager_couleur">Couleur</Label>
+                      <Input
+                        id="electromenager_couleur"
+                        type="text"
+                        value={formData.electromenager_couleur}
+                        onChange={(e) => setFormData({...formData, electromenager_couleur: e.target.value})}
+                        placeholder="Ex: Blanc, Inox, Noir"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="puissance">Puissance (W)</Label>
+                      <Input
+                        id="puissance"
+                        type="number"
+                        step="1"
+                        value={formData.puissance}
+                        onChange={(e) => setFormData({...formData, puissance: e.target.value})}
+                        placeholder="Ex: 2100"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="voltage">Voltage (V)</Label>
+                      <Input
+                        id="voltage"
+                        type="number"
+                        step="1"
+                        value={formData.voltage}
+                        onChange={(e) => setFormData({...formData, voltage: e.target.value})}
+                        placeholder="Ex: 110, 220"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="capacite">Capacité (kg/litres)</Label>
+                      <Input
+                        id="capacite"
+                        type="number"
+                        step="0.1"
+                        value={formData.capacite}
+                        onChange={(e) => setFormData({...formData, capacite: e.target.value})}
+                        placeholder="Ex: 9 (kg) ou 300 (litres)"
+                      />
+                      <p className="text-xs text-muted-foreground">kg pour lave-linge, litres pour frigo</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="electromenager_niveau_sonore_db">Niveau sonore (dB)</Label>
+                      <Input
+                        id="electromenager_niveau_sonore_db"
+                        type="number"
+                        step="1"
+                        value={formData.electromenager_niveau_sonore_db}
+                        onChange={(e) => setFormData({...formData, electromenager_niveau_sonore_db: e.target.value})}
+                        placeholder="Ex: 54"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="electromenager_classe_energie">Classe énergétique</Label>
+                      <Select
+                        value={formData.electromenager_classe_energie}
+                        onValueChange={(value) => setFormData({...formData, electromenager_classe_energie: value})}
+                      >
+                        <SelectTrigger className="pointer-events-auto">
+                          <SelectValue placeholder="Sélectionner la classe" />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto z-[150]">
+                          <SelectItem value="A+++">A+++</SelectItem>
+                          <SelectItem value="A++">A++</SelectItem>
+                          <SelectItem value="A+">A+</SelectItem>
+                          <SelectItem value="A">A</SelectItem>
+                          <SelectItem value="B">B</SelectItem>
+                          <SelectItem value="C">C</SelectItem>
+                          <SelectItem value="D">D</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="electromenager_garantie_mois">Garantie (mois)</Label>
+                      <Input
+                        id="electromenager_garantie_mois"
+                        type="number"
+                        step="1"
+                        value={formData.electromenager_garantie_mois}
+                        onChange={(e) => setFormData({...formData, electromenager_garantie_mois: e.target.value})}
+                        placeholder="Ex: 12, 24"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="electromenager_materiau">Matériau principal</Label>
+                      <Select
+                        value={formData.electromenager_materiau}
+                        onValueChange={(value) => setFormData({...formData, electromenager_materiau: value})}
+                      >
+                        <SelectTrigger className="pointer-events-auto">
+                          <SelectValue placeholder="Sélectionner le matériau" />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto z-[150]">
+                          <SelectItem value="inox">Inox</SelectItem>
+                          <SelectItem value="plastique">Plastique</SelectItem>
+                          <SelectItem value="aluminium">Aluminium</SelectItem>
+                          <SelectItem value="verre">Verre</SelectItem>
+                          <SelectItem value="mixte">Mixte</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="electromenager_installation">Type d'installation</Label>
+                      <Select
+                        value={formData.electromenager_installation}
+                        onValueChange={(value) => setFormData({...formData, electromenager_installation: value})}
+                      >
+                        <SelectTrigger className="pointer-events-auto">
+                          <SelectValue placeholder="Sélectionner le type" />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto z-[150]">
+                          <SelectItem value="pose_libre">Pose libre</SelectItem>
+                          <SelectItem value="encastrable">Encastrable</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 )}
