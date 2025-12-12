@@ -94,9 +94,17 @@ const formatIronQuantity = (barres: number, barsPerTon: number, compact: boolean
   }
 };
 
+// Helper function to format numbers with regular ASCII space as thousand separator
+const formatNumber = (num: number, decimals = 0): string => {
+  const fixed = decimals > 0 ? num.toFixed(decimals) : Math.round(num).toString();
+  const [intPart, decPart] = fixed.split('.');
+  const withSeparator = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return decPart ? `${withSeparator}.${decPart}` : withSeparator;
+};
+
 const formatAmount = (amount: number, currency: 'USD' | 'HTG' | boolean = true, compact = false): string => {
-  const separator = compact ? '' : ' '; // No space in compact mode
-  const formatted = amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, separator);
+  // Always use regular ASCII space as thousand separator (not non-breaking space)
+  const formatted = formatNumber(amount, 2);
   if (currency === false) return formatted;
   if (currency === 'USD') return `$${formatted}`;
   return `${formatted} HTG`;
@@ -301,15 +309,15 @@ export const generateReceipt = (
     
     pdf.text(qtyText, qtyCol, yPos);
     
-    // Unit price with currency (compact) - format without currency symbol to save space
+    // Unit price with currency (compact) - format with regular space separator
     const unitPrice = item.actualPrice ? item.actualPrice / item.cartQuantity : item.price;
-    const formattedPrice = Math.round(unitPrice).toLocaleString('fr-FR');
+    const formattedPrice = formatNumber(unitPrice);
     pdf.text(formattedPrice, priceCol, yPos);
     
     // Item total with currency
     const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
     const itemCurrency = item.currency || 'HTG';
-    const formattedTotal = Math.round(itemTotal).toLocaleString('fr-FR') + (itemCurrency === 'USD' ? '$' : '');
+    const formattedTotal = formatNumber(itemTotal) + (itemCurrency === 'USD' ? '$' : '');
     pdf.text(formattedTotal, amountCol, yPos, { align: 'right' });
     yPos += 5;
     
