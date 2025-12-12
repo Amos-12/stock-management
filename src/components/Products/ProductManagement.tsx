@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   AlertDialog,
@@ -17,10 +18,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package, Plus, Edit, Trash2, AlertCircle, Search } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, AlertCircle, Search, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useCategories, useSousCategories, useSpecificationsModeles } from '@/hooks/useCategories';
 
 interface Product {
   id: string;
@@ -79,9 +81,13 @@ type ProductCategory = 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique'
 export const ProductManagement = () => {
   const { user, role } = useAuth();
   const isAdmin = role === 'admin';
+  const { categories: dynamicCategories } = useCategories();
+  const { sousCategories: allSousCategories } = useSousCategories();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sousCategoryFilter, setSousCategoryFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -90,6 +96,37 @@ export const ProductManagement = () => {
     productId: null,
     productName: ''
   });
+  
+  // Form state for dynamic category selection
+  const [selectedCategorieId, setSelectedCategorieId] = useState<string>('');
+  const [selectedSousCategorieId, setSelectedSousCategorieId] = useState<string>('');
+  const [dynamicSpecs, setDynamicSpecs] = useState<Record<string, any>>({});
+  
+  // Get specifications for the selected sous-categorie
+  const { specifications: specModeles } = useSpecificationsModeles(selectedSousCategorieId || undefined);
+  
+  // Filter sous-categories based on selected category
+  const filteredSousCategories = useMemo(() => {
+    if (!selectedCategorieId) return [];
+    return allSousCategories.filter(sc => sc.categorie_id === selectedCategorieId);
+  }, [selectedCategorieId, allSousCategories]);
+  
+  // Filter sous-categories for the filter dropdown
+  const filterSousCategories = useMemo(() => {
+    if (categoryFilter === 'all') return allSousCategories;
+    return allSousCategories.filter(sc => sc.categorie_id === categoryFilter);
+  }, [categoryFilter, allSousCategories]);
+  
+  // Reset sous-category filter when category changes
+  useEffect(() => {
+    setSousCategoryFilter('all');
+  }, [categoryFilter]);
+  
+  // Reset form sous-category when form category changes
+  useEffect(() => {
+    setSelectedSousCategorieId('');
+    setDynamicSpecs({});
+  }, [selectedCategorieId]);
   
   const [formData, setFormData] = useState<{
     name: string;
@@ -231,12 +268,23 @@ export const ProductManagement = () => {
   }, []);
 
   useEffect(() => {
-    const filtered = products.filter(product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.category.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Dynamic category filter
+      const matchesCategory = categoryFilter === 'all' || 
+        (product as any).categorie_id === categoryFilter ||
+        product.category === categoryFilter;
+      
+      // Dynamic sous-category filter  
+      const matchesSousCategory = sousCategoryFilter === 'all' || 
+        (product as any).sous_categorie_id === sousCategoryFilter;
+      
+      return matchesSearch && matchesCategory && matchesSousCategory;
+    });
     setFilteredProducts(filtered);
-  }, [searchTerm, products]);
+  }, [searchTerm, categoryFilter, sousCategoryFilter, products]);
 
   const fetchProducts = async () => {
     try {
@@ -303,6 +351,10 @@ export const ProductManagement = () => {
       electromenager_installation: ''
     });
     setEditingProduct(null);
+    // Reset dynamic fields
+    setSelectedCategorieId('');
+    setSelectedSousCategorieId('');
+    setDynamicSpecs({});
   };
 
   const handleEdit = (product: Product) => {
@@ -316,6 +368,11 @@ export const ProductManagement = () => {
     }
     
     setEditingProduct(product);
+    // Set dynamic category fields
+    setSelectedCategorieId((product as any).categorie_id || '');
+    setSelectedSousCategorieId((product as any).sous_categorie_id || '');
+    setDynamicSpecs(product.specifications_techniques || {});
+    
     setFormData({
       name: product.name,
       category: product.category as ProductCategory,
@@ -475,7 +532,12 @@ export const ProductManagement = () => {
         electromenager_classe_energie: formData.electromenager_classe_energie || null,
         electromenager_couleur: formData.electromenager_couleur || null,
         electromenager_materiau: formData.electromenager_materiau || null,
-        electromenager_installation: formData.electromenager_installation || null
+        electromenager_installation: formData.electromenager_installation || null,
+        // New dynamic category fields
+        categorie_id: selectedCategorieId || null,
+        sous_categorie_id: selectedSousCategorieId || null,
+        // Dynamic specifications stored as JSONB
+        specifications_techniques: Object.keys(dynamicSpecs).length > 0 ? dynamicSpecs : null
       };
 
       // Map values based on category
@@ -742,12 +804,77 @@ export const ProductManagement = () => {
                       placeholder="Nom du produit"
                     />
                   </div>
+                  {/* Dynamic Category Selection */}
                   <div className="space-y-2">
-                    <Label htmlFor="category">Catégorie *</Label>
+                    <Label>Catégorie dynamique *</Label>
+                    <Select
+                      value={selectedCategorieId}
+                      onValueChange={(value) => {
+                        setSelectedCategorieId(value);
+                        // Find subcategory to set stock_type based unit
+                        const cat = dynamicCategories.find(c => c.id === value);
+                        if (cat) {
+                          // Also update old category field for compatibility
+                          setFormData(prev => ({...prev, category: cat.slug as ProductCategory}));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="pointer-events-auto">
+                        <SelectValue placeholder="Sélectionner une catégorie" />
+                      </SelectTrigger>
+                      <SelectContent className="pointer-events-auto z-[150] bg-popover">
+                        {dynamicCategories.map(cat => (
+                          <SelectItem key={cat.id} value={cat.id}>{cat.nom}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Dynamic Sous-Category Selection */}
+                  <div className="space-y-2">
+                    <Label>Sous-catégorie *</Label>
+                    <Select
+                      value={selectedSousCategorieId}
+                      onValueChange={(value) => {
+                        setSelectedSousCategorieId(value);
+                        const sc = filteredSousCategories.find(s => s.id === value);
+                        if (sc) {
+                          // Auto-set unit based on stock_type
+                          let newUnit = formData.unit;
+                          if (sc.stock_type === 'boite_m2') newUnit = 'm²';
+                          else if (sc.stock_type === 'barre_metre') newUnit = 'barre';
+                          else newUnit = 'unité';
+                          setFormData(prev => ({...prev, unit: newUnit}));
+                        }
+                      }}
+                      disabled={!selectedCategorieId}
+                    >
+                      <SelectTrigger className="pointer-events-auto">
+                        <SelectValue placeholder={selectedCategorieId ? "Sélectionner une sous-catégorie" : "Choisir d'abord une catégorie"} />
+                      </SelectTrigger>
+                      <SelectContent className="pointer-events-auto z-[150] bg-popover">
+                        {filteredSousCategories.map(sc => (
+                          <SelectItem key={sc.id} value={sc.id}>{sc.nom}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedSousCategorieId && filteredSousCategories.find(sc => sc.id === selectedSousCategorieId)?.stock_type && (
+                      <p className="text-xs text-muted-foreground">
+                        Type de stock: {
+                          filteredSousCategories.find(sc => sc.id === selectedSousCategorieId)?.stock_type === 'boite_m2' ? 'Boîtes / m²' :
+                          filteredSousCategories.find(sc => sc.id === selectedSousCategorieId)?.stock_type === 'barre_metre' ? 'Barres / mètres' :
+                          'Quantité simple'
+                        }
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Legacy Category Selection (hidden but kept for compatibility) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Catégorie (legacy) *</Label>
                     <Select
                       value={formData.category}
                       onValueChange={(value: ProductCategory) => {
-                        // Auto-set unit based on category
                         let newUnit = formData.unit;
                         if (value === 'ceramique') newUnit = 'm²';
                         else if (value === 'fer') newUnit = 'barre';
@@ -759,7 +886,7 @@ export const ProductManagement = () => {
                       <SelectTrigger className="pointer-events-auto">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="pointer-events-auto z-[150]">
+                      <SelectContent className="pointer-events-auto z-[150] bg-popover">
                         {categories.map(cat => (
                           <SelectItem key={cat.value} value={cat.value}>
                             {cat.label}
@@ -768,6 +895,65 @@ export const ProductManagement = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Dynamic Specifications from specifications_modeles */}
+                  {specModeles.length > 0 && (
+                    <div className="col-span-1 sm:col-span-2 p-4 border rounded-lg bg-muted/30">
+                      <h4 className="font-semibold text-sm mb-3">📋 Spécifications dynamiques</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {specModeles.map(spec => (
+                          <div key={spec.id} className="space-y-1">
+                            <Label className="text-sm">
+                              {spec.label} {spec.obligatoire && <span className="text-destructive">*</span>}
+                              {spec.unite && <span className="text-muted-foreground text-xs ml-1">({spec.unite})</span>}
+                            </Label>
+                            {spec.type_champ === 'text' && (
+                              <Input
+                                value={dynamicSpecs[spec.nom_champ] || ''}
+                                onChange={(e) => setDynamicSpecs(prev => ({...prev, [spec.nom_champ]: e.target.value}))}
+                                placeholder={spec.label}
+                                required={spec.obligatoire}
+                              />
+                            )}
+                            {spec.type_champ === 'number' && (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={dynamicSpecs[spec.nom_champ] || ''}
+                                onChange={(e) => setDynamicSpecs(prev => ({...prev, [spec.nom_champ]: e.target.value}))}
+                                placeholder={spec.label}
+                                required={spec.obligatoire}
+                              />
+                            )}
+                            {spec.type_champ === 'select' && spec.options && (
+                              <Select
+                                value={dynamicSpecs[spec.nom_champ] || ''}
+                                onValueChange={(value) => setDynamicSpecs(prev => ({...prev, [spec.nom_champ]: value}))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder={`Sélectionner ${spec.label.toLowerCase()}`} />
+                                </SelectTrigger>
+                                <SelectContent className="z-[200] bg-popover">
+                                  {spec.options.map(opt => (
+                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {spec.type_champ === 'boolean' && (
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={dynamicSpecs[spec.nom_champ] || false}
+                                  onCheckedChange={(checked) => setDynamicSpecs(prev => ({...prev, [spec.nom_champ]: checked}))}
+                                />
+                                <span className="text-sm text-muted-foreground">{dynamicSpecs[spec.nom_champ] ? 'Oui' : 'Non'}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Info badge based on category */}
                   {formData.category === 'ceramique' && (
@@ -809,13 +995,6 @@ export const ProductManagement = () => {
                     <div className="col-span-1 sm:col-span-2">
                       <Badge variant="outline" className="text-xs">
                         🔌 Électroménager : Ajoutez les spécifications techniques, la marque et la garantie
-                      </Badge>
-                    </div>
-                  )}
-                  {formData.category !== 'ceramique' && formData.category !== 'fer' && formData.category !== 'energie' && formData.category !== 'blocs' && formData.category !== 'vetements' && formData.category !== 'electromenager' && (
-                    <div className="col-span-1 sm:col-span-2">
-                      <Badge variant="outline" className="text-xs">
-                        📦 Produit standard : Remplissez le prix unitaire et la quantité en stock
                       </Badge>
                     </div>
                   )}
@@ -1449,14 +1628,47 @@ export const ProductManagement = () => {
             </DialogContent>
           </Dialog>
         </div>
-        <div className="relative mt-4">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher un produit..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+        <div className="mt-4 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher un produit..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Label className="text-sm text-muted-foreground">Filtres:</Label>
+            </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Catégorie" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-popover">
+                <SelectItem value="all">Toutes catégories</SelectItem>
+                {dynamicCategories.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.nom}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sousCategoryFilter} onValueChange={setSousCategoryFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sous-catégorie" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-popover">
+                <SelectItem value="all">Toutes sous-catégories</SelectItem>
+                {filterSousCategories.map(sc => (
+                  <SelectItem key={sc.id} value={sc.id}>{sc.nom}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Badge variant="secondary">
+              {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

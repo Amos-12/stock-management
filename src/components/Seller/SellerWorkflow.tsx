@@ -34,6 +34,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { generateReceipt, generateInvoice } from '@/lib/pdfGenerator';
 import jsPDF from 'jspdf';
 import logo from '@/assets/logo.png';
+import { useCategories, useSousCategories } from '@/hooks/useCategories';
 
 interface Product {
   id: string;
@@ -99,6 +100,8 @@ interface SellerWorkflowProps {
 
 export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const { user } = useAuth();
+  const { categories: dynamicCategories } = useCategories();
+  const { sousCategories: dynamicSousCategories } = useSousCategories();
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -106,6 +109,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [saleTypeFilter, setSaleTypeFilter] = useState<'all' | 'retail' | 'wholesale'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sousCategoryFilter, setSousCategoryFilter] = useState<string>('all');
   const [authorizedCategories, setAuthorizedCategories] = useState<string[]>([]);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
@@ -116,9 +120,27 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [customQuantityDialog, setCustomQuantityDialog] = useState<{open: boolean, product: Product | null}>({open: false, product: null});
   const [customQuantityValue, setCustomQuantityValue] = useState('');
-  const [quantityUnit, setQuantityUnit] = useState<'barre' | 'tonne'>('barre'); // Track selected unit for iron
+  const [quantityUnit, setQuantityUnit] = useState<'barre' | 'tonne'>('barre');
   const [paymentMethod, setPaymentMethod] = useState<'espece' | 'cheque' | 'virement'>('espece');
   const [companySettings, setCompanySettings] = useState<any>(null);
+
+  // Dynamic categories for filtering
+  const availableDynamicCategories = useMemo(() => {
+    return [{ id: 'all', nom: 'Toutes les catégories' }, ...dynamicCategories];
+  }, [dynamicCategories]);
+
+  const availableSousCategories = useMemo(() => {
+    if (categoryFilter === 'all') {
+      return [{ id: 'all', nom: 'Toutes les sous-catégories' }, ...dynamicSousCategories];
+    }
+    const filtered = dynamicSousCategories.filter(sc => sc.categorie_id === categoryFilter);
+    return [{ id: 'all', nom: 'Toutes les sous-catégories' }, ...filtered];
+  }, [categoryFilter, dynamicSousCategories]);
+
+  // Reset sous-category when category changes
+  useEffect(() => {
+    setSousCategoryFilter('all');
+  }, [categoryFilter]);
 
   // Utility function to format amounts with space as thousands separator
   const formatAmount = (amount: number, currency = true): string => {
@@ -262,11 +284,20 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.category.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesSaleType = saleTypeFilter === 'all' || product.sale_type === saleTypeFilter;
-      const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
-      return matchesSearch && matchesSaleType && matchesCategory;
+      
+      // Dynamic category filter using categorie_id
+      const matchesCategory = categoryFilter === 'all' || 
+        (product as any).categorie_id === categoryFilter ||
+        product.category === categoryFilter; // Fallback for old enum-based products
+      
+      // Dynamic sous-category filter
+      const matchesSousCategory = sousCategoryFilter === 'all' || 
+        (product as any).sous_categorie_id === sousCategoryFilter;
+      
+      return matchesSearch && matchesSaleType && matchesCategory && matchesSousCategory;
     });
     setFilteredProducts(filtered);
-  }, [searchTerm, saleTypeFilter, categoryFilter, products]);
+  }, [searchTerm, saleTypeFilter, categoryFilter, sousCategoryFilter, products]);
 
   const fetchProducts = async () => {
     try {
@@ -1063,22 +1094,42 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 </Button>
               </div>
               
-              <div className="flex gap-2 items-center mt-2">
-                <Label htmlFor="category-filter" className="text-sm font-medium text-muted-foreground">
-                  Catégorie:
-                </Label>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger id="category-filter" className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableCategories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex flex-wrap gap-2 items-center mt-2">
+                <div className="flex gap-2 items-center">
+                  <Label htmlFor="category-filter" className="text-sm font-medium text-muted-foreground">
+                    Catégorie:
+                  </Label>
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger id="category-filter" className="w-[180px]">
+                      <SelectValue placeholder="Catégorie" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-popover">
+                      {availableDynamicCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.nom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex gap-2 items-center">
+                  <Label htmlFor="subcategory-filter" className="text-sm font-medium text-muted-foreground">
+                    Sous-catégorie:
+                  </Label>
+                  <Select value={sousCategoryFilter} onValueChange={setSousCategoryFilter}>
+                    <SelectTrigger id="subcategory-filter" className="w-[180px]">
+                      <SelectValue placeholder="Sous-catégorie" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-popover">
+                      {availableSousCategories.map((sc) => (
+                        <SelectItem key={sc.id} value={sc.id}>
+                          {sc.nom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
               <div className="flex justify-between items-center mt-3 px-1">
