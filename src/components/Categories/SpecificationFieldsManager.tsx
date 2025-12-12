@@ -209,17 +209,18 @@ export const SpecificationFieldsManager = ({
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4">
+        <CardHeader className="flex flex-col gap-4">
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
-            Spécifications par Sous-catégorie
+            <span className="hidden sm:inline">Spécifications par Sous-catégorie</span>
+            <span className="sm:hidden">Spécifications</span>
           </CardTitle>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <Select 
               value={selectedSousCategorieId || ''} 
               onValueChange={(value) => onSelectSousCategorie(value || null)}
             >
-              <SelectTrigger className="w-[250px]">
+              <SelectTrigger className="w-full sm:w-[250px]">
                 <SelectValue placeholder="Sélectionner une sous-catégorie" />
               </SelectTrigger>
               <SelectContent>
@@ -236,12 +237,12 @@ export const SpecificationFieldsManager = ({
                 if (!open) resetForm();
               }}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button className="w-full sm:w-auto">
                     <Plus className="h-4 w-4 mr-2" />
                     Nouveau Champ
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       {editingSpec ? 'Modifier le Champ' : 'Nouveau Champ de Spécification'}
@@ -352,74 +353,71 @@ export const SpecificationFieldsManager = ({
                   Sous-catégorie : {getSelectedSousCategoryName()}
                 </Badge>
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Ordre</TableHead>
-                    <TableHead>Label</TableHead>
-                    <TableHead>Nom technique</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Unité</TableHead>
-                    <TableHead>Obligatoire</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {specifications.length === 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                        Aucune spécification définie pour cette sous-catégorie
-                      </TableCell>
+                      <TableHead className="hidden sm:table-cell">Ordre</TableHead>
+                      <TableHead>Label</TableHead>
+                      <TableHead className="hidden md:table-cell">Nom technique</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="hidden sm:table-cell">Unité</TableHead>
+                      <TableHead className="hidden sm:table-cell">Requis</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ) : (
-                    specifications.map((spec) => (
-                      <TableRow key={spec.id}>
-                        <TableCell>{spec.ordre}</TableCell>
-                        <TableCell className="font-medium">{spec.label}</TableCell>
-                        <TableCell className="text-muted-foreground font-mono text-sm">
-                          {spec.nom_champ}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{getTypeLabel(spec.type_champ)}</Badge>
-                          {spec.type_champ === 'select' && spec.options && (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              ({spec.options.length} options)
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>{spec.unite || '-'}</TableCell>
-                        <TableCell>
-                          <Badge variant={spec.obligatoire ? "default" : "outline"}>
-                            {spec.obligatoire ? 'Oui' : 'Non'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(spec)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeleteDialog({
-                                open: true,
-                                id: spec.id,
-                                name: spec.label
-                              })}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {specifications.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          Aucune spécification définie
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      specifications.map((spec) => (
+                        <TableRow key={spec.id}>
+                          <TableCell className="hidden sm:table-cell">{spec.ordre}</TableCell>
+                          <TableCell className="font-medium">{spec.label}</TableCell>
+                          <TableCell className="hidden md:table-cell text-muted-foreground font-mono text-sm">
+                            {spec.nom_champ}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs">{getTypeLabel(spec.type_champ)}</Badge>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">{spec.unite || '-'}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <Badge variant={spec.obligatoire ? "default" : "outline"}>
+                              {spec.obligatoire ? 'Oui' : 'Non'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1 sm:gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(spec)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeleteDialog({
+                                  open: true,
+                                  id: spec.id,
+                                  name: spec.label
+                                })}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </>
           )}
         </CardContent>
