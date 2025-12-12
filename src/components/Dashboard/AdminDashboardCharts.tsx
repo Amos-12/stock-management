@@ -21,6 +21,7 @@ import { Calendar, TrendingUp, Package, DollarSign, ShoppingCart, Users, Target 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { StatsCard } from './StatsCard';
+import { formatNumber } from '@/lib/utils';
 
 interface RevenueData {
   date: string;
@@ -464,7 +465,7 @@ export const AdminDashboardCharts = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Ventes Aujourd'hui"
-          value={`${todayRevenue.toFixed(2)} HTG`}
+          value={`${formatNumber(todayRevenue)} HTG`}
           icon={DollarSign}
           change={{
             value: calcTrend(todayRevenue, yesterdayRevenue).value,
@@ -475,7 +476,7 @@ export const AdminDashboardCharts = () => {
         />
         <StatsCard
           title="Bénéfices Aujourd'hui"
-          value={`${todayProfit.toFixed(2)} HTG`}
+          value={`${formatNumber(todayProfit)} HTG`}
           icon={TrendingUp}
           change={{
             value: calcTrend(todayProfit, yesterdayProfit).value,
@@ -486,7 +487,7 @@ export const AdminDashboardCharts = () => {
         />
         <StatsCard
           title="Ventes cette Semaine"
-          value={`${weekRevenue.toFixed(2)} HTG`}
+          value={`${formatNumber(weekRevenue)} HTG`}
           icon={DollarSign}
           change={{
             value: calcTrend(weekRevenue, prevWeekRevenue).value,
@@ -497,7 +498,7 @@ export const AdminDashboardCharts = () => {
         />
         <StatsCard
           title="Bénéfices cette Semaine"
-          value={`${weekProfit.toFixed(2)} HTG`}
+          value={`${formatNumber(weekProfit)} HTG`}
           icon={TrendingUp}
           change={{
             value: calcTrend(weekProfit, prevWeekProfit).value,
@@ -511,13 +512,13 @@ export const AdminDashboardCharts = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Ventes ce Mois"
-          value={`${monthRevenue.toFixed(2)} HTG`}
+          value={`${formatNumber(monthRevenue)} HTG`}
           icon={Target}
           variant="default"
         />
         <StatsCard
           title="Bénéfices ce Mois"
-          value={`${monthProfit.toFixed(2)} HTG`}
+          value={`${formatNumber(monthProfit)} HTG`}
           icon={TrendingUp}
           variant="success"
         />
