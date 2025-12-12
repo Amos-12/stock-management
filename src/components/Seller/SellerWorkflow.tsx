@@ -1576,32 +1576,6 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               })}
               <div className="border-t mt-3 pt-3 space-y-2">
                 {/* Subtotals by currency */}
-                {(() => {
-                  const { totalUSD, totalHTG } = getTotalsByCurrency();
-                  const hasMultipleCurrencies = totalUSD > 0 && totalHTG > 0;
-                  
-                  return (
-                    <>
-                      {totalHTG > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span>Sous-total HTG</span>
-                          <span className="font-medium">{formatAmount(totalHTG, 'HTG')}</span>
-                        </div>
-                      )}
-                      {totalUSD > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span>Sous-total USD</span>
-                          <span className="font-medium">{formatAmount(totalUSD, 'USD')}</span>
-                        </div>
-                      )}
-                      {hasMultipleCurrencies && (
-                        <div className="text-xs text-muted-foreground border-t pt-2">
-                          Taux: 1 USD = {(companySettings?.usd_htg_rate || 132).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
                 
                 {/* Discount Section */}
                 <div className="space-y-2 border-t pt-2">
