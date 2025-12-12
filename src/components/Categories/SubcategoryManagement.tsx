@@ -271,7 +271,7 @@ export const SubcategoryManagement = ({
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner une catégorie" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[100]" position="popper" sideOffset={5}>
                         {categories.map(cat => (
                           <SelectItem key={cat.id} value={cat.id}>{cat.nom}</SelectItem>
                         ))}
@@ -316,7 +316,7 @@ export const SubcategoryManagement = ({
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[100]" position="popper" sideOffset={5}>
                         <SelectItem value="quantity">Quantité simple (unités)</SelectItem>
                         <SelectItem value="boite_m2">Boîtes / m² (céramique)</SelectItem>
                         <SelectItem value="barre_metre">Barres / mètres (fer)</SelectItem>
