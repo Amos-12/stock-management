@@ -518,125 +518,137 @@ export const InventoryManagement = () => {
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[500px]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={selectedProducts.size === filteredProducts.length && filteredProducts.length > 0}
-                      onCheckedChange={toggleAllSelection}
-                    />
-                  </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
-                    <div className="flex items-center gap-1">
-                      Produit
-                      <ArrowUpDown className="w-3 h-3" />
-                    </div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
-                    <div className="flex items-center gap-1">
-                      Catégorie
-                      <ArrowUpDown className="w-3 h-3" />
-                    </div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer text-right" onClick={() => handleSort('quantity')}>
-                    <div className="flex items-center justify-end gap-1">
-                      Stock
-                      <ArrowUpDown className="w-3 h-3" />
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-right">Seuil</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
-                      <RefreshCw className="w-6 h-6 animate-spin mx-auto text-primary" />
-                    </TableCell>
+                    <TableHead className="w-10 hidden sm:table-cell">
+                      <Checkbox
+                        checked={selectedProducts.size === filteredProducts.length && filteredProducts.length > 0}
+                        onCheckedChange={toggleAllSelection}
+                      />
+                    </TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
+                      <div className="flex items-center gap-1">
+                        Produit
+                        <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer hidden md:table-cell" onClick={() => handleSort('category')}>
+                      <div className="flex items-center gap-1">
+                        Catégorie
+                        <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer text-right" onClick={() => handleSort('quantity')}>
+                      <div className="flex items-center justify-end gap-1">
+                        Stock
+                        <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">Seuil</TableHead>
+                    <TableHead className="hidden sm:table-cell">Statut</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ) : filteredProducts.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      Aucun produit trouvé
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredProducts.map(product => {
-                    const stock = getStockDisplay(product);
-                    const status = getStockStatus(product);
-                    
-                    return (
-                      <TableRow 
-                        key={product.id} 
-                        className={!product.is_active ? 'opacity-50' : ''}
-                      >
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedProducts.has(product.id)}
-                            onCheckedChange={() => toggleProductSelection(product.id)}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {product.name}
-                          {!product.is_active && (
-                            <Badge variant="outline" className="ml-2 text-xs">Inactif</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{product.category}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          <span className={
-                            status === 'rupture' ? 'text-destructive font-bold' :
-                            status === 'alerte' ? 'text-orange-500 font-semibold' : ''
-                          }>
-                            {stock.value.toFixed(stock.unit === 'm²' ? 2 : 0)}
-                          </span>
-                          <span className="text-muted-foreground text-sm ml-1">{stock.unit}</span>
-                        </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {product.alert_threshold}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(status)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex justify-end gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => openAdjustmentModal(product, 'add')}
-                              title="Ajouter du stock"
-                            >
-                              <Plus className="w-4 h-4 text-green-500" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => openAdjustmentModal(product, 'remove')}
-                              title="Retirer du stock"
-                            >
-                              <Minus className="w-4 h-4 text-red-500" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => openAdjustmentModal(product, 'adjust')}
-                              title="Ajuster le stock"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <RefreshCw className="w-6 h-6 animate-spin mx-auto text-primary" />
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredProducts.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        Aucun produit trouvé
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredProducts.map(product => {
+                      const stock = getStockDisplay(product);
+                      const status = getStockStatus(product);
+                      
+                      return (
+                        <TableRow 
+                          key={product.id} 
+                          className={!product.is_active ? 'opacity-50' : ''}
+                        >
+                          <TableCell className="hidden sm:table-cell">
+                            <Checkbox
+                              checked={selectedProducts.has(product.id)}
+                              onCheckedChange={() => toggleProductSelection(product.id)}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col">
+                              <span>{product.name}</span>
+                              {!product.is_active && (
+                                <Badge variant="outline" className="mt-1 text-xs w-fit">Inactif</Badge>
+                              )}
+                              {/* Mobile: show category and status inline */}
+                              <div className="flex flex-wrap gap-1 mt-1 md:hidden">
+                                <Badge variant="outline" className="text-xs">{product.category}</Badge>
+                                {getStatusBadge(status)}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <Badge variant="outline">{product.category}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            <span className={
+                              status === 'rupture' ? 'text-destructive font-bold' :
+                              status === 'alerte' ? 'text-orange-500 font-semibold' : ''
+                            }>
+                              {stock.value.toFixed(stock.unit === 'm²' ? 2 : 0)}
+                            </span>
+                            <span className="text-muted-foreground text-sm ml-1">{stock.unit}</span>
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground hidden sm:table-cell">
+                            {product.alert_threshold}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {getStatusBadge(status)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => openAdjustmentModal(product, 'add')}
+                                title="Ajouter du stock"
+                              >
+                                <Plus className="w-4 h-4 text-green-500" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => openAdjustmentModal(product, 'remove')}
+                                title="Retirer du stock"
+                              >
+                                <Minus className="w-4 h-4 text-red-500" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => openAdjustmentModal(product, 'adjust')}
+                                title="Ajuster le stock"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </ScrollArea>
         </CardContent>
       </Card>
