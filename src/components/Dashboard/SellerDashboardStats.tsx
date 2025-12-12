@@ -12,6 +12,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
+import { formatNumber } from '@/lib/utils';
 
 export const SellerDashboardStats = () => {
   const { user } = useAuth();
@@ -174,7 +175,7 @@ export const SellerDashboardStats = () => {
         />
         <StatsCard
           title="Revenu Aujourd'hui"
-          value={`${stats.todayRevenue.toFixed(2)} HTG`}
+          value={`${formatNumber(stats.todayRevenue)} HTG`}
           icon={DollarSign}
           variant="default"
           change={{
@@ -191,7 +192,7 @@ export const SellerDashboardStats = () => {
         />
         <StatsCard
           title="Revenu Total"
-          value={`${stats.totalRevenue.toFixed(2)} HTG`}
+          value={`${formatNumber(stats.totalRevenue)} HTG`}
           icon={DollarSign}
           variant="success"
         />
@@ -201,7 +202,7 @@ export const SellerDashboardStats = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatsCard
           title="Ventes cette Semaine"
-          value={`${stats.weekRevenue.toFixed(2)} HTG`}
+          value={`${formatNumber(stats.weekRevenue)} HTG`}
           icon={Calendar}
           variant="default"
           change={{
@@ -213,7 +214,7 @@ export const SellerDashboardStats = () => {
         
         <StatsCard
           title="Ventes ce Mois"
-          value={`${stats.monthRevenue.toFixed(2)} HTG`}
+          value={`${formatNumber(stats.monthRevenue)} HTG`}
           icon={Calendar}
           variant="success"
           change={{
@@ -225,7 +226,7 @@ export const SellerDashboardStats = () => {
         
         <StatsCard
           title="Moyenne par Vente"
-          value={`${stats.averageSale.toFixed(2)} HTG`}
+          value={`${formatNumber(stats.averageSale)} HTG`}
           icon={ShoppingCart}
           variant="default"
         />
@@ -258,7 +259,7 @@ export const SellerDashboardStats = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-primary">{product.revenue.toFixed(2)} HTG</div>
+                      <div className="font-bold text-primary">{formatNumber(product.revenue)} HTG</div>
                     </div>
                   </div>
                 ))}
@@ -294,7 +295,7 @@ export const SellerDashboardStats = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-success">{Number(sale.total_amount).toFixed(2)} HTG</div>
+                      <div className="font-bold text-success">{formatNumber(Number(sale.total_amount))} HTG</div>
                       <div className="text-xs text-muted-foreground">{sale.payment_method}</div>
                     </div>
                   </div>
@@ -324,8 +325,8 @@ export const SellerDashboardStats = () => {
             </div>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Revenu Mensuel</p>
-              <p className="text-2xl font-bold text-primary">
-                {stats.monthRevenue.toFixed(2)} HTG
+              <p className="text-lg font-bold text-primary">
+                {formatNumber(stats.monthRevenue)} HTG
               </p>
               <p className="text-xs text-muted-foreground">{stats.monthSales} ventes ce mois</p>
             </div>
