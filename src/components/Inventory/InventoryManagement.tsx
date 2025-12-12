@@ -13,6 +13,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Constants } from '@/integrations/supabase/types';
+import { usePagination } from '@/hooks/usePagination';
+import { TablePagination } from '@/components/ui/table-pagination';
 import { 
   Package, 
   Search, 
@@ -194,6 +196,24 @@ export const InventoryManagement = () => {
         return sortDirection === 'asc' ? comparison : -comparison;
       });
   }, [products, searchQuery, selectedCategory, stockLevel, statusFilter, sortField, sortDirection]);
+
+  const { 
+    paginatedItems: paginatedProducts, 
+    currentPage, 
+    totalPages, 
+    totalItems, 
+    pageSize, 
+    nextPage, 
+    prevPage, 
+    hasNextPage, 
+    hasPrevPage,
+    resetPage
+  } = usePagination(filteredProducts, 20);
+
+  // Reset page when filters change
+  useEffect(() => {
+    resetPage();
+  }, [searchQuery, selectedCategory, stockLevel, statusFilter]);
 
   const stats = useMemo(() => {
     const totalValue = products.reduce((sum, p) => {
@@ -546,13 +566,13 @@ export const InventoryManagement = () => {
                 <div className="flex justify-center py-8">
                   <RefreshCw className="w-6 h-6 animate-spin text-primary" />
                 </div>
-              ) : filteredProducts.length === 0 ? (
+              ) : paginatedProducts.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   Aucun produit trouvé
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredProducts.map(product => {
+                  {paginatedProducts.map(product => {
                     const stock = getStockDisplay(product);
                     const status = getStockStatus(product);
                     
@@ -669,14 +689,14 @@ export const InventoryManagement = () => {
                           <RefreshCw className="w-6 h-6 animate-spin mx-auto text-primary" />
                         </TableCell>
                       </TableRow>
-                    ) : filteredProducts.length === 0 ? (
+                    ) : paginatedProducts.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                           Aucun produit trouvé
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredProducts.map(product => {
+                      paginatedProducts.map(product => {
                         const stock = getStockDisplay(product);
                         const status = getStockStatus(product);
                         
@@ -761,6 +781,16 @@ export const InventoryManagement = () => {
               </div>
             </ScrollArea>
           )}
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPrevPage={prevPage}
+            onNextPage={nextPage}
+            hasPrevPage={hasPrevPage}
+            hasNextPage={hasNextPage}
+          />
         </CardContent>
       </Card>
 

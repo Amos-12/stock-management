@@ -23,6 +23,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useCategories, useSousCategories, useSpecificationsModeles } from '@/hooks/useCategories';
+import { usePagination } from '@/hooks/usePagination';
+import { TablePagination } from '@/components/ui/table-pagination';
 
 interface Product {
   id: string;
@@ -284,7 +286,21 @@ export const ProductManagement = () => {
       return matchesSearch && matchesCategory && matchesSousCategory;
     });
     setFilteredProducts(filtered);
+    resetPage();
   }, [searchTerm, categoryFilter, sousCategoryFilter, products]);
+
+  const { 
+    paginatedItems: paginatedProducts, 
+    currentPage, 
+    totalPages, 
+    totalItems, 
+    pageSize, 
+    nextPage, 
+    prevPage, 
+    hasNextPage, 
+    hasPrevPage,
+    resetPage
+  } = usePagination(filteredProducts, 20);
 
   const fetchProducts = async () => {
     try {
@@ -1689,14 +1705,14 @@ export const ProductManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.length === 0 ? (
+              {paginatedProducts.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Aucun produit trouvé
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredProducts.map((product) => (
+                paginatedProducts.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>
@@ -1764,6 +1780,16 @@ export const ProductManagement = () => {
             </TableBody>
           </Table>
         </div>
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPrevPage={prevPage}
+          onNextPage={nextPage}
+          hasPrevPage={hasPrevPage}
+          hasNextPage={hasNextPage}
+        />
       </CardContent>
       
       <AlertDialog open={deleteDialog.open} onOpenChange={(open) => 
