@@ -11,6 +11,7 @@ import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { ActivityLogPanel } from '@/components/ActivityLog/ActivityLogPanel';
 import { DatabaseMonitoring } from '@/components/Settings/DatabaseMonitoring';
 import { SellerPerformanceReport } from '@/components/Reports/SellerPerformanceReport';
+import { CategoryManagement } from '@/components/Categories/CategoryManagement';
 
 const AdminDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -20,6 +21,8 @@ const AdminDashboard = () => {
     switch (currentSection) {
       case 'dashboard':
         return <AdminDashboardCharts />;
+      case 'categories':
+        return <CategoryManagement />;
       case 'products':
         return <ProductManagement />;
       case 'sales':
