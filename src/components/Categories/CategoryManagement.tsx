@@ -10,12 +10,81 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FolderTree, Plus, Edit, Trash2, Layers, Settings } from 'lucide-react';
+import { FolderTree, Plus, Edit, Trash2, Layers, Settings, GripVertical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useCategories, useSousCategories, Category, SousCategorie } from '@/hooks/useCategories';
 import { SubcategoryManagement } from './SubcategoryManagement';
 import { SpecificationFieldsManager } from './SpecificationFieldsManager';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+interface SortableRowProps {
+  category: Category;
+  getSousCategoriesCount: (id: string) => number;
+  onEdit: (category: Category) => void;
+  onDelete: (category: Category) => void;
+  onViewSubcategories: (category: Category) => void;
+}
+
+const SortableCategoryRow = ({ category, getSousCategoriesCount, onEdit, onDelete, onViewSubcategories }: SortableRowProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: category.id });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style} className={isDragging ? 'bg-muted' : ''}>
+      <TableCell className="hidden sm:table-cell w-8">
+        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </TableCell>
+      <TableCell className="hidden sm:table-cell">{category.ordre}</TableCell>
+      <TableCell className="font-medium">{category.nom}</TableCell>
+      <TableCell className="hidden md:table-cell text-muted-foreground">{category.slug}</TableCell>
+      <TableCell className="hidden sm:table-cell">
+        <Badge variant="secondary">
+          {getSousCategoriesCount(category.id)}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <Badge variant={category.is_active ? "default" : "secondary"}>
+          {category.is_active ? 'Active' : 'Inactive'}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-1 sm:gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onViewSubcategories(category)}
+          >
+            <Layers className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(category)}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(category)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 export const CategoryManagement = () => {
   const { categories, loading, refetch } = useCategories();
@@ -194,6 +263,44 @@ export const CategoryManagement = () => {
     return sousCategories.filter(sc => sc.categorie_id === categoryId).length;
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = categories.findIndex(c => c.id === active.id);
+    const newIndex = categories.findIndex(c => c.id === over.id);
+    
+    const reorderedCategories = arrayMove(categories, oldIndex, newIndex);
+    
+    // Update ordre in database for all affected items
+    try {
+      const updates = reorderedCategories.map((cat, index) => 
+        supabase.from('categories').update({ ordre: index }).eq('id', cat.id)
+      );
+      
+      await Promise.all(updates);
+      refetch();
+      
+      toast({
+        title: "Ordre mis à jour",
+        description: "L'ordre des catégories a été modifié."
+      });
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour l'ordre.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -308,69 +415,42 @@ export const CategoryManagement = () => {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="hidden sm:table-cell">Ordre</TableHead>
-                      <TableHead>Nom</TableHead>
-                      <TableHead className="hidden md:table-cell">Slug</TableHead>
-                      <TableHead className="hidden sm:table-cell">Sous-cat.</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {categories.map((category) => (
-                      <TableRow key={category.id}>
-                        <TableCell className="hidden sm:table-cell">{category.ordre}</TableCell>
-                        <TableCell className="font-medium">{category.nom}</TableCell>
-                        <TableCell className="hidden md:table-cell text-muted-foreground">{category.slug}</TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <Badge variant="secondary">
-                            {getSousCategoriesCount(category.id)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={category.is_active ? "default" : "secondary"}>
-                            {category.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1 sm:gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedCategoryId(category.id);
-                                setActiveTab('subcategories');
-                              }}
-                            >
-                              <Layers className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(category)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeleteDialog({
-                                open: true,
-                                categoryId: category.id,
-                                categoryName: category.nom
-                              })}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="hidden sm:table-cell w-8"></TableHead>
+                        <TableHead className="hidden sm:table-cell">Ordre</TableHead>
+                        <TableHead>Nom</TableHead>
+                        <TableHead className="hidden md:table-cell">Slug</TableHead>
+                        <TableHead className="hidden sm:table-cell">Sous-cat.</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      <SortableContext items={categories.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                        {categories.map((category) => (
+                          <SortableCategoryRow
+                            key={category.id}
+                            category={category}
+                            getSousCategoriesCount={getSousCategoriesCount}
+                            onEdit={handleEdit}
+                            onDelete={(cat) => setDeleteDialog({
+                              open: true,
+                              categoryId: cat.id,
+                              categoryName: cat.nom
+                            })}
+                            onViewSubcategories={(cat) => {
+                              setSelectedCategoryId(cat.id);
+                              setActiveTab('subcategories');
+                            }}
+                          />
+                        ))}
+                      </SortableContext>
+                    </TableBody>
+                  </Table>
+                </DndContext>
               </div>
             </CardContent>
           </Card>
