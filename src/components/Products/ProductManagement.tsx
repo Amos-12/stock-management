@@ -1723,6 +1723,7 @@ export const ProductManagement = () => {
                 <TableHead>Catégorie</TableHead>
                 <TableHead>Unité</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead>Devise</TableHead>
                 <TableHead>Prix</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Statut</TableHead>
@@ -1732,7 +1733,7 @@ export const ProductManagement = () => {
             <TableBody>
               {paginatedProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     Aucun produit trouvé
                   </TableCell>
                 </TableRow>
@@ -1751,6 +1752,17 @@ export const ProductManagement = () => {
                     <TableCell>
                       <Badge variant={product.sale_type === 'retail' ? "default" : "secondary"}>
                         {product.sale_type === 'retail' ? 'Détail' : 'Gros'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="outline"
+                        className={product.currency === 'USD' 
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700' 
+                          : 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-700'
+                        }
+                      >
+                        {product.currency === 'USD' ? '$ USD' : 'G HTG'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-success font-medium">
