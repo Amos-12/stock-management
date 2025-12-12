@@ -1613,44 +1613,86 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   )}
                 </div>
                 
-                {/* Total Section */}
+                {/* Total Section - Affichage complet des calculs */}
                 {(() => {
                   const { totalUSD, totalHTG } = getTotalsByCurrency();
                   const hasMultipleCurrencies = totalUSD > 0 && totalHTG > 0;
-                  const finalTotal = getUnifiedFinalTotal();
+                  const rate = companySettings?.usd_htg_rate || 132;
+                  const displayCurrency = companySettings?.default_display_currency || 'HTG';
+                  
+                  // Calculer le sous-total unifié HT
+                  const unifiedSubtotal = displayCurrency === 'HTG'
+                    ? totalHTG + (totalUSD * rate)
+                    : totalUSD + (totalHTG / rate);
+                  
+                  // Remise
+                  const discountAmount = getDiscountAmount();
+                  
+                  // Montant après remise
+                  const afterDiscount = unifiedSubtotal - discountAmount;
+                  
+                  // TCA/TVA
+                  const tvaRate = companySettings?.tva_rate || 0;
+                  const tvaAmount = afterDiscount * (tvaRate / 100);
+                  
+                  // Total TTC final
+                  const finalTTC = afterDiscount + tvaAmount;
                   
                   return (
                     <div className="border-t pt-3 space-y-2">
-                      {/* Sous-totaux par devise si multi-devises */}
-                      {hasMultipleCurrencies && (
-                        <>
-                          <div className="flex justify-between text-sm text-muted-foreground">
-                            <span>Sous-total USD</span>
-                            <span>{formatAmount(totalUSD, 'USD')}</span>
-                          </div>
-                          <div className="flex justify-between text-sm text-muted-foreground">
-                            <span>Sous-total HTG</span>
-                            <span>{formatAmount(totalHTG, 'HTG')}</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground italic">
-                            Taux: 1 USD = {(companySettings?.usd_htg_rate || 132).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG
-                          </div>
-                        </>
+                      {/* Sous-totaux par devise */}
+                      {totalUSD > 0 && (
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>Sous-total USD</span>
+                          <span>{formatAmount(totalUSD, 'USD')}</span>
+                        </div>
                       )}
-                      
-                      {/* Remise appliquée */}
-                      {discountType !== 'none' && getDiscountAmount() > 0 && (
-                        <div className="flex justify-between text-sm text-warning">
-                          <span>Remise appliquée</span>
-                          <span>-{formatAmount(getDiscountAmount())}</span>
+                      {totalHTG > 0 && (
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>Sous-total HTG</span>
+                          <span>{formatAmount(totalHTG, 'HTG')}</span>
                         </div>
                       )}
                       
-                      {/* Total à payer - EN DERNIER ET EN GRAS */}
-                      <div className="flex justify-between font-bold text-xl pt-2 border-t">
-                        <span>Total à payer</span>
-                        <span className="text-success">
-                          {formatAmount(finalTotal.amount, finalTotal.currency)}
+                      {/* Taux de change si multi-devises */}
+                      {hasMultipleCurrencies && (
+                        <div className="text-xs text-muted-foreground italic">
+                          Taux: 1 USD = {rate.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG
+                        </div>
+                      )}
+                      
+                      {/* Séparateur et calculs détaillés */}
+                      <div className="border-t pt-2 mt-2 space-y-1">
+                        {/* Sous-total HT unifié */}
+                        <div className="flex justify-between text-sm font-medium">
+                          <span>Sous-total HT</span>
+                          <span>{formatAmount(unifiedSubtotal, displayCurrency)}</span>
+                        </div>
+                        
+                        {/* Remise appliquée */}
+                        {discountAmount > 0 && (
+                          <div className="flex justify-between text-sm text-destructive">
+                            <span>
+                              {discountType === 'percentage' 
+                                ? `Remise (${discountValue}%)` 
+                                : 'Remise'}
+                            </span>
+                            <span>-{formatAmount(discountAmount, displayCurrency)}</span>
+                          </div>
+                        )}
+                        
+                        {/* TCA/TVA */}
+                        <div className="flex justify-between text-sm">
+                          <span>TCA ({tvaRate}%)</span>
+                          <span>{formatAmount(tvaAmount, displayCurrency)}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Total TTC final - EN GRAS avec fond coloré */}
+                      <div className="flex justify-between font-bold text-lg pt-2 mt-2 bg-primary/10 p-3 rounded-lg border">
+                        <span>TOTAL TTC</span>
+                        <span className="text-primary">
+                          {formatAmount(finalTTC, displayCurrency)}
                         </span>
                       </div>
                     </div>
