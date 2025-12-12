@@ -156,6 +156,7 @@ export type Database = {
           category: Database["public"]["Enums"]["product_category"]
           created_at: string
           created_by: string | null
+          currency: string
           decimal_autorise: boolean | null
           description: string | null
           diametre: string | null
@@ -205,6 +206,7 @@ export type Database = {
           category: Database["public"]["Enums"]["product_category"]
           created_at?: string
           created_by?: string | null
+          currency?: string
           decimal_autorise?: boolean | null
           description?: string | null
           diametre?: string | null
@@ -254,6 +256,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["product_category"]
           created_at?: string
           created_by?: string | null
+          currency?: string
           decimal_autorise?: boolean | null
           description?: string | null
           diametre?: string | null
@@ -342,6 +345,7 @@ export type Database = {
       }
       sale_items: {
         Row: {
+          currency: string | null
           id: string
           product_id: string
           product_name: string
@@ -354,6 +358,7 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          currency?: string | null
           id?: string
           product_id: string
           product_name: string
@@ -366,6 +371,7 @@ export type Database = {
           unit_price: number
         }
         Update: {
+          currency?: string | null
           id?: string
           product_id?: string
           product_name?: string

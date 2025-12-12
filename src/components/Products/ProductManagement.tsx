@@ -37,6 +37,7 @@ interface Product {
   alert_threshold: number;
   is_active: boolean;
   sale_type: 'retail' | 'wholesale';
+  currency: 'USD' | 'HTG';
   description?: string;
   created_at: string;
   // Ceramic-specific fields
@@ -171,6 +172,7 @@ export const ProductManagement = () => {
     electromenager_couleur: string;
     electromenager_materiau: string;
     electromenager_installation: string;
+    currency: 'USD' | 'HTG';
   }>({
     name: '',
     category: 'alimentaires',
@@ -212,7 +214,8 @@ export const ProductManagement = () => {
     electromenager_classe_energie: '',
     electromenager_couleur: '',
     electromenager_materiau: '',
-    electromenager_installation: ''
+    electromenager_installation: '',
+    currency: 'HTG' as const
   });
 
   // Fonction pour afficher le stock selon la catégorie du produit
@@ -310,7 +313,11 @@ export const ProductManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProducts(data || []);
+      // Cast currency to expected type (database returns string)
+      setProducts((data || []).map(p => ({
+        ...p,
+        currency: (p.currency === 'USD' ? 'USD' : 'HTG') as 'USD' | 'HTG'
+      })));
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -364,7 +371,8 @@ export const ProductManagement = () => {
       electromenager_classe_energie: '',
       electromenager_couleur: '',
       electromenager_materiau: '',
-      electromenager_installation: ''
+      electromenager_installation: '',
+      currency: 'HTG'
     });
     setEditingProduct(null);
     // Reset dynamic fields
@@ -429,7 +437,8 @@ export const ProductManagement = () => {
       electromenager_classe_energie: product.electromenager_classe_energie || '',
       electromenager_couleur: product.electromenager_couleur || '',
       electromenager_materiau: product.electromenager_materiau || '',
-      electromenager_installation: product.electromenager_installation || ''
+      electromenager_installation: product.electromenager_installation || '',
+      currency: product.currency || 'HTG'
     });
     setIsDialogOpen(true);
   };
@@ -549,6 +558,7 @@ export const ProductManagement = () => {
         electromenager_couleur: formData.electromenager_couleur || null,
         electromenager_materiau: formData.electromenager_materiau || null,
         electromenager_installation: formData.electromenager_installation || null,
+        currency: formData.currency,
         // New dynamic category fields
         categorie_id: selectedCategorieId || null,
         sous_categorie_id: selectedSousCategorieId || null,
@@ -1116,6 +1126,21 @@ export const ProductManagement = () => {
                       <SelectContent className="pointer-events-auto z-[150]">
                         <SelectItem value="retail">Détail</SelectItem>
                         <SelectItem value="wholesale">Gros</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">Devise *</Label>
+                    <Select
+                      value={formData.currency}
+                      onValueChange={(value: 'USD' | 'HTG') => setFormData({...formData, currency: value})}
+                    >
+                      <SelectTrigger className="pointer-events-auto">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="pointer-events-auto z-[150]">
+                        <SelectItem value="HTG">HTG (Gourdes)</SelectItem>
+                        <SelectItem value="USD">USD (Dollars US)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1729,7 +1754,7 @@ export const ProductManagement = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-success font-medium">
-                      {product.price.toFixed(2)} HTG
+                      {product.currency === 'USD' ? '$' : ''}{product.price.toFixed(2)} {product.currency || 'HTG'}
                     </TableCell>
                     <TableCell>
                       {(() => {

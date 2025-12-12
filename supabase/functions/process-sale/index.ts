@@ -12,6 +12,7 @@ interface SaleItem {
   unit: string
   unit_price: number
   subtotal: number
+  currency?: 'USD' | 'HTG'
 }
 
 interface SaleRequest {
@@ -190,7 +191,7 @@ Deno.serve(async (req) => {
       const purchasePriceAtSale = currentProduct.purchase_price || 0
       const profitAmount = (item.unit_price - purchasePriceAtSale) * item.quantity
 
-      // Insert sale item with profit data
+      // Insert sale item with profit data and currency
       const { error: itemError } = await supabaseClient
         .from('sale_items')
         .insert([{
@@ -201,7 +202,8 @@ Deno.serve(async (req) => {
           unit_price: item.unit_price,
           subtotal: item.subtotal,
           purchase_price_at_sale: purchasePriceAtSale,
-          profit_amount: profitAmount
+          profit_amount: profitAmount,
+          currency: item.currency || 'HTG'
         }])
 
       if (itemError) {

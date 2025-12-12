@@ -46,6 +46,7 @@ interface Product {
   alert_threshold: number;
   is_active: boolean;
   sale_type: 'retail' | 'wholesale';
+  currency: 'USD' | 'HTG';
   // Ceramic-specific fields
   dimension?: string;
   surface_par_boite?: number;
@@ -142,14 +143,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     setSousCategoryFilter('all');
   }, [categoryFilter]);
 
-  // Utility function to format amounts with space as thousands separator
-  const formatAmount = (amount: number, currency = true): string => {
+  // Utility function to format amounts with space as thousands separator and currency
+  const formatAmount = (amount: number, currency: 'USD' | 'HTG' | boolean = true): string => {
     const formatted = amount.toLocaleString('fr-FR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
       useGrouping: true
     }).replace(/\s/g, ' '); // Ensure space separator
-    return currency ? `${formatted} HTG` : formatted;
+    
+    if (currency === false) return formatted;
+    if (currency === 'USD') return `$${formatted}`;
+    return `${formatted} HTG`;
   };
 
   // Utility function to convert decimal tonnage to fractional display
@@ -315,8 +319,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       if (error) throw error;
       
-      // Filter products with available stock
-      const availableProducts = (data || []).filter((product: Product) => {
+      // Filter products with available stock and cast currency
+      const availableProducts = (data || []).filter((product) => {
         let hasStock = false;
         
         if (product.category === 'ceramique') {
@@ -331,9 +335,12 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         }
         
         return hasStock;
-      });
+      }).map(p => ({
+        ...p,
+        currency: (p.currency === 'USD' ? 'USD' : 'HTG') as 'USD' | 'HTG'
+      }));
     
-      const byCat = availableProducts.reduce((acc: any, p: Product) => {
+      const byCat = availableProducts.reduce((acc: any, p) => {
         acc[p.category] = (acc[p.category] || 0) + 1;
         return acc;
       }, {});
@@ -767,7 +774,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             quantity: quantityToSend, // En m² pour céramique, sinon quantité normale
             unit: item.category === 'fer' ? 'barre' : (item.category === 'ceramique' ? 'm²' : (item.displayUnit || item.unit)),
             unit_price: item.actualPrice !== undefined ? item.actualPrice / item.cartQuantity : item.price,
-            subtotal: item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity)
+            subtotal: item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity),
+            currency: item.currency || 'HTG'
           };
         })
       };
@@ -1255,13 +1263,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                           {/* Pricing */}
                           <div className="mt-2">
                             {product.category === 'ceramique' && product.prix_m2 ? (
-                              <div className="text-success font-bold text-lg">{formatAmount(product.prix_m2)}/m²</div>
+                              <div className="text-success font-bold text-lg">{formatAmount(product.prix_m2, product.currency)}/m²</div>
                            ) : product.category === 'fer' && product.prix_par_barre ? (
-                              <div className="text-success font-bold text-lg">{formatAmount(product.prix_par_barre)}/barre</div>
+                              <div className="text-success font-bold text-lg">{formatAmount(product.prix_par_barre, product.currency)}/barre</div>
                             ) : product.category === 'vetements' ? (
-                              <div className="text-success font-bold text-lg">{formatAmount(product.price)}/{product.unit}</div>
+                              <div className="text-success font-bold text-lg">{formatAmount(product.price, product.currency)}/{product.unit}</div>
                             ) : (
-                              <div className="text-success font-bold text-lg">{formatAmount(product.price)}</div>
+                              <div className="text-success font-bold text-lg">{formatAmount(product.price, product.currency)}</div>
                             )}
                           </div>
                           
@@ -1363,7 +1371,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                             }
                           </p>
                           <p className="text-sm font-medium text-success mt-1">
-                            {formatAmount(itemTotal)}
+                            {formatAmount(itemTotal, item.currency)}
                           </p>
                         </div>
                     <div className="flex items-center gap-2 shrink-0">
