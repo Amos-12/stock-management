@@ -282,7 +282,7 @@ export const SpecificationFieldsManager = ({
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[100]" position="popper" sideOffset={5}>
                           <SelectItem value="text">Texte</SelectItem>
                           <SelectItem value="number">Nombre</SelectItem>
                           <SelectItem value="select">Liste de sélection</SelectItem>
