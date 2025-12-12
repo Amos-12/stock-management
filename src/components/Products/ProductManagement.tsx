@@ -1044,7 +1044,7 @@ export const ProductManagement = () => {
                   {formData.category !== 'ceramique' && formData.category !== 'fer' && (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="price">Prix de vente (HTG) *</Label>
+                        <Label htmlFor="price">Prix de vente ({formData.currency}) *</Label>
                         <Input
                           id="price"
                           type="number"
@@ -1052,23 +1052,23 @@ export const ProductManagement = () => {
                           required
                           value={formData.price}
                           onChange={(e) => setFormData({...formData, price: e.target.value})}
-                          placeholder="0.00 HTG"
+                          placeholder={formData.currency === 'USD' ? '$0.00' : '0.00 HTG'}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="purchase_price">Prix d'achat (HTG)</Label>
+                        <Label htmlFor="purchase_price">Prix d'achat ({formData.currency})</Label>
                         <Input
                           id="purchase_price"
                           type="number"
                           step="0.01"
                           value={formData.purchase_price}
                           onChange={(e) => setFormData({...formData, purchase_price: e.target.value})}
-                          placeholder="0.00 HTG"
+                          placeholder={formData.currency === 'USD' ? '$0.00' : '0.00 HTG'}
                         />
                         <p className="text-xs text-muted-foreground">Coût payé par le magasin (optionnel)</p>
                         {formData.purchase_price && formData.price && (
                           <p className="text-xs font-medium text-success">
-                            Bénéfice: {(parseFloat(formData.price) - parseFloat(formData.purchase_price)).toFixed(2)} HTG
+                            Bénéfice: {formData.currency === 'USD' ? '$' : ''}{(parseFloat(formData.price) - parseFloat(formData.purchase_price)).toFixed(2)}{formData.currency === 'HTG' ? ' HTG' : ''}
                             ({(((parseFloat(formData.price) - parseFloat(formData.purchase_price)) / parseFloat(formData.price)) * 100).toFixed(1)}%)
                           </p>
                         )}
@@ -1175,7 +1175,7 @@ export const ProductManagement = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="prix_m2">Prix de vente par m² (HTG) *</Label>
+                      <Label htmlFor="prix_m2">Prix de vente par m² ({formData.currency}) *</Label>
                       <Input
                         id="prix_m2"
                         type="number"
@@ -1183,12 +1183,12 @@ export const ProductManagement = () => {
                         required
                         value={formData.prix_m2}
                         onChange={(e) => setFormData({...formData, prix_m2: e.target.value})}
-                        placeholder="1200.00"
+                        placeholder={formData.currency === 'USD' ? '$0.00' : '0.00 HTG'}
                       />
                       <p className="text-xs text-muted-foreground">Prix de revente au client</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="prix_achat_m2">Prix d'achat par m² (HTG) *</Label>
+                      <Label htmlFor="prix_achat_m2">Prix d'achat par m² ({formData.currency}) *</Label>
                       <Input
                         id="prix_achat_m2"
                         type="number"
@@ -1199,12 +1199,12 @@ export const ProductManagement = () => {
                           const prixAchat = e.target.value;
                           setFormData({...formData, prix_achat_m2: prixAchat});
                         }}
-                        placeholder="840.00"
+                        placeholder={formData.currency === 'USD' ? '$0.00' : '0.00 HTG'}
                       />
                       <p className="text-xs text-muted-foreground">Coût unitaire payé par le magasin</p>
                       {formData.prix_achat_m2 && formData.prix_m2 && (
                         <p className="text-xs font-medium text-success">
-                          Bénéfice: {(parseFloat(formData.prix_m2) - parseFloat(formData.prix_achat_m2)).toFixed(2)} HTG/m²
+                          Bénéfice: {formData.currency === 'USD' ? '$' : ''}{(parseFloat(formData.prix_m2) - parseFloat(formData.prix_achat_m2)).toFixed(2)}{formData.currency === 'HTG' ? ' HTG' : ''}/m²
                           ({(((parseFloat(formData.prix_m2) - parseFloat(formData.prix_achat_m2)) / parseFloat(formData.prix_m2)) * 100).toFixed(1)}%)
                         </p>
                       )}
@@ -1283,7 +1283,7 @@ export const ProductManagement = () => {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="prix_par_barre">Prix par barre (HTG) *</Label>
+                      <Label htmlFor="prix_par_barre">Prix par barre ({formData.currency}) *</Label>
                       <Input
                         id="prix_par_barre"
                         type="number"
@@ -1291,7 +1291,7 @@ export const ProductManagement = () => {
                         required
                         value={formData.prix_par_barre}
                         onChange={(e) => setFormData({...formData, prix_par_barre: e.target.value})}
-                        placeholder="750.00"
+                        placeholder={formData.currency === 'USD' ? '$0.00' : '0.00 HTG'}
                       />
                       <p className="text-xs text-muted-foreground">Prix unitaire d'une barre</p>
                     </div>
@@ -1309,14 +1309,14 @@ export const ProductManagement = () => {
                       <p className="text-xs text-muted-foreground">Accepte les décimales pour les fractions de tonne</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="purchase_price">Prix d'achat par barre (HTG)</Label>
+                      <Label htmlFor="purchase_price">Prix d'achat par barre ({formData.currency})</Label>
                       <Input
                         id="purchase_price"
                         type="number"
                         step="0.01"
                         value={formData.purchase_price}
                         onChange={(e) => setFormData({...formData, purchase_price: e.target.value})}
-                        placeholder="525.00"
+                        placeholder={formData.currency === 'USD' ? '$0.00' : '0.00 HTG'}
                       />
                       <p className="text-xs text-muted-foreground">Coût unitaire payé par le magasin</p>
                     </div>
