@@ -55,6 +55,39 @@ export type Database = {
           },
         ]
       }
+      categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          nom: string
+          ordre: number | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          nom: string
+          ordre?: number | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          nom?: string
+          ordre?: number | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       company_settings: {
         Row: {
           address: string
@@ -119,6 +152,7 @@ export type Database = {
           bloc_poids: number | null
           bloc_type: string | null
           capacite: number | null
+          categorie_id: string | null
           category: Database["public"]["Enums"]["product_category"]
           created_at: string
           created_by: string | null
@@ -148,6 +182,7 @@ export type Database = {
           purchase_price: number | null
           quantity: number
           sale_type: Database["public"]["Enums"]["sale_type"]
+          sous_categorie_id: string | null
           specifications_techniques: Json | null
           stock_barre: number | null
           stock_boite: number | null
@@ -166,6 +201,7 @@ export type Database = {
           bloc_poids?: number | null
           bloc_type?: string | null
           capacite?: number | null
+          categorie_id?: string | null
           category: Database["public"]["Enums"]["product_category"]
           created_at?: string
           created_by?: string | null
@@ -195,6 +231,7 @@ export type Database = {
           purchase_price?: number | null
           quantity?: number
           sale_type?: Database["public"]["Enums"]["sale_type"]
+          sous_categorie_id?: string | null
           specifications_techniques?: Json | null
           stock_barre?: number | null
           stock_boite?: number | null
@@ -213,6 +250,7 @@ export type Database = {
           bloc_poids?: number | null
           bloc_type?: string | null
           capacite?: number | null
+          categorie_id?: string | null
           category?: Database["public"]["Enums"]["product_category"]
           created_at?: string
           created_by?: string | null
@@ -242,6 +280,7 @@ export type Database = {
           purchase_price?: number | null
           quantity?: number
           sale_type?: Database["public"]["Enums"]["sale_type"]
+          sous_categorie_id?: string | null
           specifications_techniques?: Json | null
           stock_barre?: number | null
           stock_boite?: number | null
@@ -254,7 +293,22 @@ export type Database = {
           vetement_taille?: string | null
           voltage?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_categorie_id_fkey"
+            columns: ["categorie_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_sous_categorie_id_fkey"
+            columns: ["sous_categorie_id"]
+            isOneToOne: false
+            referencedRelation: "sous_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -408,6 +462,100 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      sous_categories: {
+        Row: {
+          categorie_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          nom: string
+          ordre: number | null
+          slug: string
+          stock_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          categorie_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          nom: string
+          ordre?: number | null
+          slug: string
+          stock_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          categorie_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          nom?: string
+          ordre?: number | null
+          slug?: string
+          stock_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sous_categories_categorie_id_fkey"
+            columns: ["categorie_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      specifications_modeles: {
+        Row: {
+          created_at: string | null
+          id: string
+          label: string
+          nom_champ: string
+          obligatoire: boolean | null
+          options: Json | null
+          ordre: number | null
+          sous_categorie_id: string
+          type_champ: string
+          unite: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          label: string
+          nom_champ: string
+          obligatoire?: boolean | null
+          options?: Json | null
+          ordre?: number | null
+          sous_categorie_id: string
+          type_champ: string
+          unite?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          label?: string
+          nom_champ?: string
+          obligatoire?: boolean | null
+          options?: Json | null
+          ordre?: number | null
+          sous_categorie_id?: string
+          type_champ?: string
+          unite?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specifications_modeles_sous_categorie_id_fkey"
+            columns: ["sous_categorie_id"]
+            isOneToOne: false
+            referencedRelation: "sous_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_movements: {
         Row: {
