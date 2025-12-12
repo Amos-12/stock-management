@@ -14,6 +14,7 @@ export interface CartItem {
   bars_per_ton?: number;
   sourceUnit?: 'barre' | 'tonne';
   sourceValue?: number;
+  currency?: 'USD' | 'HTG';
 }
 
 export interface CompanySettings {
@@ -73,10 +74,12 @@ const barresToTonnage = (barres: number, barsPerTon: number): number => {
   return barres / barsPerTon;
 };
 
-const formatAmount = (amount: number, currency = true, compact = false): string => {
+const formatAmount = (amount: number, currency: 'USD' | 'HTG' | boolean = true, compact = false): string => {
   const separator = compact ? '' : ' '; // No space in compact mode
   const formatted = amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, separator);
-  return currency ? `${formatted} HTG` : formatted;
+  if (currency === false) return formatted;
+  if (currency === 'USD') return `$${formatted}`;
+  return `${formatted} HTG`;
 };
 
 export const generateReceipt = (
@@ -284,13 +287,14 @@ export const generateReceipt = (
     
     pdf.text(qtyText, qtyCol, yPos);
     
-    // Unit price
+    // Unit price with currency
     const unitPrice = item.actualPrice ? item.actualPrice / item.cartQuantity : item.price;
-    pdf.text(formatAmount(unitPrice, false, true), priceCol, yPos);
+    const itemCurrency = item.currency || 'HTG';
+    pdf.text(formatAmount(unitPrice, itemCurrency, true), priceCol, yPos);
     
-    // Item total
+    // Item total with currency
     const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
-    pdf.text(formatAmount(itemTotal, false, true), amountCol, yPos, { align: 'right' });
+    pdf.text(formatAmount(itemTotal, itemCurrency, true), amountCol, yPos, { align: 'right' });
     yPos += 5;
     
     if (yPos > 270) {
@@ -513,11 +517,13 @@ export const generateInvoice = (
     }
     pdf.text(unitText, 140, yPos, { align: 'right' });
     
+    // Unit price and total with currency
+    const itemCurrency = item.currency || 'HTG';
     const unitPrice = item.actualPrice ? item.actualPrice / item.cartQuantity : item.price;
-    pdf.text(formatAmount(unitPrice, false), 160, yPos, { align: 'right' });
+    pdf.text(formatAmount(unitPrice, itemCurrency), 160, yPos, { align: 'right' });
     
     const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
-    pdf.text(formatAmount(itemTotal, false), 188, yPos, { align: 'right' });
+    pdf.text(formatAmount(itemTotal, itemCurrency), 188, yPos, { align: 'right' });
     yPos += 6;
   });
   
