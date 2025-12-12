@@ -1,0 +1,411 @@
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FolderTree, Plus, Edit, Trash2, Layers, Settings } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { useCategories, useSousCategories, Category, SousCategorie } from '@/hooks/useCategories';
+import { SubcategoryManagement } from './SubcategoryManagement';
+import { SpecificationFieldsManager } from './SpecificationFieldsManager';
+
+export const CategoryManagement = () => {
+  const { categories, loading, refetch } = useCategories();
+  const { sousCategories, refetch: refetchSousCategories } = useSousCategories();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{open: boolean, categoryId: string | null, categoryName: string}>({
+    open: false, 
+    categoryId: null,
+    categoryName: ''
+  });
+  const [activeTab, setActiveTab] = useState('categories');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedSousCategoryId, setSelectedSousCategoryId] = useState<string | null>(null);
+  
+  const [formData, setFormData] = useState({
+    nom: '',
+    description: '',
+    slug: '',
+    is_active: true,
+    ordre: 0
+  });
+
+  const resetForm = () => {
+    setFormData({
+      nom: '',
+      description: '',
+      slug: '',
+      is_active: true,
+      ordre: categories.length
+    });
+    setEditingCategory(null);
+  };
+
+  const generateSlug = (nom: string) => {
+    return nom
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const slug = formData.slug || generateSlug(formData.nom);
+      
+      if (editingCategory) {
+        const { error } = await supabase
+          .from('categories')
+          .update({
+            nom: formData.nom,
+            description: formData.description || null,
+            slug,
+            is_active: formData.is_active,
+            ordre: formData.ordre
+          })
+          .eq('id', editingCategory.id);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Catégorie mise à jour",
+          description: `La catégorie "${formData.nom}" a été modifiée.`
+        });
+      } else {
+        const { error } = await supabase
+          .from('categories')
+          .insert({
+            nom: formData.nom,
+            description: formData.description || null,
+            slug,
+            is_active: formData.is_active,
+            ordre: formData.ordre
+          });
+
+        if (error) throw error;
+        
+        toast({
+          title: "Catégorie créée",
+          description: `La catégorie "${formData.nom}" a été ajoutée.`
+        });
+      }
+
+      setIsDialogOpen(false);
+      resetForm();
+      refetch();
+    } catch (error: any) {
+      console.error('Error saving category:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de sauvegarder la catégorie.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEdit = (category: Category) => {
+    setEditingCategory(category);
+    setFormData({
+      nom: category.nom,
+      description: category.description || '',
+      slug: category.slug,
+      is_active: category.is_active,
+      ordre: category.ordre
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteDialog.categoryId) return;
+
+    try {
+      // Check if category has products
+      const { data: products } = await supabase
+        .from('products')
+        .select('id')
+        .eq('categorie_id', deleteDialog.categoryId)
+        .limit(1);
+
+      if (products && products.length > 0) {
+        toast({
+          title: "Impossible de supprimer",
+          description: "Cette catégorie contient des produits. Supprimez d'abord les produits.",
+          variant: "destructive"
+        });
+        setDeleteDialog({ open: false, categoryId: null, categoryName: '' });
+        return;
+      }
+
+      // Check if category has subcategories
+      const { data: subCategories } = await supabase
+        .from('sous_categories')
+        .select('id')
+        .eq('categorie_id', deleteDialog.categoryId)
+        .limit(1);
+
+      if (subCategories && subCategories.length > 0) {
+        toast({
+          title: "Impossible de supprimer",
+          description: "Cette catégorie contient des sous-catégories. Supprimez d'abord les sous-catégories.",
+          variant: "destructive"
+        });
+        setDeleteDialog({ open: false, categoryId: null, categoryName: '' });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', deleteDialog.categoryId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Catégorie supprimée",
+        description: `La catégorie "${deleteDialog.categoryName}" a été supprimée.`
+      });
+      
+      refetch();
+    } catch (error: any) {
+      console.error('Error deleting category:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de supprimer la catégorie.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteDialog({ open: false, categoryId: null, categoryName: '' });
+    }
+  };
+
+  const getSousCategoriesCount = (categoryId: string) => {
+    return sousCategories.filter(sc => sc.categorie_id === categoryId).length;
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <div className="text-muted-foreground">Chargement...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="categories" className="flex items-center gap-2">
+            <FolderTree className="h-4 w-4" />
+            Catégories
+          </TabsTrigger>
+          <TabsTrigger value="subcategories" className="flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            Sous-catégories
+          </TabsTrigger>
+          <TabsTrigger value="specifications" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Spécifications
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="categories">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <FolderTree className="h-5 w-5" />
+                Gestion des Catégories
+              </CardTitle>
+              <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                setIsDialogOpen(open);
+                if (!open) resetForm();
+              }}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nouvelle Catégorie
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingCategory ? 'Modifier la Catégorie' : 'Nouvelle Catégorie'}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nom">Nom *</Label>
+                      <Input
+                        id="nom"
+                        value={formData.nom}
+                        onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="slug">Slug (auto-généré si vide)</Label>
+                      <Input
+                        id="slug"
+                        value={formData.slug}
+                        onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                        placeholder={generateSlug(formData.nom)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        rows={3}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ordre">Ordre d'affichage</Label>
+                      <Input
+                        id="ordre"
+                        type="number"
+                        value={formData.ordre}
+                        onChange={(e) => setFormData({ ...formData, ordre: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="is_active">Active</Label>
+                      <Switch
+                        id="is_active"
+                        checked={formData.is_active}
+                        onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                        Annuler
+                      </Button>
+                      <Button type="submit">
+                        {editingCategory ? 'Mettre à jour' : 'Créer'}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ordre</TableHead>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Slug</TableHead>
+                    <TableHead>Sous-catégories</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell>{category.ordre}</TableCell>
+                      <TableCell className="font-medium">{category.nom}</TableCell>
+                      <TableCell className="text-muted-foreground">{category.slug}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {getSousCategoriesCount(category.id)} sous-catégories
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={category.is_active ? "default" : "secondary"}>
+                          {category.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedCategoryId(category.id);
+                              setActiveTab('subcategories');
+                            }}
+                          >
+                            <Layers className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(category)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteDialog({
+                              open: true,
+                              categoryId: category.id,
+                              categoryName: category.nom
+                            })}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="subcategories">
+          <SubcategoryManagement 
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={setSelectedCategoryId}
+            onSelectSubcategory={(id) => {
+              setSelectedSousCategoryId(id);
+              setActiveTab('specifications');
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="specifications">
+          <SpecificationFieldsManager
+            selectedSousCategorieId={selectedSousCategoryId}
+            onSelectSousCategorie={setSelectedSousCategoryId}
+          />
+        </TabsContent>
+      </Tabs>
+
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer la catégorie "{deleteDialog.categoryName}" ?
+              Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+};
