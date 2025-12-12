@@ -256,12 +256,14 @@ export const generateReceipt = (
   pdf.line(margin, yPos, width - margin, yPos);
   yPos += 5;
   
-  // Items header - responsive column positioning with better spacing
-  const qtyCol = width === 58 ? 25 : 38;
-  const priceCol = width === 58 ? 40 : 55;
-  const amountCol = width - margin - 2;
+  // Items header - optimized column positioning to prevent overlap
+  const descMaxWidth = width === 58 ? 18 : 24;  // Max width for description
+  const qtyCol = width === 58 ? 22 : 28;        // Quantity column start
+  const priceCol = width === 58 ? 34 : 44;      // Unit price column start
+  const amountCol = width - margin;             // Total column (right-aligned)
   
   pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(width === 58 ? 7 : 8);
   pdf.text('Article', margin, yPos);
   pdf.text('Qté', qtyCol, yPos);
   pdf.text('P.U.', priceCol, yPos);
@@ -272,7 +274,8 @@ export const generateReceipt = (
   
   // Items
   pdf.setFont('helvetica', 'normal');
-  const maxNameLength = width === 58 ? 9 : 14;
+  pdf.setFontSize(width === 58 ? 6 : 7);
+  const maxNameLength = width === 58 ? 7 : 10;
   
   items.forEach(item => {
     // Build item description with details
@@ -298,14 +301,16 @@ export const generateReceipt = (
     
     pdf.text(qtyText, qtyCol, yPos);
     
-    // Unit price with currency (compact)
+    // Unit price with currency (compact) - format without currency symbol to save space
     const unitPrice = item.actualPrice ? item.actualPrice / item.cartQuantity : item.price;
-    const itemCurrency = item.currency || 'HTG';
-    pdf.text(formatAmount(unitPrice, itemCurrency, true), priceCol, yPos);
+    const formattedPrice = Math.round(unitPrice).toLocaleString('fr-FR');
+    pdf.text(formattedPrice, priceCol, yPos);
     
     // Item total with currency
     const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
-    pdf.text(formatAmount(itemTotal, itemCurrency, true), amountCol, yPos, { align: 'right' });
+    const itemCurrency = item.currency || 'HTG';
+    const formattedTotal = Math.round(itemTotal).toLocaleString('fr-FR') + (itemCurrency === 'USD' ? '$' : '');
+    pdf.text(formattedTotal, amountCol, yPos, { align: 'right' });
     yPos += 5;
     
     if (yPos > 270) {
