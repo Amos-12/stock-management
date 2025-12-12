@@ -71,6 +71,16 @@ interface Product {
   vetement_taille?: string;
   vetement_genre?: string;
   vetement_couleur?: string;
+  // Électroménager-specific fields
+  electromenager_sous_categorie?: string;
+  electromenager_marque?: string;
+  electromenager_modele?: string;
+  electromenager_garantie_mois?: number;
+  electromenager_niveau_sonore_db?: number;
+  electromenager_classe_energie?: string;
+  electromenager_couleur?: string;
+  electromenager_materiau?: string;
+  electromenager_installation?: string;
 }
 
 interface CartItem extends Product {
@@ -928,6 +938,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     { value: 'energie', label: 'Énergie' },
     { value: 'blocs', label: 'Blocs' },
     { value: 'vetements', label: 'Vêtements' },
+    { value: 'electromenager', label: 'Électroménager' },
     { value: 'autres', label: 'Autres' }
   ];
 
