@@ -31,6 +31,8 @@ export interface CompanySettings {
   logo_width?: number;
   logo_height?: number;
   payment_terms?: string;
+  usd_htg_rate?: number;
+  default_display_currency?: 'USD' | 'HTG';
 }
 
 export interface SaleData {
@@ -307,11 +309,46 @@ export const generateReceipt = (
   pdf.line(margin, yPos, width - margin, yPos);
   yPos += 5;
   
-  // Totals
+  // Calculate totals by currency
+  let totalUSD = 0;
+  let totalHTG = 0;
+  items.forEach(item => {
+    const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
+    if (item.currency === 'USD') {
+      totalUSD += itemTotal;
+    } else {
+      totalHTG += itemTotal;
+    }
+  });
+  const hasMultipleCurrencies = totalUSD > 0 && totalHTG > 0;
+  const rate = companySettings.usd_htg_rate || 132;
+  const displayCurrency = companySettings.default_display_currency || 'HTG';
+  
+  // Totals by currency if multi-currency
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Sous-total HT:', margin, yPos);
-  pdf.text(formatAmount(saleData.subtotal, false, true), width - margin, yPos, { align: 'right' });
-  yPos += 5;
+  if (hasMultipleCurrencies) {
+    if (totalHTG > 0) {
+      pdf.text('Sous-total HTG:', margin, yPos);
+      pdf.text(formatAmount(totalHTG, 'HTG', true), width - margin, yPos, { align: 'right' });
+      yPos += 5;
+    }
+    if (totalUSD > 0) {
+      pdf.text('Sous-total USD:', margin, yPos);
+      pdf.text(formatAmount(totalUSD, 'USD', true), width - margin, yPos, { align: 'right' });
+      yPos += 5;
+    }
+    // Exchange rate
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(regularFontSize - 1);
+    pdf.text(`Taux: 1 USD = ${rate.toFixed(2)} HTG`, margin, yPos);
+    yPos += 5;
+    pdf.setFontSize(regularFontSize);
+    pdf.setFont('helvetica', 'bold');
+  } else {
+    pdf.text('Sous-total HT:', margin, yPos);
+    pdf.text(formatAmount(saleData.subtotal, false, true), width - margin, yPos, { align: 'right' });
+    yPos += 5;
+  }
   
   if (saleData.discount_amount > 0) {
     pdf.setFont('helvetica', 'normal');
@@ -330,12 +367,25 @@ export const generateReceipt = (
   pdf.text(formatAmount(tvaAmount, false, true), width - margin, yPos, { align: 'right' });
   yPos += 5;
   
-  // Total TTC
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(titleFontSize - 1);
-  pdf.text('TOTAL TTC:', margin, yPos);
-  pdf.text(formatAmount(saleData.total_amount + tvaAmount, true, true), width - margin, yPos, { align: 'right' });
-  yPos += 6;
+  // Unified total for multi-currency
+  if (hasMultipleCurrencies) {
+    const unifiedAmount = displayCurrency === 'HTG' 
+      ? totalHTG + (totalUSD * rate) + tvaAmount
+      : totalUSD + (totalHTG / rate) + (tvaAmount / rate);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(titleFontSize - 1);
+    pdf.text('TOTAL UNIFIÉ:', margin, yPos);
+    pdf.text(formatAmount(unifiedAmount, displayCurrency, true), width - margin, yPos, { align: 'right' });
+    yPos += 6;
+  } else {
+    // Total TTC
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(titleFontSize - 1);
+    pdf.text('TOTAL TTC:', margin, yPos);
+    pdf.text(formatAmount(saleData.total_amount + tvaAmount, true, true), width - margin, yPos, { align: 'right' });
+    yPos += 6;
+  }
   
   // Payment method
   pdf.setFontSize(regularFontSize);

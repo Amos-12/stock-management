@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Building2, Save, Loader2 } from 'lucide-react';
+import { Building2, Save, Loader2, DollarSign } from 'lucide-react';
 
 interface CompanySettings {
   id: string;
@@ -23,6 +24,8 @@ interface CompanySettings {
   logo_position_y?: number;
   logo_width?: number;
   logo_height?: number;
+  usd_htg_rate?: number;
+  default_display_currency?: 'USD' | 'HTG';
 }
 
 export const CompanySettings = () => {
@@ -46,7 +49,10 @@ export const CompanySettings = () => {
         .single();
 
       if (error) throw error;
-      setSettings(data);
+      setSettings({
+        ...data,
+        default_display_currency: (data.default_display_currency as 'USD' | 'HTG') || 'HTG'
+      });
       if (data.logo_url) {
         setLogoPreview(data.logo_url);
       }
@@ -149,6 +155,8 @@ export const CompanySettings = () => {
           logo_position_y: settings.logo_position_y,
           logo_width: settings.logo_width,
           logo_height: settings.logo_height,
+          usd_htg_rate: settings.usd_htg_rate,
+          default_display_currency: settings.default_display_currency,
         })
         .eq('id', settings.id);
 
@@ -386,6 +394,71 @@ export const CompanySettings = () => {
           <p className="text-xs text-muted-foreground">
             Conditions de paiement affichées sur les factures
           </p>
+        </div>
+
+        {/* Currency Settings Section */}
+        <div className="space-y-4 pt-6 border-t">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            <div>
+              <Label className="text-base font-semibold">Paramètres de devises</Label>
+              <p className="text-sm text-muted-foreground">
+                Configurez le taux de conversion pour afficher les totaux unifiés
+              </p>
+            </div>
+          </div>
+          
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="usd_htg_rate">Taux USD → HTG</Label>
+              <Input
+                id="usd_htg_rate"
+                type="number"
+                step="0.01"
+                min="1"
+                value={settings.usd_htg_rate || 132}
+                onChange={(e) => setSettings({ ...settings, usd_htg_rate: parseFloat(e.target.value) || 132 })}
+                placeholder="132.00"
+              />
+              <p className="text-xs text-muted-foreground">
+                1 USD = {(settings.usd_htg_rate || 132).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="default_display_currency">Devise d'affichage par défaut</Label>
+              <Select
+                value={settings.default_display_currency || 'HTG'}
+                onValueChange={(value: 'USD' | 'HTG') => setSettings({ ...settings, default_display_currency: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="HTG">HTG (Gourdes haïtiennes)</SelectItem>
+                  <SelectItem value="USD">USD (Dollars US)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Devise utilisée pour les totaux unifiés sur les reçus
+              </p>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="p-4 rounded-lg bg-muted/50 border">
+            <p className="text-sm font-medium mb-2">Aperçu de conversion</p>
+            <div className="grid gap-2 text-sm">
+              <div className="flex justify-between">
+                <span>100 USD =</span>
+                <span className="font-mono">{((settings.usd_htg_rate || 132) * 100).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG</span>
+              </div>
+              <div className="flex justify-between">
+                <span>1,000 HTG =</span>
+                <span className="font-mono">${(1000 / (settings.usd_htg_rate || 132)).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} USD</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-4">

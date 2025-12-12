@@ -664,6 +664,40 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     return getTotalAmount();
   };
 
+  // Get totals by currency
+  const getTotalsByCurrency = () => {
+    let totalUSD = 0;
+    let totalHTG = 0;
+    
+    cart.forEach(item => {
+      const price = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
+      if (item.currency === 'USD') {
+        totalUSD += price;
+      } else {
+        totalHTG += price;
+      }
+    });
+    
+    return { totalUSD, totalHTG };
+  };
+
+  // Calculate unified total in preferred currency
+  const getUnifiedTotal = () => {
+    const { totalUSD, totalHTG } = getTotalsByCurrency();
+    const rate = companySettings?.usd_htg_rate || 132;
+    const displayCurrency = companySettings?.default_display_currency || 'HTG';
+    
+    if (displayCurrency === 'HTG') {
+      // Convert everything to HTG
+      const unifiedHTG = totalHTG + (totalUSD * rate);
+      return { amount: unifiedHTG, currency: 'HTG' as const };
+    } else {
+      // Convert everything to USD
+      const unifiedUSD = totalUSD + (totalHTG / rate);
+      return { amount: unifiedUSD, currency: 'USD' as const };
+    }
+  };
+
   const getDiscountAmount = () => {
     const subtotal = getSubtotal();
     const discVal = parseFloat(discountValue) || 0;
@@ -1513,15 +1547,38 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 return (
                   <div key={item.id} className="flex justify-between text-sm mb-2 gap-2">
                     <span className="break-words">{item.name} × {displayQuantity}</span>
-                    <span className="font-medium shrink-0">{formatAmount(itemTotal)}</span>
+                    <span className="font-medium shrink-0">{formatAmount(itemTotal, item.currency)}</span>
                   </div>
                 );
               })}
               <div className="border-t mt-3 pt-3 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span><strong>Sous-total</strong></span>
-                  <span><strong>{formatAmount(getSubtotal())}</strong></span>
-                </div>
+                {/* Subtotals by currency */}
+                {(() => {
+                  const { totalUSD, totalHTG } = getTotalsByCurrency();
+                  const hasMultipleCurrencies = totalUSD > 0 && totalHTG > 0;
+                  
+                  return (
+                    <>
+                      {totalHTG > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>Sous-total HTG</span>
+                          <span className="font-medium">{formatAmount(totalHTG, 'HTG')}</span>
+                        </div>
+                      )}
+                      {totalUSD > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>Sous-total USD</span>
+                          <span className="font-medium">{formatAmount(totalUSD, 'USD')}</span>
+                        </div>
+                      )}
+                      {hasMultipleCurrencies && (
+                        <div className="text-xs text-muted-foreground border-t pt-2">
+                          Taux: 1 USD = {(companySettings?.usd_htg_rate || 132).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
                 
                 {/* Discount Section */}
                 <div className="space-y-2 border-t pt-2">
@@ -1566,10 +1623,27 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   )}
                 </div>
                 
-                <div className="border-t pt-2 flex justify-between font-semibold text-lg">
-                  <span>Total</span>
-                  <span className="text-success">{formatAmount(getFinalTotal())}</span>
-                </div>
+                {/* Unified Total */}
+                {(() => {
+                  const { totalUSD, totalHTG } = getTotalsByCurrency();
+                  const hasMultipleCurrencies = totalUSD > 0 && totalHTG > 0;
+                  const unified = getUnifiedTotal();
+                  
+                  return (
+                    <div className="border-t pt-2 space-y-1">
+                      {hasMultipleCurrencies && (
+                        <div className="flex justify-between text-sm font-medium text-primary">
+                          <span>Total unifié</span>
+                          <span>{formatAmount(unified.amount, unified.currency)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-semibold text-lg">
+                        <span>Total</span>
+                        <span className="text-success">{formatAmount(getFinalTotal())}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
