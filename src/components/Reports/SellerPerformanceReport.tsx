@@ -245,7 +245,7 @@ export const SellerPerformanceReport = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Chiffre d'affaires total</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
+                <p className="text-lg font-bold">{formatCurrency(totalRevenue)}</p>
               </div>
               <div className="p-3 bg-primary/10 rounded-full">
                 <DollarSign className="w-6 h-6 text-primary" />
@@ -259,7 +259,7 @@ export const SellerPerformanceReport = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Ventes totales</p>
-                <p className="text-2xl font-bold">{totalSales}</p>
+                <p className="text-lg font-bold">{totalSales}</p>
               </div>
               <div className="p-3 bg-blue-500/10 rounded-full">
                 <ShoppingCart className="w-6 h-6 text-blue-500" />
@@ -273,7 +273,7 @@ export const SellerPerformanceReport = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Bénéfice total</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalProfit)}</p>
+                <p className="text-lg font-bold">{formatCurrency(totalProfit)}</p>
               </div>
               <div className="p-3 bg-green-500/10 rounded-full">
                 <TrendingUp className="w-6 h-6 text-green-500" />
@@ -287,7 +287,7 @@ export const SellerPerformanceReport = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Vendeurs actifs</p>
-                <p className="text-2xl font-bold">{sellers.length}</p>
+                <p className="text-lg font-bold">{sellers.length}</p>
               </div>
               <div className="p-3 bg-purple-500/10 rounded-full">
                 <Users className="w-6 h-6 text-purple-500" />

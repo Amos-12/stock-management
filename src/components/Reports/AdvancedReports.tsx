@@ -30,7 +30,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { cn, formatNumber } from '@/lib/utils';
 
 interface SalesData {
   date: string;
@@ -246,13 +246,13 @@ export const AdvancedReports = () => {
 Rapport de Ventes - ${format(dateRange.from, 'dd/MM/yyyy', { locale: fr })} au ${format(dateRange.to, 'dd/MM/yyyy', { locale: fr })}
 
 Résumé:
-Chiffre d'affaires total,${reportData.totalRevenue.toFixed(2)} HTG
+Chiffre d'affaires total,${formatNumber(reportData.totalRevenue)} HTG
 Nombre de ventes,${reportData.totalSales}
-Panier moyen,${reportData.averageOrderValue.toFixed(2)} HTG
+Panier moyen,${formatNumber(reportData.averageOrderValue)} HTG
 
 Top Produits:
 Produit,Quantité vendue,Chiffre d'affaires
-${reportData.topProducts.map(p => `${p.product_name},${p.quantity_sold},${p.total_revenue.toFixed(2)} HTG`).join('\n')}
+${reportData.topProducts.map(p => `${p.product_name},${p.quantity_sold},${formatNumber(p.total_revenue)} HTG`).join('\n')}
 
 Méthodes de paiement:
 Méthode,Nombre,Pourcentage
@@ -285,10 +285,10 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
       ['Date de génération', format(new Date(), 'dd/MM/yyyy HH:mm')],
       [''],
       ['Métrique', 'Valeur'],
-      ['Chiffre d\'affaires total', `${reportData.totalRevenue.toFixed(2)} HTG`],
-      ['Bénéfices totaux', `${reportData.totalProfit.toFixed(2)} HTG`],
+      ['Chiffre d\'affaires total', `${formatNumber(reportData.totalRevenue)} HTG`],
+      ['Bénéfices totaux', `${formatNumber(reportData.totalProfit)} HTG`],
       ['Nombre total de ventes', reportData.totalSales],
-      ['Panier moyen', `${reportData.averageOrderValue.toFixed(2)} HTG`]
+      ['Panier moyen', `${formatNumber(reportData.averageOrderValue)} HTG`]
     ];
 
     // Sheet 2: Ventes par catégorie
@@ -470,8 +470,8 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                 <DollarSign className="h-4 w-4 text-success" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-success">
-                  {reportData.totalRevenue.toFixed(2)} HTG
+                <div className="text-lg font-bold text-success">
+                  {formatNumber(reportData.totalRevenue)} HTG
                 </div>
               </CardContent>
             </Card>
@@ -482,8 +482,8 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                 <TrendingUp className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-primary">
-                  {reportData.totalProfit.toFixed(2)} HTG
+                <div className="text-lg font-bold text-primary">
+                  {formatNumber(reportData.totalProfit)} HTG
                 </div>
               </CardContent>
             </Card>
@@ -494,7 +494,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                 <BarChart3 className="h-4 w-4 text-warning" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-warning">
+                <div className="text-lg font-bold text-warning">
                   {reportData.totalSales}
                 </div>
               </CardContent>
@@ -506,8 +506,8 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                 <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {reportData.averageOrderValue.toFixed(2)} HTG
+                <div className="text-lg font-bold">
+                  {formatNumber(reportData.averageOrderValue)} HTG
                 </div>
               </CardContent>
             </Card>
@@ -532,8 +532,8 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                         <span className="font-medium capitalize">{cat.category}</span>
                         <Badge variant="secondary">{cat.count}</Badge>
                       </div>
-                      <div className="text-2xl font-bold mb-1">
-                        {cat.revenue.toFixed(2)} HTG
+                      <div className="text-lg font-bold mb-1">
+                        {formatNumber(cat.revenue)} HTG
                       </div>
                       <div className="w-full bg-secondary rounded-full h-2 mb-2">
                         <div 
@@ -576,7 +576,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                     </div>
                     <div className="text-right">
                       <div className="font-semibold text-success">
-                        {product.total_revenue.toFixed(2)} HTG
+                        {formatNumber(product.total_revenue)} HTG
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {((product.total_revenue / reportData.totalRevenue) * 100).toFixed(1)}% du CA HTG total
