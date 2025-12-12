@@ -591,7 +591,7 @@ export const generateInvoice = (
   
   yPos += 5;
   pdf.line(15, yPos, 195, yPos);
-  yPos += 8;
+  yPos += 10;
   
   // Calculate totals by currency
   let subtotalHTG = 0;
@@ -614,67 +614,101 @@ export const generateInvoice = (
     ? subtotalHTG + (subtotalUSD * rate)
     : subtotalUSD + (subtotalHTG / rate);
   
-  // Totals section
-  pdf.setFont('helvetica', 'normal');
-  
-  // Show sub-totals by currency if multi-currency
-  if (hasMultipleCurrencies) {
-    pdf.text('Sous-total USD:', 140, yPos);
-    pdf.text(formatAmount(subtotalUSD, 'USD'), 188, yPos, { align: 'right' });
-    yPos += 6;
-    
-    pdf.text('Sous-total HTG:', 140, yPos);
-    pdf.text(formatAmount(subtotalHTG, 'HTG'), 188, yPos, { align: 'right' });
-    yPos += 6;
-    
-    // Exchange rate info
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'italic');
-    pdf.text(`Taux: 1 USD = ${rate.toFixed(2)} HTG`, 140, yPos);
-    yPos += 6;
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'normal');
-  }
-  
-  // Unified subtotal
-  pdf.text('Sous-total unifié HT:', 140, yPos);
-  pdf.text(formatAmount(unifiedSubtotal, displayCurrency), 188, yPos, { align: 'right' });
-  yPos += 6;
-  
   // Discount calculation based on unified subtotal
   let discountAmount = 0;
   if (saleData.discount_type === 'percentage' && saleData.discount_value > 0) {
     discountAmount = unifiedSubtotal * (saleData.discount_value / 100);
   } else if (saleData.discount_amount > 0) {
-    // Convert discount to display currency if needed
     discountAmount = displayCurrency === 'HTG' ? saleData.discount_amount : saleData.discount_amount / rate;
   }
   
-  if (discountAmount > 0) {
-    const discountLabel = saleData.discount_type === 'percentage'
-      ? `Remise (${saleData.discount_value}%):`
-      : 'Remise:';
-    pdf.text(discountLabel, 140, yPos);
-    pdf.text(`-${formatAmount(discountAmount, displayCurrency)}`, 188, yPos, { align: 'right' });
-    yPos += 6;
+  const afterDiscount = unifiedSubtotal - discountAmount;
+  const tvaAmount = afterDiscount * (companySettings.tva_rate / 100);
+  const totalTTC = afterDiscount + tvaAmount;
+  
+  // ============= PROFESSIONAL TOTALS BOX =============
+  const boxX = 110;
+  const boxWidth = 85;
+  const labelX = boxX + 3;
+  const valueX = boxX + boxWidth - 3;
+  const lineHeight = 7;
+  
+  // Calculate box height based on content
+  let linesCount = 2; // Sous-total HT + TVA + Total TTC (mandatory)
+  if (hasMultipleCurrencies) linesCount += 3; // USD + HTG + Taux
+  if (discountAmount > 0) linesCount += 1;
+  linesCount += 1; // Total TTC
+  
+  const boxHeight = (linesCount * lineHeight) + 12; // Extra padding for total
+  const boxY = yPos;
+  
+  // Draw rounded box with light background
+  pdf.setFillColor(248, 249, 250);
+  pdf.setDrawColor(200, 200, 200);
+  pdf.roundedRect(boxX, boxY, boxWidth, boxHeight, 2, 2, 'FD');
+  
+  let currentY = boxY + 6;
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  
+  // Show sub-totals by currency if multi-currency
+  if (hasMultipleCurrencies) {
+    pdf.text('Sous-total USD', labelX, currentY);
+    pdf.text(formatAmount(subtotalUSD, 'USD'), valueX, currentY, { align: 'right' });
+    currentY += lineHeight;
+    
+    pdf.text('Sous-total HTG', labelX, currentY);
+    pdf.text(formatAmount(subtotalHTG, 'HTG'), valueX, currentY, { align: 'right' });
+    currentY += lineHeight;
+    
+    // Exchange rate info
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'italic');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`Taux: 1 USD = ${rate.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG`, labelX, currentY);
+    pdf.setTextColor(0, 0, 0);
+    currentY += lineHeight;
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
   }
   
-  // Calculate after discount
-  const afterDiscount = unifiedSubtotal - discountAmount;
+  // Sous-total HT (unified)
+  pdf.text('Sous-total HT', labelX, currentY);
+  pdf.text(formatAmount(unifiedSubtotal, displayCurrency), valueX, currentY, { align: 'right' });
+  currentY += lineHeight;
   
-  // TVA on the after-discount amount
-  const tvaAmount = afterDiscount * (companySettings.tva_rate / 100);
-  pdf.text(`TVA (${companySettings.tva_rate}%):`, 140, yPos);
-  pdf.text(formatAmount(tvaAmount, displayCurrency), 188, yPos, { align: 'right' });
-  yPos += 8;
+  // Discount
+  if (discountAmount > 0) {
+    const discountLabel = saleData.discount_type === 'percentage'
+      ? `Remise (${saleData.discount_value}%)`
+      : 'Remise';
+    pdf.setTextColor(220, 53, 69); // Red for discount
+    pdf.text(discountLabel, labelX, currentY);
+    pdf.text(`-${formatAmount(discountAmount, displayCurrency)}`, valueX, currentY, { align: 'right' });
+    pdf.setTextColor(0, 0, 0);
+    currentY += lineHeight;
+  }
   
-  // Total TTC
-  const totalTTC = afterDiscount + tvaAmount;
+  // TVA
+  pdf.text(`TVA (${companySettings.tva_rate}%)`, labelX, currentY);
+  pdf.text(formatAmount(tvaAmount, displayCurrency), valueX, currentY, { align: 'right' });
+  currentY += lineHeight + 2;
+  
+  // Separator line before total
+  pdf.setDrawColor(150, 150, 150);
+  pdf.line(labelX, currentY - 2, valueX, currentY - 2);
+  
+  // Total TTC - prominent style
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(11);
-  pdf.text('TOTAL TTC:', 140, yPos);
-  pdf.text(formatAmount(totalTTC, displayCurrency), 188, yPos, { align: 'right' });
-  yPos += 10;
+  pdf.setFillColor(33, 37, 41); // Dark background
+  pdf.setTextColor(255, 255, 255); // White text
+  pdf.roundedRect(boxX, currentY - 1, boxWidth, 10, 1, 1, 'F');
+  pdf.text('TOTAL TTC', labelX + 1, currentY + 5);
+  pdf.text(formatAmount(totalTTC, displayCurrency), valueX - 1, currentY + 5, { align: 'right' });
+  pdf.setTextColor(0, 0, 0);
+  
+  yPos = boxY + boxHeight + 10;
   
   // Payment method
   pdf.setFontSize(9);
