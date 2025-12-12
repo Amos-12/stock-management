@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Users, UserCheck, Mail, Calendar, Search, UserPlus, RefreshCcw, Settings, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { usePagination } from '@/hooks/usePagination';
+import { TablePagination } from '@/components/ui/table-pagination';
 
 interface User {
   id: string;
@@ -357,6 +359,18 @@ export const UserManagementPanel = () => {
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const { 
+    paginatedItems: paginatedUsers, 
+    currentPage, 
+    totalPages, 
+    totalItems, 
+    pageSize, 
+    nextPage, 
+    prevPage, 
+    hasNextPage, 
+    hasPrevPage 
+  } = usePagination(filteredUsers, 20);
+
   const totalUsers = users.length;
   const adminUsers = users.filter(u => u.role === 'admin').length;
   const sellerUsers = users.filter(u => u.role === 'seller').length;
@@ -485,7 +499,7 @@ export const UserManagementPanel = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {paginatedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">
                       <div>
@@ -578,7 +592,18 @@ export const UserManagementPanel = () => {
             </Table>
           </div>
 
-          {filteredUsers.length === 0 && (
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPrevPage={prevPage}
+            onNextPage={nextPage}
+            hasPrevPage={hasPrevPage}
+            hasNextPage={hasNextPage}
+          />
+
+          {paginatedUsers.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>Aucun utilisateur trouvé</p>

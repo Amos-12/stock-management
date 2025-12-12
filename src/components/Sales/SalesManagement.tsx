@@ -8,6 +8,8 @@ import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2 } from 'lucide-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { SaleDetailsDialog } from './SaleDetailsDialog';
+import { usePagination } from '@/hooks/usePagination';
+import { TablePagination } from '@/components/ui/table-pagination';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -43,6 +45,19 @@ export const SalesManagement = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  const { 
+    paginatedItems: paginatedSales, 
+    currentPage, 
+    totalPages, 
+    totalItems, 
+    pageSize, 
+    nextPage, 
+    prevPage, 
+    hasNextPage, 
+    hasPrevPage,
+    resetPage
+  } = usePagination(filteredSales, 20);
+
   useEffect(() => {
     fetchSales();
     checkAdminRole();
@@ -54,6 +69,7 @@ export const SalesManagement = () => {
       sale.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredSales(filtered);
+    resetPage();
   }, [searchTerm, sales]);
 
   const fetchSales = async () => {
@@ -259,14 +275,14 @@ export const SalesManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSales.length === 0 ? (
+                {paginatedSales.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Aucune vente trouvée
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredSales.map((sale) => (
+                  paginatedSales.map((sale) => (
                     <TableRow key={sale.id}>
                       <TableCell className="font-medium">
                         {formatDate(sale.created_at)}
@@ -337,6 +353,16 @@ export const SalesManagement = () => {
               </TableBody>
             </Table>
           </div>
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPrevPage={prevPage}
+            onNextPage={nextPage}
+            hasPrevPage={hasPrevPage}
+            hasNextPage={hasNextPage}
+          />
         </CardContent>
       </Card>
       
