@@ -1637,13 +1637,6 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                       />
                     </div>
                   )}
-                  
-                  {discountType !== 'none' && getDiscountAmount() > 0 && (
-                    <div className="flex justify-between text-sm text-warning">
-                      <span>Remise appliquée</span>
-                      <span>-{formatAmount(getDiscountAmount())}</span>
-                    </div>
-                  )}
                 </div>
                 
                 {/* Total Section */}
