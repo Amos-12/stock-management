@@ -681,7 +681,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     return { totalUSD, totalHTG };
   };
 
-  // Calculate unified total in preferred currency
+  // Calculate unified total in preferred currency (before discount)
   const getUnifiedTotal = () => {
     const { totalUSD, totalHTG } = getTotalsByCurrency();
     const rate = companySettings?.usd_htg_rate || 132;
@@ -695,6 +695,29 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       // Convert everything to USD
       const unifiedUSD = totalUSD + (totalHTG / rate);
       return { amount: unifiedUSD, currency: 'USD' as const };
+    }
+  };
+
+  // Calculate unified total WITH discount applied (final amount to pay)
+  const getUnifiedFinalTotal = () => {
+    const { totalUSD, totalHTG } = getTotalsByCurrency();
+    const rate = companySettings?.usd_htg_rate || 132;
+    const displayCurrency = companySettings?.default_display_currency || 'HTG';
+    const discountAmount = getDiscountAmount();
+    
+    if (displayCurrency === 'HTG') {
+      // Convert everything to HTG
+      const unifiedHTG = totalHTG + (totalUSD * rate);
+      // Apply discount to unified total
+      const finalUnifiedHTG = Math.max(0, unifiedHTG - discountAmount);
+      return { amount: finalUnifiedHTG, currency: 'HTG' as const };
+    } else {
+      // Convert everything to USD
+      const unifiedUSD = totalUSD + (totalHTG / rate);
+      // Convert discount to USD and apply
+      const discountInUSD = discountAmount / rate;
+      const finalUnifiedUSD = Math.max(0, unifiedUSD - discountInUSD);
+      return { amount: finalUnifiedUSD, currency: 'USD' as const };
     }
   };
 
@@ -1623,23 +1646,42 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   )}
                 </div>
                 
-                {/* Unified Total */}
+                {/* Total Section */}
                 {(() => {
                   const { totalUSD, totalHTG } = getTotalsByCurrency();
                   const hasMultipleCurrencies = totalUSD > 0 && totalHTG > 0;
-                  const unified = getUnifiedTotal();
+                  const finalTotal = getUnifiedFinalTotal();
                   
                   return (
-                    <div className="border-t pt-2 space-y-1">
+                    <div className="border-t pt-3 space-y-2">
+                      {/* Sous-totaux par devise si multi-devises */}
                       {hasMultipleCurrencies && (
-                        <div className="flex justify-between text-sm font-medium text-primary">
-                          <span>Total unifié</span>
-                          <span>{formatAmount(unified.amount, unified.currency)}</span>
+                        <>
+                          <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>Sous-total USD</span>
+                            <span>{formatAmount(totalUSD, 'USD')}</span>
+                          </div>
+                          <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>Sous-total HTG</span>
+                            <span>{formatAmount(totalHTG, 'HTG')}</span>
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* Remise appliquée */}
+                      {discountType !== 'none' && getDiscountAmount() > 0 && (
+                        <div className="flex justify-between text-sm text-warning">
+                          <span>Remise appliquée</span>
+                          <span>-{formatAmount(getDiscountAmount())}</span>
                         </div>
                       )}
-                      <div className="flex justify-between font-semibold text-lg">
-                        <span>Total</span>
-                        <span className="text-success">{formatAmount(getFinalTotal())}</span>
+                      
+                      {/* Total à payer - EN DERNIER ET EN GRAS */}
+                      <div className="flex justify-between font-bold text-xl pt-2 border-t">
+                        <span>Total à payer</span>
+                        <span className="text-success">
+                          {formatAmount(finalTotal.amount, finalTotal.currency)}
+                        </span>
                       </div>
                     </div>
                   );
@@ -1679,7 +1721,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             <CheckCircle className="w-16 h-16 text-success mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">Vente confirmée !</h3>
             <p className="text-muted-foreground mb-6">
-              La vente de {getFinalTotal().toFixed(2)} HTG a été enregistrée avec succès.
+              La vente de {formatAmount(getUnifiedFinalTotal().amount, getUnifiedFinalTotal().currency)} a été enregistrée avec succès.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               {completedSale && (
