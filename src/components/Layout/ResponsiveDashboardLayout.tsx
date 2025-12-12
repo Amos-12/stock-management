@@ -232,7 +232,7 @@ export const ResponsiveDashboardLayout = ({
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-light via-background to-secondary">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-background/90 backdrop-blur-md border-b border-border shadow-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
