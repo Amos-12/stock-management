@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { 
   Package, 
   ShoppingCart, 
@@ -233,7 +234,7 @@ export const ResponsiveDashboardLayout = ({
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-light via-background to-secondary">
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-border shadow-md sticky top-0 z-50">
+      <header className="bg-background/90 backdrop-blur-md border-b border-border shadow-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Left side - Mobile menu button + Logo */}
@@ -316,6 +317,8 @@ export const ResponsiveDashboardLayout = ({
                 <User className="w-4 h-4" />
               </Button>
 
+              <ThemeToggle />
+
               <Button 
                 variant="outline"
                 size="sm"
@@ -334,7 +337,7 @@ export const ResponsiveDashboardLayout = ({
         <div className="flex w-full">
           {/* Desktop Sidebar */}
           <aside className={cn(
-            "flex-shrink-0 hidden lg:block bg-white border-r border-border h-[calc(100vh-64px)] sticky top-16 transition-all duration-300",
+            "flex-shrink-0 hidden lg:block bg-background border-r border-border h-[calc(100vh-64px)] sticky top-16 transition-all duration-300",
             sidebarCollapsed ? "w-20" : "w-64"
           )}>
             <SidebarContent isDesktop={true} />
