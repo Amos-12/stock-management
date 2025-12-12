@@ -23,8 +23,10 @@ import {
   Users,
   ChevronDown,
   FileSpreadsheet,
-  FileText
+  FileText,
+  FileDown
 } from 'lucide-react';
+import { generateAdvancedReportPDF, CompanySettings } from '@/lib/pdfGenerator';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -65,6 +67,21 @@ export const AdvancedReports = () => {
   const [reportType, setReportType] = useState<'sales' | 'products' | 'sellers'>('sales');
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+
+  // Fetch company settings for PDF export
+  useEffect(() => {
+    const fetchCompanySettings = async () => {
+      const { data } = await supabase
+        .from('company_settings')
+        .select('*')
+        .single();
+      if (data) {
+        setCompanySettings(data as CompanySettings);
+      }
+    };
+    fetchCompanySettings();
+  }, []);
 
   const generateReport = async () => {
     try {
@@ -365,6 +382,24 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
     });
   };
 
+  const exportToPDF = () => {
+    if (!reportData || !companySettings) {
+      toast({
+        title: "Erreur",
+        description: "Paramètres de l'entreprise non disponibles",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    generateAdvancedReportPDF(reportData, companySettings, dateRange);
+    
+    toast({
+      title: "Export réussi",
+      description: "Le rapport PDF a été téléchargé avec succès",
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Controls */}
@@ -445,6 +480,10 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={exportToPDF}>
+                    <FileDown className="w-4 h-4 mr-2" />
+                    Export PDF
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={exportReport}>
                     <FileText className="w-4 h-4 mr-2" />
                     Export rapide (CSV)

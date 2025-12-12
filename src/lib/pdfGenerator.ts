@@ -580,3 +580,290 @@ export const generateInvoice = (
   const fileName = `facture_${saleData.id.substring(0, 8)}_${new Date().toISOString().split('T')[0]}.pdf`;
   pdf.save(fileName);
 };
+
+// Interface for Advanced Report PDF
+export interface AdvancedReportData {
+  totalRevenue: number;
+  totalSales: number;
+  totalProfit: number;
+  averageOrderValue: number;
+  topProducts: { product_name: string; quantity_sold: number; total_revenue: number }[];
+  salesByPeriod: { period: string; revenue: number; sales: number }[];
+  paymentMethods: { method: string; count: number; percentage: number }[];
+  categoryDistribution: { category: string; revenue: number; count: number; percentage: number }[];
+}
+
+export const generateAdvancedReportPDF = (
+  reportData: AdvancedReportData,
+  companySettings: CompanySettings,
+  dateRange: { from: Date; to: Date }
+) => {
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
+  let yPos = 20;
+
+  // Helper function to check page break
+  const checkPageBreak = (requiredSpace: number) => {
+    if (yPos + requiredSpace > pageHeight - 20) {
+      pdf.addPage();
+      yPos = 20;
+      return true;
+    }
+    return false;
+  };
+
+  // Header with logo
+  if (companySettings.logo_url) {
+    try {
+      const logoX = companySettings.logo_position_x || 15;
+      const logoY = companySettings.logo_position_y || 15;
+      const logoW = companySettings.logo_width || 35;
+      const logoH = companySettings.logo_height || 35;
+      pdf.addImage(companySettings.logo_url, 'PNG', logoX, logoY, logoW, logoH);
+    } catch (error) {
+      console.error('Error loading logo:', error);
+    }
+  }
+
+  // Company info (top right)
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(companySettings.company_name, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 5;
+
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  if (companySettings.company_description) {
+    pdf.text(companySettings.company_description, pageWidth - margin, yPos, { align: 'right' });
+    yPos += 4;
+  }
+  pdf.text(companySettings.address, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(companySettings.city, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(`Tél: ${companySettings.phone}`, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(companySettings.email, pageWidth - margin, yPos, { align: 'right' });
+
+  // Reset yPos for title
+  yPos = 65;
+
+  // Report title
+  pdf.setFontSize(18);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('RAPPORT DE VENTES', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 10;
+
+  // Date range
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  const fromDate = dateRange.from.toLocaleDateString('fr-FR');
+  const toDate = dateRange.to.toLocaleDateString('fr-FR');
+  pdf.text(`Période: ${fromDate} - ${toDate}`, pageWidth / 2, yPos, { align: 'center' });
+  yPos += 5;
+  pdf.text(`Généré le: ${new Date().toLocaleString('fr-FR')}`, pageWidth / 2, yPos, { align: 'center' });
+  yPos += 15;
+
+  // Summary section (4 boxes)
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('RÉSUMÉ', margin, yPos);
+  yPos += 8;
+
+  const boxWidth = (contentWidth - 15) / 4;
+  const boxHeight = 25;
+  const boxY = yPos;
+
+  const summaryItems = [
+    { label: "Chiffre d'affaires", value: formatAmount(reportData.totalRevenue), color: [34, 197, 94] },
+    { label: "Bénéfices", value: formatAmount(reportData.totalProfit), color: [59, 130, 246] },
+    { label: "Nb. Ventes", value: reportData.totalSales.toString(), color: [168, 85, 247] },
+    { label: "Panier moyen", value: formatAmount(reportData.averageOrderValue), color: [249, 115, 22] }
+  ];
+
+  summaryItems.forEach((item, idx) => {
+    const boxX = margin + idx * (boxWidth + 5);
+    
+    // Box background
+    pdf.setFillColor(item.color[0], item.color[1], item.color[2]);
+    pdf.roundedRect(boxX, boxY, boxWidth, boxHeight, 2, 2, 'F');
+    
+    // Text
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(item.label, boxX + boxWidth / 2, boxY + 8, { align: 'center' });
+    
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(item.value, boxX + boxWidth / 2, boxY + 18, { align: 'center' });
+  });
+
+  pdf.setTextColor(0, 0, 0);
+  yPos = boxY + boxHeight + 15;
+
+  // Category Distribution Table
+  checkPageBreak(50);
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('RÉPARTITION PAR CATÉGORIE', margin, yPos);
+  yPos += 8;
+
+  // Table header
+  pdf.setFillColor(240, 240, 240);
+  pdf.rect(margin, yPos, contentWidth, 8, 'F');
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Catégorie', margin + 3, yPos + 5);
+  pdf.text('Revenu', margin + 90, yPos + 5, { align: 'right' });
+  pdf.text('Ventes', margin + 120, yPos + 5, { align: 'right' });
+  pdf.text('%', margin + contentWidth - 3, yPos + 5, { align: 'right' });
+  yPos += 10;
+
+  pdf.setFont('helvetica', 'normal');
+  reportData.categoryDistribution.slice(0, 8).forEach((cat, idx) => {
+    checkPageBreak(8);
+    if (idx % 2 === 0) {
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(margin, yPos - 4, contentWidth, 7, 'F');
+    }
+    pdf.text(cat.category, margin + 3, yPos);
+    pdf.text(formatAmount(cat.revenue), margin + 90, yPos, { align: 'right' });
+    pdf.text(cat.count.toString(), margin + 120, yPos, { align: 'right' });
+    pdf.text(`${cat.percentage.toFixed(1)}%`, margin + contentWidth - 3, yPos, { align: 'right' });
+    yPos += 7;
+  });
+  yPos += 10;
+
+  // Top 10 Products Table
+  checkPageBreak(60);
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('TOP 10 PRODUITS', margin, yPos);
+  yPos += 8;
+
+  // Table header
+  pdf.setFillColor(240, 240, 240);
+  pdf.rect(margin, yPos, contentWidth, 8, 'F');
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('#', margin + 3, yPos + 5);
+  pdf.text('Produit', margin + 12, yPos + 5);
+  pdf.text('Qté', margin + 120, yPos + 5, { align: 'right' });
+  pdf.text('Revenu', margin + contentWidth - 3, yPos + 5, { align: 'right' });
+  yPos += 10;
+
+  pdf.setFont('helvetica', 'normal');
+  reportData.topProducts.forEach((prod, idx) => {
+    checkPageBreak(8);
+    if (idx % 2 === 0) {
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(margin, yPos - 4, contentWidth, 7, 'F');
+    }
+    pdf.text((idx + 1).toString(), margin + 3, yPos);
+    const productName = prod.product_name.length > 40 
+      ? prod.product_name.substring(0, 37) + '...' 
+      : prod.product_name;
+    pdf.text(productName, margin + 12, yPos);
+    pdf.text(prod.quantity_sold.toString(), margin + 120, yPos, { align: 'right' });
+    pdf.text(formatAmount(prod.total_revenue), margin + contentWidth - 3, yPos, { align: 'right' });
+    yPos += 7;
+  });
+  yPos += 10;
+
+  // Payment Methods Table
+  checkPageBreak(40);
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('MÉTHODES DE PAIEMENT', margin, yPos);
+  yPos += 8;
+
+  const methodLabels: Record<string, string> = {
+    'espece': 'Espèces',
+    'cash': 'Espèces',
+    'cheque': 'Chèque',
+    'virement': 'Virement bancaire',
+    'mobile': 'Mobile Money'
+  };
+
+  // Table header
+  pdf.setFillColor(240, 240, 240);
+  pdf.rect(margin, yPos, contentWidth, 8, 'F');
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Méthode', margin + 3, yPos + 5);
+  pdf.text('Transactions', margin + 100, yPos + 5, { align: 'right' });
+  pdf.text('%', margin + contentWidth - 3, yPos + 5, { align: 'right' });
+  yPos += 10;
+
+  pdf.setFont('helvetica', 'normal');
+  reportData.paymentMethods.forEach((pm, idx) => {
+    checkPageBreak(8);
+    if (idx % 2 === 0) {
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(margin, yPos - 4, contentWidth, 7, 'F');
+    }
+    pdf.text(methodLabels[pm.method] || pm.method, margin + 3, yPos);
+    pdf.text(pm.count.toString(), margin + 100, yPos, { align: 'right' });
+    pdf.text(`${pm.percentage.toFixed(1)}%`, margin + contentWidth - 3, yPos, { align: 'right' });
+    yPos += 7;
+  });
+  yPos += 10;
+
+  // Chronological History (last 15 days max)
+  if (reportData.salesByPeriod.length > 0) {
+    checkPageBreak(60);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('HISTORIQUE CHRONOLOGIQUE', margin, yPos);
+    yPos += 8;
+
+    // Table header
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(margin, yPos, contentWidth, 8, 'F');
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Date', margin + 3, yPos + 5);
+    pdf.text('Revenu', margin + 100, yPos + 5, { align: 'right' });
+    pdf.text('Ventes', margin + contentWidth - 3, yPos + 5, { align: 'right' });
+    yPos += 10;
+
+    pdf.setFont('helvetica', 'normal');
+    const historyData = reportData.salesByPeriod.slice(-15);
+    historyData.forEach((sp, idx) => {
+      checkPageBreak(8);
+      if (idx % 2 === 0) {
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(margin, yPos - 4, contentWidth, 7, 'F');
+      }
+      const dateStr = new Date(sp.period).toLocaleDateString('fr-FR');
+      pdf.text(dateStr, margin + 3, yPos);
+      pdf.text(formatAmount(sp.revenue), margin + 100, yPos, { align: 'right' });
+      pdf.text(sp.sales.toString(), margin + contentWidth - 3, yPos, { align: 'right' });
+      yPos += 7;
+    });
+  }
+
+  // Footer
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'italic');
+  pdf.setTextColor(100, 100, 100);
+  pdf.text(
+    `Généré par ${companySettings.company_name} - ${new Date().toLocaleDateString('fr-FR')}`,
+    pageWidth / 2,
+    pageHeight - 10,
+    { align: 'center' }
+  );
+
+  // Save PDF
+  const fileName = `rapport_ventes_${dateRange.from.toISOString().split('T')[0]}_${dateRange.to.toISOString().split('T')[0]}.pdf`;
+  pdf.save(fileName);
+};
