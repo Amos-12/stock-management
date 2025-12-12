@@ -614,12 +614,13 @@ export const generateInvoice = (
     ? subtotalHTG + (subtotalUSD * rate)
     : subtotalUSD + (subtotalHTG / rate);
   
-  // Discount calculation based on unified subtotal
+  // Discount - use the stored discount_amount directly (already calculated correctly)
   let discountAmount = 0;
-  if (saleData.discount_type === 'percentage' && saleData.discount_value > 0) {
-    discountAmount = unifiedSubtotal * (saleData.discount_value / 100);
-  } else if (saleData.discount_amount > 0) {
-    discountAmount = displayCurrency === 'HTG' ? saleData.discount_amount : saleData.discount_amount / rate;
+  if (saleData.discount_amount > 0) {
+    // Convert to display currency if needed
+    discountAmount = displayCurrency === 'HTG' 
+      ? saleData.discount_amount 
+      : saleData.discount_amount / rate;
   }
   
   const afterDiscount = unifiedSubtotal - discountAmount;
