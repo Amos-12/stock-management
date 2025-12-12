@@ -10,10 +10,88 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Layers, Plus, Edit, Trash2, Settings } from 'lucide-react';
+import { Layers, Plus, Edit, Trash2, Settings, GripVertical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useCategories, useSousCategories, SousCategorie } from '@/hooks/useCategories';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+interface SortableSubcategoryRowProps {
+  sousCategorie: SousCategorie;
+  getCategoryName: (id: string) => string;
+  getStockTypeLabel: (type: string) => string;
+  onEdit: (sc: SousCategorie) => void;
+  onDelete: (sc: SousCategorie) => void;
+  onManageSpecs: (id: string) => void;
+}
+
+const SortableSubcategoryRow = ({ 
+  sousCategorie, 
+  getCategoryName, 
+  getStockTypeLabel, 
+  onEdit, 
+  onDelete, 
+  onManageSpecs 
+}: SortableSubcategoryRowProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sousCategorie.id });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style} className={isDragging ? 'bg-muted' : ''}>
+      <TableCell className="hidden sm:table-cell w-8">
+        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </TableCell>
+      <TableCell className="hidden sm:table-cell">{sousCategorie.ordre}</TableCell>
+      <TableCell className="font-medium">{sousCategorie.nom}</TableCell>
+      <TableCell className="hidden md:table-cell">
+        <Badge variant="outline">{getCategoryName(sousCategorie.categorie_id)}</Badge>
+      </TableCell>
+      <TableCell className="hidden sm:table-cell">
+        <Badge variant="secondary" className="text-xs">{getStockTypeLabel(sousCategorie.stock_type)}</Badge>
+      </TableCell>
+      <TableCell>
+        <Badge variant={sousCategorie.is_active ? "default" : "secondary"}>
+          {sousCategorie.is_active ? 'Active' : 'Inactive'}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-1 sm:gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onManageSpecs(sousCategorie.id)}
+            title="Gérer les spécifications"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(sousCategorie)}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(sousCategorie)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 interface SubcategoryManagementProps {
   selectedCategoryId: string | null;
@@ -210,6 +288,43 @@ export const SubcategoryManagement = ({
     return category?.nom || 'Inconnue';
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sousCategories.findIndex(sc => sc.id === active.id);
+    const newIndex = sousCategories.findIndex(sc => sc.id === over.id);
+    
+    const reorderedItems = arrayMove(sousCategories, oldIndex, newIndex);
+    
+    try {
+      const updates = reorderedItems.map((sc, index) => 
+        supabase.from('sous_categories').update({ ordre: index }).eq('id', sc.id)
+      );
+      
+      await Promise.all(updates);
+      refetch();
+      
+      toast({
+        title: "Ordre mis à jour",
+        description: "L'ordre des sous-catégories a été modifié."
+      });
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour l'ordre.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -358,75 +473,48 @@ export const SubcategoryManagement = ({
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="hidden sm:table-cell">Ordre</TableHead>
-                  <TableHead>Nom</TableHead>
-                  <TableHead className="hidden md:table-cell">Catégorie</TableHead>
-                  <TableHead className="hidden sm:table-cell">Type stock</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sousCategories.length === 0 ? (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Aucune sous-catégorie trouvée
-                    </TableCell>
+                    <TableHead className="hidden sm:table-cell w-8"></TableHead>
+                    <TableHead className="hidden sm:table-cell">Ordre</TableHead>
+                    <TableHead>Nom</TableHead>
+                    <TableHead className="hidden md:table-cell">Catégorie</TableHead>
+                    <TableHead className="hidden sm:table-cell">Type stock</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  sousCategories.map((sc) => (
-                    <TableRow key={sc.id}>
-                      <TableCell className="hidden sm:table-cell">{sc.ordre}</TableCell>
-                      <TableCell className="font-medium">{sc.nom}</TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <Badge variant="outline">{getCategoryName(sc.categorie_id)}</Badge>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Badge variant="secondary" className="text-xs">{getStockTypeLabel(sc.stock_type)}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={sc.is_active ? "default" : "secondary"}>
-                          {sc.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1 sm:gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onSelectSubcategory(sc.id)}
-                            title="Gérer les spécifications"
-                          >
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(sc)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeleteDialog({
-                              open: true,
-                              id: sc.id,
-                              name: sc.nom
-                            })}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {sousCategories.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        Aucune sous-catégorie trouvée
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    <SortableContext items={sousCategories.map(sc => sc.id)} strategy={verticalListSortingStrategy}>
+                      {sousCategories.map((sc) => (
+                        <SortableSubcategoryRow
+                          key={sc.id}
+                          sousCategorie={sc}
+                          getCategoryName={getCategoryName}
+                          getStockTypeLabel={getStockTypeLabel}
+                          onEdit={handleEdit}
+                          onDelete={(item) => setDeleteDialog({
+                            open: true,
+                            id: item.id,
+                            name: item.nom
+                          })}
+                          onManageSpecs={onSelectSubcategory}
+                        />
+                      ))}
+                    </SortableContext>
+                  )}
+                </TableBody>
+              </Table>
+            </DndContext>
           </div>
         </CardContent>
       </Card>
