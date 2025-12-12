@@ -95,6 +95,7 @@ export type Database = {
           company_description: string | null
           company_name: string
           created_at: string | null
+          default_display_currency: string | null
           email: string
           id: string
           logo_height: number | null
@@ -106,6 +107,7 @@ export type Database = {
           phone: string
           tva_rate: number
           updated_at: string | null
+          usd_htg_rate: number | null
         }
         Insert: {
           address?: string
@@ -113,6 +115,7 @@ export type Database = {
           company_description?: string | null
           company_name?: string
           created_at?: string | null
+          default_display_currency?: string | null
           email?: string
           id?: string
           logo_height?: number | null
@@ -124,6 +127,7 @@ export type Database = {
           phone?: string
           tva_rate?: number
           updated_at?: string | null
+          usd_htg_rate?: number | null
         }
         Update: {
           address?: string
@@ -131,6 +135,7 @@ export type Database = {
           company_description?: string | null
           company_name?: string
           created_at?: string | null
+          default_display_currency?: string | null
           email?: string
           id?: string
           logo_height?: number | null
@@ -142,6 +147,7 @@ export type Database = {
           phone?: string
           tva_rate?: number
           updated_at?: string | null
+          usd_htg_rate?: number | null
         }
         Relationships: []
       }
