@@ -181,7 +181,7 @@ export const SubcategoryManagement = ({
         // Log activity
         await supabase.from('activity_logs').insert({
           user_id: user?.id,
-          action_type: 'subcategory_updated',
+          action_type: 'subcategory_updated' as any,
           entity_type: 'sous_categorie',
           entity_id: editingSousCategorie.id,
           description: `Sous-catégorie "${formData.nom}" modifiée`,
@@ -216,7 +216,7 @@ export const SubcategoryManagement = ({
         // Log activity
         await supabase.from('activity_logs').insert({
           user_id: user?.id,
-          action_type: 'subcategory_created',
+          action_type: 'subcategory_created' as any,
           entity_type: 'sous_categorie',
           entity_id: newSubcat?.id,
           description: `Sous-catégorie "${formData.nom}" créée`,
@@ -289,7 +289,7 @@ export const SubcategoryManagement = ({
       // Log activity
       await supabase.from('activity_logs').insert({
         user_id: user?.id,
-        action_type: 'subcategory_deleted',
+        action_type: 'subcategory_deleted' as any,
         entity_type: 'sous_categorie',
         entity_id: deleteDialog.id,
         description: `Sous-catégorie "${deleteDialog.name}" supprimée`,

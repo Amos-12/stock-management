@@ -19,14 +19,16 @@ import {
   RefreshCw,
   Package
 } from 'lucide-react';
-import { format, subDays, startOfDay, endOfDay, subMonths } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 
 interface SellerStats {
   seller_id: string;
   seller_name: string;
-  total_revenue: number;
+  total_revenue_usd: number;
+  total_revenue_htg: number;
+  total_revenue_converted: number;
   total_sales: number;
   total_profit: number;
   average_cart: number;
@@ -34,11 +36,33 @@ interface SellerStats {
   top_products: { name: string; quantity: number; revenue: number }[];
 }
 
+interface CompanySettings {
+  usd_htg_rate: number;
+  default_display_currency: string;
+}
+
 export const SellerPerformanceReport = () => {
   const [sellers, setSellers] = useState<SellerStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('30');
   const [expandedSeller, setExpandedSeller] = useState<string | null>(null);
+  const [companySettings, setCompanySettings] = useState<CompanySettings>({ usd_htg_rate: 132, default_display_currency: 'HTG' });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from('company_settings')
+        .select('usd_htg_rate, default_display_currency')
+        .single();
+      if (data) {
+        setCompanySettings({
+          usd_htg_rate: data.usd_htg_rate || 132,
+          default_display_currency: data.default_display_currency || 'HTG'
+        });
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const fetchSellerStats = async () => {
     setLoading(true);
@@ -65,7 +89,7 @@ export const SellerPerformanceReport = () => {
         userRoles?.some(r => r.user_id === p.user_id)
       ) || [];
 
-      // Fetch current period sales
+      // Fetch current period sales with sale_items including currency
       const { data: currentSales } = await supabase
         .from('sales')
         .select(`
@@ -77,7 +101,8 @@ export const SellerPerformanceReport = () => {
             product_name,
             quantity,
             subtotal,
-            profit_amount
+            profit_amount,
+            currency
           )
         `)
         .gte('created_at', startDate)
@@ -97,7 +122,9 @@ export const SellerPerformanceReport = () => {
         sellerStatsMap.set(profile.user_id, {
           seller_id: profile.user_id,
           seller_name: profile.full_name,
-          total_revenue: 0,
+          total_revenue_usd: 0,
+          total_revenue_htg: 0,
+          total_revenue_converted: 0,
           total_sales: 0,
           total_profit: 0,
           average_cart: 0,
@@ -112,10 +139,20 @@ export const SellerPerformanceReport = () => {
       currentSales?.forEach(sale => {
         const stats = sellerStatsMap.get(sale.seller_id);
         if (stats) {
-          stats.total_revenue += sale.total_amount || 0;
           stats.total_sales += 1;
           
           sale.sale_items?.forEach((item: any) => {
+            const currency = item.currency || 'HTG';
+            const amount = item.subtotal || 0;
+            
+            if (currency === 'USD') {
+              stats.total_revenue_usd += amount;
+              stats.total_revenue_converted += amount * companySettings.usd_htg_rate;
+            } else {
+              stats.total_revenue_htg += amount;
+              stats.total_revenue_converted += amount;
+            }
+            
             stats.total_profit += item.profit_amount || 0;
             
             // Track products for this seller
@@ -142,13 +179,13 @@ export const SellerPerformanceReport = () => {
       // Finalize stats
       sellerStatsMap.forEach((stats, sellerId) => {
         if (stats.total_sales > 0) {
-          stats.average_cart = stats.total_revenue / stats.total_sales;
+          stats.average_cart = stats.total_revenue_converted / stats.total_sales;
         }
         
         const prevRevenue = prevRevenueMap.get(sellerId) || 0;
         if (prevRevenue > 0) {
-          stats.trend_percent = ((stats.total_revenue - prevRevenue) / prevRevenue) * 100;
-        } else if (stats.total_revenue > 0) {
+          stats.trend_percent = ((stats.total_revenue_converted - prevRevenue) / prevRevenue) * 100;
+        } else if (stats.total_revenue_converted > 0) {
           stats.trend_percent = 100;
         }
 
@@ -165,7 +202,7 @@ export const SellerPerformanceReport = () => {
       // Sort by revenue
       const sortedSellers = Array.from(sellerStatsMap.values())
         .filter(s => s.total_sales > 0)
-        .sort((a, b) => b.total_revenue - a.total_revenue);
+        .sort((a, b) => b.total_revenue_converted - a.total_revenue_converted);
 
       setSellers(sortedSellers);
     } catch (error) {
@@ -177,13 +214,15 @@ export const SellerPerformanceReport = () => {
 
   useEffect(() => {
     fetchSellerStats();
-  }, [period]);
+  }, [period, companySettings]);
 
   const exportToExcel = () => {
     const data = sellers.map((s, index) => ({
       'Rang': index + 1,
       'Vendeur': s.seller_name,
-      'Chiffre d\'affaires': s.total_revenue,
+      'Ventes USD': s.total_revenue_usd,
+      'Ventes HTG': s.total_revenue_htg,
+      'Total (HTG)': s.total_revenue_converted,
       'Nombre de ventes': s.total_sales,
       'Panier moyen': s.average_cart,
       'Bénéfice': s.total_profit,
@@ -196,14 +235,17 @@ export const SellerPerformanceReport = () => {
     XLSX.writeFile(wb, `performance_vendeurs_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', { 
+  const formatCurrency = (amount: number, currency: string = 'HTG') => {
+    const formatted = new Intl.NumberFormat('fr-FR', { 
       minimumFractionDigits: 0,
       maximumFractionDigits: 0 
-    }).format(amount) + ' HTG';
+    }).format(amount);
+    return currency === 'USD' ? `$ ${formatted}` : `${formatted} HTG`;
   };
 
-  const totalRevenue = sellers.reduce((sum, s) => sum + s.total_revenue, 0);
+  const totalRevenueUSD = sellers.reduce((sum, s) => sum + s.total_revenue_usd, 0);
+  const totalRevenueHTG = sellers.reduce((sum, s) => sum + s.total_revenue_htg, 0);
+  const totalRevenueConverted = sellers.reduce((sum, s) => sum + s.total_revenue_converted, 0);
   const totalSales = sellers.reduce((sum, s) => sum + s.total_sales, 0);
   const totalProfit = sellers.reduce((sum, s) => sum + s.total_profit, 0);
 
@@ -239,16 +281,44 @@ export const SellerPerformanceReport = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Chiffre d'affaires total</p>
-                <p className="text-lg font-bold">{formatCurrency(totalRevenue)}</p>
+                <p className="text-sm text-muted-foreground">Ventes USD</p>
+                <p className="text-lg font-bold">{formatCurrency(totalRevenueUSD, 'USD')}</p>
+              </div>
+              <div className="p-3 bg-green-500/10 rounded-full">
+                <DollarSign className="w-6 h-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Ventes HTG</p>
+                <p className="text-lg font-bold">{formatCurrency(totalRevenueHTG, 'HTG')}</p>
               </div>
               <div className="p-3 bg-primary/10 rounded-full">
                 <DollarSign className="w-6 h-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-primary">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total ({companySettings.default_display_currency})</p>
+                <p className="text-lg font-bold text-primary">{formatCurrency(totalRevenueConverted, 'HTG')}</p>
+              </div>
+              <div className="p-3 bg-primary/10 rounded-full">
+                <TrendingUp className="w-6 h-6 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -263,20 +333,6 @@ export const SellerPerformanceReport = () => {
               </div>
               <div className="p-3 bg-blue-500/10 rounded-full">
                 <ShoppingCart className="w-6 h-6 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Bénéfice total</p>
-                <p className="text-lg font-bold">{formatCurrency(totalProfit)}</p>
-              </div>
-              <div className="p-3 bg-green-500/10 rounded-full">
-                <TrendingUp className="w-6 h-6 text-green-500" />
               </div>
             </div>
           </CardContent>
@@ -339,18 +395,18 @@ export const SellerPerformanceReport = () => {
                             <p className="text-sm text-muted-foreground">{seller.total_sales} ventes</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-4">
                           <div className="text-right hidden sm:block">
-                            <p className="font-semibold">{formatCurrency(seller.total_revenue)}</p>
-                            <p className="text-sm text-muted-foreground">CA</p>
+                            <p className="text-sm text-green-600">{formatCurrency(seller.total_revenue_usd, 'USD')}</p>
+                            <p className="text-sm text-blue-600">{formatCurrency(seller.total_revenue_htg, 'HTG')}</p>
                           </div>
                           <div className="text-right hidden md:block">
-                            <p className="font-semibold">{formatCurrency(seller.total_profit)}</p>
-                            <p className="text-sm text-muted-foreground">Bénéfice</p>
+                            <p className="font-semibold">{formatCurrency(seller.total_revenue_converted, 'HTG')}</p>
+                            <p className="text-xs text-muted-foreground">Total converti</p>
                           </div>
                           <div className="text-right hidden lg:block">
-                            <p className="font-semibold">{formatCurrency(seller.average_cart)}</p>
-                            <p className="text-sm text-muted-foreground">Panier moy.</p>
+                            <p className="font-semibold">{formatCurrency(seller.total_profit, 'HTG')}</p>
+                            <p className="text-xs text-muted-foreground">Bénéfice</p>
                           </div>
                           <Badge variant={seller.trend_percent >= 0 ? 'default' : 'destructive'} className="flex items-center gap-1">
                             {seller.trend_percent >= 0 ? (
@@ -370,20 +426,25 @@ export const SellerPerformanceReport = () => {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <div className="border-t bg-muted/30 p-4">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4 sm:hidden">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                           <div>
-                            <p className="text-sm text-muted-foreground">CA</p>
-                            <p className="font-semibold">{formatCurrency(seller.total_revenue)}</p>
+                            <p className="text-sm text-muted-foreground">USD</p>
+                            <p className="font-semibold text-green-600">{formatCurrency(seller.total_revenue_usd, 'USD')}</p>
                           </div>
                           <div>
-                            <p className="text-sm text-muted-foreground">Bénéfice</p>
-                            <p className="font-semibold">{formatCurrency(seller.total_profit)}</p>
+                            <p className="text-sm text-muted-foreground">HTG</p>
+                            <p className="font-semibold text-blue-600">{formatCurrency(seller.total_revenue_htg, 'HTG')}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Total converti</p>
+                            <p className="font-semibold">{formatCurrency(seller.total_revenue_converted, 'HTG')}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Panier moy.</p>
-                            <p className="font-semibold">{formatCurrency(seller.average_cart)}</p>
+                            <p className="font-semibold">{formatCurrency(seller.average_cart, 'HTG')}</p>
                           </div>
                         </div>
+                        <p className="text-xs text-muted-foreground mb-2">Taux: 1 USD = {companySettings.usd_htg_rate} HTG</p>
                         <h4 className="font-medium mb-2 flex items-center gap-2">
                           <Package className="w-4 h-4" />
                           Top 5 Produits vendus
@@ -402,7 +463,7 @@ export const SellerPerformanceReport = () => {
                                 <TableRow key={idx}>
                                   <TableCell className="font-medium">{product.name}</TableCell>
                                   <TableCell className="text-right">{product.quantity}</TableCell>
-                                  <TableCell className="text-right">{formatCurrency(product.revenue)}</TableCell>
+                                  <TableCell className="text-right">{formatCurrency(product.revenue, 'HTG')}</TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>

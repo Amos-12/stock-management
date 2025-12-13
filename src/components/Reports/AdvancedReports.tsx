@@ -20,7 +20,6 @@ import {
   Target,
   DollarSign,
   Package,
-  Users,
   ChevronDown,
   FileSpreadsheet,
   FileText,
@@ -49,6 +48,9 @@ interface ProductSales {
 }
 
 interface ReportData {
+  totalRevenueUSD: number;
+  totalRevenueHTG: number;
+  totalRevenueConverted: number;
   totalRevenue: number;
   totalSales: number;
   totalProfit: number;
@@ -59,6 +61,13 @@ interface ReportData {
   categoryDistribution: { category: string; revenue: number; count: number; percentage: number }[];
 }
 
+// Define filters available per report type
+const REPORT_FILTERS = {
+  sales: ['period', 'seller', 'payment_method', 'currency'],
+  products: ['period', 'category', 'stock_level'],
+  sellers: ['period', 'seller']
+};
+
 export const AdvancedReports = () => {
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
@@ -68,6 +77,17 @@ export const AdvancedReports = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  
+  // Dynamic filters state
+  const [selectedSeller, setSelectedSeller] = useState<string>('all');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('all');
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedStockLevel, setSelectedStockLevel] = useState<string>('all');
+  
+  // Data for filter dropdowns
+  const [sellers, setSellers] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; nom: string }[]>([]);
 
   // Fetch company settings for PDF export
   useEffect(() => {
@@ -83,15 +103,39 @@ export const AdvancedReports = () => {
     fetchCompanySettings();
   }, []);
 
+  // Fetch filter data
+  useEffect(() => {
+    const fetchFilterData = async () => {
+      // Fetch sellers
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name');
+      if (profiles) {
+        setSellers(profiles.map(p => ({ id: p.user_id, name: p.full_name })));
+      }
+      
+      // Fetch categories
+      const { data: cats } = await supabase
+        .from('categories')
+        .select('id, nom')
+        .eq('is_active', true);
+      if (cats) {
+        setCategories(cats);
+      }
+    };
+    fetchFilterData();
+  }, []);
+
   const generateReport = async () => {
     try {
       setLoading(true);
       
       const fromDate = format(dateRange.from, 'yyyy-MM-dd');
       const toDate = format(dateRange.to, 'yyyy-MM-dd');
+      const usdHtgRate = companySettings?.usd_htg_rate || 132;
 
-      // Fetch sales data
-      const { data: salesData, error: salesError } = await supabase
+      // Build sales query with filters
+      let salesQuery = supabase
         .from('sales')
         .select(`
           id,
@@ -104,18 +148,39 @@ export const AdvancedReports = () => {
             product_name,
             quantity,
             unit_price,
-            subtotal
+            subtotal,
+            currency
           )
         `)
         .gte('created_at', fromDate)
         .lte('created_at', toDate + 'T23:59:59')
         .order('created_at', { ascending: false });
 
+      // Apply seller filter
+      if (selectedSeller !== 'all') {
+        salesQuery = salesQuery.eq('seller_id', selectedSeller);
+      }
+      
+      // Apply payment method filter
+      if (selectedPaymentMethod !== 'all') {
+        salesQuery = salesQuery.eq('payment_method', selectedPaymentMethod);
+      }
+
+      const { data: salesData, error: salesError } = await salesQuery;
+
       if (salesError) throw salesError;
+
+      // Filter by currency if selected
+      let filteredSalesData = salesData || [];
+      if (selectedCurrency !== 'all') {
+        filteredSalesData = filteredSalesData.filter(sale => 
+          sale.sale_items?.some((item: any) => (item.currency || 'HTG') === selectedCurrency)
+        );
+      }
 
       // Fetch seller names
       const salesWithSellers = await Promise.all(
-        (salesData || []).map(async (sale) => {
+        (filteredSalesData || []).map(async (sale) => {
           const { data: profileData } = await supabase
             .from('profiles')
             .select('full_name')
@@ -129,13 +194,27 @@ export const AdvancedReports = () => {
         })
       );
 
-      // Calculate report data
-      const totalRevenue = salesWithSellers.reduce((sum, sale) => sum + sale.total_amount, 0);
+      // Calculate report data with multi-currency support
+      let totalRevenueUSD = 0;
+      let totalRevenueHTG = 0;
+      let totalProfit = 0;
+
+      salesWithSellers.forEach(sale => {
+        sale.sale_items?.forEach((item: any) => {
+          const currency = item.currency || 'HTG';
+          if (currency === 'USD') {
+            totalRevenueUSD += item.subtotal || 0;
+          } else {
+            totalRevenueHTG += item.subtotal || 0;
+          }
+        });
+      });
+
+      const totalRevenueConverted = totalRevenueHTG + (totalRevenueUSD * usdHtgRate);
       const totalSales = salesWithSellers.length;
-      const averageOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
+      const averageOrderValue = totalSales > 0 ? totalRevenueConverted / totalSales : 0;
 
       // Calculate total profit
-      let totalProfit = 0;
       for (const sale of salesWithSellers) {
         const { data: itemsData } = await supabase
           .from('sale_items')
@@ -148,7 +227,7 @@ export const AdvancedReports = () => {
       // Top products
       const productSales: Record<string, ProductSales> = {};
       salesWithSellers.forEach(sale => {
-        sale.sale_items?.forEach(item => {
+        sale.sale_items?.forEach((item: any) => {
           if (!productSales[item.product_name]) {
             productSales[item.product_name] = {
               product_name: item.product_name,
@@ -175,7 +254,7 @@ export const AdvancedReports = () => {
       const paymentMethods = Object.entries(paymentMethodCounts).map(([method, count]) => ({
         method,
         count,
-        percentage: (count / totalSales) * 100
+        percentage: totalSales > 0 ? (count / totalSales) * 100 : 0
       }));
 
       // Sales by period (daily for the selected range)
@@ -225,12 +304,15 @@ export const AdvancedReports = () => {
           category,
           revenue: data.revenue,
           count: data.count,
-          percentage: (data.revenue / totalRevenue) * 100
+          percentage: totalRevenueConverted > 0 ? (data.revenue / totalRevenueConverted) * 100 : 0
         }))
         .sort((a, b) => b.revenue - a.revenue);
 
       setReportData({
-        totalRevenue,
+        totalRevenueUSD,
+        totalRevenueHTG,
+        totalRevenueConverted,
+        totalRevenue: totalRevenueConverted,
         totalSales,
         totalProfit,
         averageOrderValue,
@@ -254,7 +336,7 @@ export const AdvancedReports = () => {
 
   useEffect(() => {
     generateReport();
-  }, [dateRange, reportType]);
+  }, [dateRange, reportType, selectedSeller, selectedPaymentMethod, selectedCurrency, selectedCategory, selectedStockLevel]);
 
   const exportReport = () => {
     if (!reportData) return;
@@ -263,7 +345,9 @@ export const AdvancedReports = () => {
 Rapport de Ventes - ${format(dateRange.from, 'dd/MM/yyyy', { locale: fr })} au ${format(dateRange.to, 'dd/MM/yyyy', { locale: fr })}
 
 Résumé:
-Chiffre d'affaires total,${formatNumber(reportData.totalRevenue)} HTG
+Ventes USD,$ ${formatNumber(reportData.totalRevenueUSD)}
+Ventes HTG,${formatNumber(reportData.totalRevenueHTG)} HTG
+Total converti,${formatNumber(reportData.totalRevenueConverted)} HTG
 Nombre de ventes,${reportData.totalSales}
 Panier moyen,${formatNumber(reportData.averageOrderValue)} HTG
 
@@ -294,15 +378,19 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
 
   const exportToExcel = () => {
     if (!reportData) return;
+    const usdHtgRate = companySettings?.usd_htg_rate || 132;
 
     // Sheet 1: Résumé
     const summaryData = [
       ['RAPPORT DE VENTES COMPLET'],
       ['Période', `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`],
       ['Date de génération', format(new Date(), 'dd/MM/yyyy HH:mm')],
+      ['Taux de change', `1 USD = ${usdHtgRate} HTG`],
       [''],
       ['Métrique', 'Valeur'],
-      ['Chiffre d\'affaires total', `${formatNumber(reportData.totalRevenue)} HTG`],
+      ['Ventes USD', `$ ${formatNumber(reportData.totalRevenueUSD)}`],
+      ['Ventes HTG', `${formatNumber(reportData.totalRevenueHTG)} HTG`],
+      ['Total converti (HTG)', `${formatNumber(reportData.totalRevenueConverted)} HTG`],
       ['Bénéfices totaux', `${formatNumber(reportData.totalProfit)} HTG`],
       ['Nombre total de ventes', reportData.totalSales],
       ['Panier moyen', `${formatNumber(reportData.averageOrderValue)} HTG`]
@@ -400,6 +488,105 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
     });
   };
 
+  // Render dynamic filters based on report type
+  const renderDynamicFilters = () => {
+    const availableFilters = REPORT_FILTERS[reportType] || [];
+    
+    return (
+      <div className="flex flex-wrap gap-2 items-end">
+        {/* Seller filter */}
+        {availableFilters.includes('seller') && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Vendeur</label>
+            <Select value={selectedSeller} onValueChange={setSelectedSeller}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Tous" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                {sellers.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        
+        {/* Payment method filter */}
+        {availableFilters.includes('payment_method') && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Paiement</label>
+            <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Tous" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="cash">Espèces</SelectItem>
+                <SelectItem value="card">Carte</SelectItem>
+                <SelectItem value="transfer">Virement</SelectItem>
+                <SelectItem value="credit">Crédit</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        
+        {/* Currency filter */}
+        {availableFilters.includes('currency') && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Devise</label>
+            <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+              <SelectTrigger className="w-28">
+                <SelectValue placeholder="Toutes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
+                <SelectItem value="HTG">HTG</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        
+        {/* Category filter */}
+        {availableFilters.includes('category') && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Catégorie</label>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Toutes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                {categories.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        
+        {/* Stock level filter */}
+        {availableFilters.includes('stock_level') && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Niveau stock</label>
+            <Select value={selectedStockLevel} onValueChange={setSelectedStockLevel}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Tous" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="rupture">Rupture</SelectItem>
+                <SelectItem value="alerte">Alerte</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Controls */}
@@ -410,8 +597,8 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
             Rapports Avancés
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 items-end">
+        <CardContent className="space-y-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-end">
             <div className="space-y-2">
               <label className="text-sm font-medium">Période</label>
               <div className="flex gap-2">
@@ -496,34 +683,53 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
               </DropdownMenu>
             </div>
           </div>
+          
+          {/* Dynamic filters */}
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium mb-2">Filtres</p>
+            {renderDynamicFilters()}
+          </div>
         </CardContent>
       </Card>
 
       {reportData && (
         <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* Summary Cards with Multi-Currency */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Card className="shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Chiffre d'Affaires</CardTitle>
-                <DollarSign className="h-4 w-4 text-success" />
+                <CardTitle className="text-sm font-medium">Ventes USD</CardTitle>
+                <DollarSign className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-bold text-success">
-                  {formatNumber(reportData.totalRevenue)} HTG
+                <div className="text-lg font-bold text-green-600">
+                  $ {formatNumber(reportData.totalRevenueUSD)}
                 </div>
               </CardContent>
             </Card>
 
             <Card className="shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Bénéfices Totaux</CardTitle>
+                <CardTitle className="text-sm font-medium">Ventes HTG</CardTitle>
+                <DollarSign className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg font-bold text-blue-600">
+                  {formatNumber(reportData.totalRevenueHTG)} HTG
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg border-primary">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Converti</CardTitle>
                 <TrendingUp className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
                 <div className="text-lg font-bold text-primary">
-                  {formatNumber(reportData.totalProfit)} HTG
+                  {formatNumber(reportData.totalRevenueConverted)} HTG
                 </div>
+                <p className="text-xs text-muted-foreground">Taux: 1 USD = {companySettings?.usd_htg_rate || 132} HTG</p>
               </CardContent>
             </Card>
 
@@ -618,7 +824,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                         {formatNumber(product.total_revenue)} HTG
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {((product.total_revenue / reportData.totalRevenue) * 100).toFixed(1)}% du CA HTG total
+                        {reportData.totalRevenueConverted > 0 ? ((product.total_revenue / reportData.totalRevenueConverted) * 100).toFixed(1) : 0}% du CA
                       </div>
                     </div>
                   </div>

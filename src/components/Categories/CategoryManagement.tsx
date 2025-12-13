@@ -154,7 +154,7 @@ export const CategoryManagement = () => {
         // Log activity
         await supabase.from('activity_logs').insert({
           user_id: user?.id,
-          action_type: 'category_updated',
+          action_type: 'category_updated' as any,
           entity_type: 'category',
           entity_id: editingCategory.id,
           description: `Catégorie "${formData.nom}" modifiée`,
@@ -187,7 +187,7 @@ export const CategoryManagement = () => {
         // Log activity
         await supabase.from('activity_logs').insert({
           user_id: user?.id,
-          action_type: 'category_created',
+          action_type: 'category_created' as any,
           entity_type: 'category',
           entity_id: newCategory?.id,
           description: `Catégorie "${formData.nom}" créée`,
@@ -275,7 +275,7 @@ export const CategoryManagement = () => {
       // Log activity
       await supabase.from('activity_logs').insert({
         user_id: user?.id,
-        action_type: 'category_deleted',
+        action_type: 'category_deleted' as any,
         entity_type: 'category',
         entity_id: deleteDialog.categoryId,
         description: `Catégorie "${deleteDialog.categoryName}" supprimée`,
