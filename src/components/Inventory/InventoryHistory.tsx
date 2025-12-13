@@ -30,6 +30,7 @@ import { generateInventoryHistoryPDF, CompanySettings } from '@/lib/pdfGenerator
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
 interface StockMovement {
   id: string;
@@ -138,7 +139,9 @@ export const InventoryHistory = () => {
       if (movementFilter !== 'all') {
         const isIn = ['restock', 'adjustment_in', 'return', 'in'].includes(m.movement_type);
         const isOut = ['sale', 'adjustment_out', 'loss', 'out'].includes(m.movement_type);
-        const isAdjust = ['adjustment', 'inventory_adjustment'].includes(m.movement_type);
+        // Identify adjustments by movement_type OR by reason containing adjustment keywords
+        const isAdjust = ['adjustment', 'inventory_adjustment', 'adjustment_in', 'adjustment_out'].includes(m.movement_type) ||
+          (m.reason?.toLowerCase().includes('ajustement') || m.reason?.toLowerCase().includes('inventaire'));
         
         if (movementFilter === 'in' && !isIn) return false;
         if (movementFilter === 'out' && !isOut) return false;
@@ -178,10 +181,35 @@ export const InventoryHistory = () => {
     ).reduce((sum, m) => sum + m.quantity, 0);
     
     const adjustments = movements.filter(m => 
-      ['adjustment', 'inventory_adjustment'].includes(m.movement_type)
+      ['adjustment', 'inventory_adjustment', 'adjustment_in', 'adjustment_out'].includes(m.movement_type) ||
+      (m.reason?.toLowerCase().includes('ajustement') || m.reason?.toLowerCase().includes('inventaire'))
     ).length;
 
     return { ins, outs, adjustments, total: movements.length };
+  }, [movements]);
+
+  // Stock evolution chart data
+  const stockEvolution = useMemo(() => {
+    const dailyData: Record<string, { date: string; dateLabel: string; ins: number; outs: number; net: number }> = {};
+    
+    movements.forEach(m => {
+      const dateKey = format(new Date(m.created_at), 'yyyy-MM-dd');
+      const dateLabel = format(new Date(m.created_at), 'dd/MM', { locale: fr });
+      
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = { date: dateKey, dateLabel, ins: 0, outs: 0, net: 0 };
+      }
+      
+      if (['restock', 'adjustment_in', 'return', 'in'].includes(m.movement_type)) {
+        dailyData[dateKey].ins += Math.abs(m.quantity);
+        dailyData[dateKey].net += Math.abs(m.quantity);
+      } else if (['sale', 'adjustment_out', 'loss', 'out'].includes(m.movement_type)) {
+        dailyData[dateKey].outs += Math.abs(m.quantity);
+        dailyData[dateKey].net -= Math.abs(m.quantity);
+      }
+    });
+    
+    return Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
   }, [movements]);
 
   const getMovementBadge = (type: string, quantity: number, prev: number, next: number) => {
@@ -281,7 +309,7 @@ export const InventoryHistory = () => {
 
     toast({
       title: 'Export réussi',
-      description: 'Le rapport PDF a été téléchargé'
+      description: `${filteredMovements.length} mouvements exportés en PDF`
     });
   };
 
@@ -344,6 +372,63 @@ export const InventoryHistory = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Stock Evolution Chart */}
+      {stockEvolution.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="text-lg font-semibold mb-4">Évolution des stocks</h3>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={stockEvolution} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorIns" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                    </linearGradient>
+                    <linearGradient id="colorOuts" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="dateLabel" 
+                    tick={{ fontSize: 12 }} 
+                    className="text-muted-foreground"
+                  />
+                  <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Legend />
+                  <Area 
+                    type="monotone" 
+                    dataKey="ins" 
+                    name="Entrées" 
+                    stroke="#22c55e" 
+                    fillOpacity={1} 
+                    fill="url(#colorIns)" 
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="outs" 
+                    name="Sorties" 
+                    stroke="#ef4444" 
+                    fillOpacity={1} 
+                    fill="url(#colorOuts)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>
