@@ -86,6 +86,8 @@ interface Product {
   electromenager_couleur?: string;
   electromenager_materiau?: string;
   electromenager_installation?: string;
+  // Dynamic specifications (JSONB)
+  specifications_techniques?: Record<string, any>;
 }
 
 interface CartItem extends Product {
@@ -1159,7 +1161,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       {/* Step Content */}
       {currentStep === 'products' && (
-        <Card className="shadow-lg">
+        <Card className="shadow-lg flex flex-col h-[calc(100vh-280px)] min-h-[400px]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="w-5 h-5" />
@@ -1252,8 +1254,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pb-32">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[60vh] md:max-h-[65vh] lg:max-h-[70vh] overflow-y-auto">
+          <CardContent className="flex-1 pb-24 flex flex-col min-h-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 overflow-y-auto min-h-0">
               {filteredProducts.map((product) => {
                 const cartItem = cart.find(item => item.id === product.id);
                 let availableStock = product.quantity;
@@ -1353,6 +1355,67 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                               {product.vetement_couleur && (
                                 <p className="text-xs text-muted-foreground">🎨 Couleur: {product.vetement_couleur}</p>
                               )}
+                            </div>
+                          )}
+
+                          {/* Électroménager product details */}
+                          {product.category === 'electromenager' && (
+                            <div className="space-y-1 mt-1">
+                              {product.electromenager_marque && (
+                                <p className="text-xs text-muted-foreground">🏭 Marque: {product.electromenager_marque}</p>
+                              )}
+                              {product.electromenager_modele && (
+                                <p className="text-xs text-muted-foreground">📋 Modèle: {product.electromenager_modele}</p>
+                              )}
+                              {product.puissance && (
+                                <p className="text-xs text-muted-foreground">💪 Puissance: {product.puissance}W</p>
+                              )}
+                              {product.voltage && (
+                                <p className="text-xs text-muted-foreground">🔌 Voltage: {product.voltage}V</p>
+                              )}
+                              {product.capacite && (
+                                <p className="text-xs text-muted-foreground">📦 Capacité: {product.capacite}L</p>
+                              )}
+                              {product.electromenager_garantie_mois && (
+                                <p className="text-xs text-muted-foreground">🛡️ Garantie: {product.electromenager_garantie_mois} mois</p>
+                              )}
+                              {product.electromenager_classe_energie && (
+                                <p className="text-xs text-muted-foreground">⚡ Classe énergie: {product.electromenager_classe_energie}</p>
+                              )}
+                              {product.electromenager_couleur && (
+                                <p className="text-xs text-muted-foreground">🎨 Couleur: {product.electromenager_couleur}</p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Électronique product details */}
+                          {product.category === 'electronique' && (
+                            <div className="space-y-1 mt-1">
+                              {product.electromenager_marque && (
+                                <p className="text-xs text-muted-foreground">🏭 Marque: {product.electromenager_marque}</p>
+                              )}
+                              {product.electromenager_modele && (
+                                <p className="text-xs text-muted-foreground">📋 Modèle: {product.electromenager_modele}</p>
+                              )}
+                              {product.electromenager_couleur && (
+                                <p className="text-xs text-muted-foreground">🎨 Couleur: {product.electromenager_couleur}</p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Dynamic specifications from specifications_techniques */}
+                          {product.specifications_techniques && 
+                           Object.keys(product.specifications_techniques).length > 0 && (
+                            <div className="space-y-1 mt-1">
+                              {Object.entries(product.specifications_techniques)
+                                .filter(([_, value]) => value !== null && value !== '' && value !== undefined)
+                                .slice(0, 4)
+                                .map(([key, value]) => (
+                                  <p key={key} className="text-xs text-muted-foreground">
+                                    ℹ️ {key.replace(/_/g, ' ')}: {String(value)}
+                                  </p>
+                                ))
+                              }
                             </div>
                           )}
                           
