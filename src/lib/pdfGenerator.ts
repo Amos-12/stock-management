@@ -1445,7 +1445,7 @@ export const generateInventoryHistoryPDF = (
   pdf.text('Produit', margin + 28, yPos + 5);
   pdf.text('Type', margin + 80, yPos + 5);
   pdf.text('Qté', margin + 110, yPos + 5);
-  pdf.text('Avant→Après', margin + 130, yPos + 5);
+  pdf.text('Avant > Apres', margin + 130, yPos + 5);
   pdf.text('Utilisateur', margin + 165, yPos + 5);
   pdf.setTextColor(0, 0, 0);
   yPos += 10;
@@ -1493,7 +1493,7 @@ export const generateInventoryHistoryPDF = (
     pdf.setTextColor(0, 0, 0);
 
     // Stock before/after
-    pdf.text(`${m.previousQuantity} → ${m.newQuantity}`, margin + 130, yPos);
+    pdf.text(`${m.previousQuantity} > ${m.newQuantity}`, margin + 130, yPos);
 
     // User
     const userName = m.userName.length > 12 ? m.userName.substring(0, 10) + '..' : m.userName;
@@ -1539,12 +1539,13 @@ export interface InventoryStockItem {
   status: string;
   price: number;
   stockTotalValue: number;
+  currency: string;
 }
 
 export const generateInventoryStockPDF = (
   products: InventoryStockItem[],
   companySettings: CompanySettings,
-  stats: { totalValue: number; alertProducts: number; ruptureProducts: number; totalProducts: number }
+  stats: { totalValueUSD: number; totalValueHTG: number; alertProducts: number; ruptureProducts: number; totalProducts: number }
 ) => {
   const pdf = new jsPDF({
     unit: 'mm',
@@ -1615,7 +1616,13 @@ export const generateInventoryStockPDF = (
     pdf.text(label, x + boxWidth / 2, boxY + 16, { align: 'center' });
   };
 
-  drawStatBox(margin, 'Valeur totale', `${formatNumber(stats.totalValue)} HTG`, [34, 197, 94]);
+  // Show totals per currency
+  const totalLabel = stats.totalValueUSD > 0 && stats.totalValueHTG > 0 
+    ? `$${formatNumber(stats.totalValueUSD)} + ${formatNumber(stats.totalValueHTG)} HTG`
+    : stats.totalValueUSD > 0 
+      ? `$${formatNumber(stats.totalValueUSD)}`
+      : `${formatNumber(stats.totalValueHTG)} HTG`;
+  drawStatBox(margin, 'Valeur totale', totalLabel, [34, 197, 94]);
   drawStatBox(margin + boxWidth + 5, 'Produits', stats.totalProducts.toString(), [59, 130, 246]);
   drawStatBox(margin + (boxWidth + 5) * 2, 'En alerte', stats.alertProducts.toString(), [249, 115, 22]);
   drawStatBox(margin + (boxWidth + 5) * 3, 'En rupture', stats.ruptureProducts.toString(), [239, 68, 68]);
@@ -1678,8 +1685,11 @@ export const generateInventoryStockPDF = (
     }
     pdf.setTextColor(0, 0, 0);
 
-    // Value
-    pdf.text(`${formatNumber(p.stockTotalValue)} HTG`, margin + contentWidth - 3, yPos, { align: 'right' });
+    // Value with currency
+    const valueLabel = p.currency === 'USD' 
+      ? `$${formatNumber(p.stockTotalValue)}` 
+      : `${formatNumber(p.stockTotalValue)} HTG`;
+    pdf.text(valueLabel, margin + contentWidth - 3, yPos, { align: 'right' });
 
     yPos += 6;
   });

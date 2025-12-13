@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Constants } from '@/integrations/supabase/types';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/ui/table-pagination';
+import { formatNumber } from '@/lib/utils';
 import { 
   Package, 
   Search, 
@@ -58,6 +59,7 @@ type Product = {
   purchase_price: number | null;
   unit: string;
   created_at: string;
+  currency: string;
 };
 
 type StockLevel = 'all' | 'rupture' | 'alerte' | 'normal' | 'eleve';
@@ -221,15 +223,23 @@ export const InventoryManagement = () => {
   }, [searchQuery, selectedCategory, stockLevel, statusFilter]);
 
   const stats = useMemo(() => {
-    const totalValue = products.reduce((sum, p) => {
+    let totalValueUSD = 0;
+    let totalValueHTG = 0;
+    
+    products.forEach(p => {
       const stock = getStockDisplay(p);
-      return sum + (stock.value * p.price);
-    }, 0);
+      const value = stock.value * p.price;
+      if (p.currency === 'USD') {
+        totalValueUSD += value;
+      } else {
+        totalValueHTG += value;
+      }
+    });
     
     const ruptureCount = products.filter(p => getStockStatus(p) === 'rupture').length;
     const alerteCount = products.filter(p => getStockStatus(p) === 'alerte').length;
     
-    return { totalValue, ruptureCount, alerteCount, totalProducts: products.length };
+    return { totalValueUSD, totalValueHTG, ruptureCount, alerteCount, totalProducts: products.length };
   }, [products]);
 
   const handleSort = (field: SortField) => {
@@ -419,12 +429,14 @@ export const InventoryManagement = () => {
         alertThreshold: p.alert_threshold,
         status: getStockStatus(p),
         price: p.price,
-        stockTotalValue: stock.value * p.price
+        stockTotalValue: stock.value * p.price,
+        currency: p.currency || 'HTG'
       };
     });
 
     generateInventoryStockPDF(pdfProducts, settings as CompanySettings, {
-      totalValue: stats.totalValue,
+      totalValueUSD: stats.totalValueUSD,
+      totalValueHTG: stats.totalValueHTG,
       alertProducts: stats.alerteCount,
       ruptureProducts: stats.ruptureCount,
       totalProducts: stats.totalProducts
@@ -436,11 +448,12 @@ export const InventoryManagement = () => {
     });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', { 
+  const formatCurrencyValue = (amount: number, currency: 'USD' | 'HTG' = 'HTG') => {
+    const formatted = new Intl.NumberFormat('fr-FR', { 
       minimumFractionDigits: 0,
       maximumFractionDigits: 0 
-    }).format(amount) + ' HTG';
+    }).format(amount);
+    return currency === 'USD' ? `$${formatted}` : `${formatted} HTG`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -529,7 +542,11 @@ export const InventoryManagement = () => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <p className="text-xl font-bold">{formatCurrency(stats.totalValue)}</p>
+                <p className="text-xl font-bold">
+                  {stats.totalValueUSD > 0 && <span className="text-green-600">${formatNumber(stats.totalValueUSD)}</span>}
+                  {stats.totalValueUSD > 0 && stats.totalValueHTG > 0 && <span className="text-muted-foreground"> + </span>}
+                  {stats.totalValueHTG > 0 && <span>{formatNumber(stats.totalValueHTG)} HTG</span>}
+                </p>
               </div>
               <DollarSign className="w-8 h-8 text-primary opacity-50" />
             </div>
