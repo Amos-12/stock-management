@@ -617,13 +617,15 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col lg:flex-row gap-4 items-end">
+          {/* Main filters row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Date Range */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Période</label>
-              <div className="flex gap-2">
+              <label className="text-sm font-medium text-foreground">Période</label>
+              <div className="flex items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="justify-start">
+                    <Button variant="outline" size="sm" className="flex-1 justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {format(dateRange.from, 'dd/MM/yyyy', { locale: fr })}
                     </Button>
@@ -637,12 +639,10 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                     />
                   </PopoverContent>
                 </Popover>
-                
-                <span className="flex items-center text-muted-foreground">à</span>
-                
+                <span className="text-muted-foreground text-sm">→</span>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="justify-start">
+                    <Button variant="outline" size="sm" className="flex-1 justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {format(dateRange.to, 'dd/MM/yyyy', { locale: fr })}
                     </Button>
@@ -659,10 +659,11 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
               </div>
             </div>
 
+            {/* Report Type */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Type de rapport</label>
+              <label className="text-sm font-medium text-foreground">Type de rapport</label>
               <Select value={reportType} onValueChange={(value: any) => setReportType(value)}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -673,40 +674,42 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
               </Select>
             </div>
 
-            <div className="flex gap-2">
-              <Button onClick={generateReport} disabled={loading}>
-                {loading ? 'Génération...' : 'Actualiser'}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" disabled={!reportData}>
-                    <Download className="w-4 h-4 mr-2" />
-                    Exporter
-                    <ChevronDown className="w-4 h-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={exportToPDF}>
-                    <FileDown className="w-4 h-4 mr-2" />
-                    Export PDF
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={exportReport}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Export rapide (CSV)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={exportToExcel}>
-                    <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Export complet (Excel)
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            {/* Dynamic Filters */}
+            <div className="sm:col-span-2 lg:col-span-2">
+              <label className="text-sm font-medium text-foreground block mb-2">Filtres</label>
+              {renderDynamicFilters()}
             </div>
           </div>
-          
-          {/* Dynamic filters */}
-          <div className="border-t pt-4">
-            <p className="text-sm font-medium mb-2">Filtres</p>
-            {renderDynamicFilters()}
+
+          {/* Actions row */}
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+            <Button onClick={generateReport} disabled={loading} className="gap-2">
+              <TrendingUp className="w-4 h-4" />
+              {loading ? 'Génération...' : 'Actualiser le rapport'}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={!reportData} className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Exporter
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportToPDF}>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Export PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportReport}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Export rapide (CSV)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToExcel}>
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Export complet (Excel)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardContent>
       </Card>
