@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { Printer, Receipt as ReceiptIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { generateReceipt, generateInvoice } from '@/lib/pdfGenerator';
@@ -11,6 +12,17 @@ interface SaleDetailsDialogProps {
   saleId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+interface SaleItem {
+  id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  unit?: string;
+  currency?: string;
 }
 
 export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDialogProps) => {
@@ -60,7 +72,7 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
 
       setSellerName(profile?.full_name || 'N/A');
 
-      // Fetch sale items
+      // Fetch sale items with currency
       const { data: items, error: itemsError } = await supabase
         .from('sale_items')
         .select('*')
@@ -70,7 +82,7 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
 
       setSaleData({
         ...sale,
-        items: items || []
+        items: (items || []) as SaleItem[]
       });
     } catch (error) {
       console.error('Error loading sale details:', error);
@@ -84,18 +96,48 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
     }
   };
 
+  // Calculate currency subtotals
+  const currencySubtotals = useMemo(() => {
+    if (!saleData?.items) return { usd: 0, htg: 0, hasMultipleCurrencies: false };
+    
+    const subtotals = { usd: 0, htg: 0 };
+    saleData.items.forEach((item: SaleItem) => {
+      const currency = item.currency || 'HTG';
+      if (currency === 'USD') {
+        subtotals.usd += item.subtotal;
+      } else {
+        subtotals.htg += item.subtotal;
+      }
+    });
+    
+    return {
+      ...subtotals,
+      hasMultipleCurrencies: subtotals.usd > 0 && subtotals.htg > 0
+    };
+  }, [saleData?.items]);
+
+  const formatCurrencyAmount = (amount: number, currency: string = 'HTG'): string => {
+    const formatted = amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return currency === 'USD' ? `$${formatted}` : `${formatted} HTG`;
+  };
+
+  const formatNumber = (amount: number): string => {
+    return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  };
+
   const handlePrintReceipt = () => {
     if (!saleData || !companySettings) return;
 
-    const cartItems = saleData.items.map((item: any) => ({
+    const cartItems = saleData.items.map((item: SaleItem) => ({
       id: item.product_id,
       name: item.product_name,
-      category: 'general', // We'll need to fetch this if needed
+      category: 'general',
       unit: item.unit || 'unité',
       cartQuantity: item.quantity,
       price: item.unit_price,
       actualPrice: item.subtotal,
-      displayUnit: item.unit
+      displayUnit: item.unit,
+      currency: item.currency || 'HTG'
     }));
 
     generateReceipt(saleData, companySettings, cartItems, sellerName);
@@ -104,7 +146,7 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
   const handlePrintInvoice = () => {
     if (!saleData || !companySettings) return;
 
-    const cartItems = saleData.items.map((item: any) => ({
+    const cartItems = saleData.items.map((item: SaleItem) => ({
       id: item.product_id,
       name: item.product_name,
       category: 'general',
@@ -112,14 +154,34 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
       cartQuantity: item.quantity,
       price: item.unit_price,
       actualPrice: item.subtotal,
-      displayUnit: item.unit
+      displayUnit: item.unit,
+      currency: item.currency || 'HTG'
     }));
 
     generateInvoice(saleData, companySettings, cartItems, sellerName);
   };
 
-  const formatAmount = (amount: number): string => {
-    return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' HTG';
+  // Calculate unified total
+  const getUnifiedTotal = (): { amount: number; currency: string } => {
+    if (!companySettings || !saleData) return { amount: saleData?.total_amount || 0, currency: 'HTG' };
+    
+    const rate = companySettings.usd_htg_rate || 132;
+    const displayCurrency = companySettings.default_display_currency || 'HTG';
+    
+    let unifiedTotal = 0;
+    if (displayCurrency === 'HTG') {
+      unifiedTotal = currencySubtotals.htg + (currencySubtotals.usd * rate);
+    } else {
+      unifiedTotal = currencySubtotals.usd + (currencySubtotals.htg / rate);
+    }
+    
+    // Apply discount if any
+    if (saleData.discount_amount > 0) {
+      // discount_amount is stored in the display currency
+      unifiedTotal -= saleData.discount_amount;
+    }
+    
+    return { amount: unifiedTotal, currency: displayCurrency };
   };
 
   return (
@@ -151,10 +213,10 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
                   <p className="text-sm">{saleData.customer_name}</p>
                 </div>
               )}
-              {saleData.notes && (
+              {saleData.customer_address && (
                 <div>
                   <span className="text-sm font-medium text-muted-foreground">Adresse:</span>
-                  <p className="text-sm">{saleData.notes}</p>
+                  <p className="text-sm">{saleData.customer_address}</p>
                 </div>
               )}
             </div>
@@ -167,26 +229,41 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
                   <TableHeader>
                     <TableRow>
                       <TableHead>Produit</TableHead>
+                      <TableHead className="text-center">Devise</TableHead>
                       <TableHead className="text-right">Quantité</TableHead>
                       <TableHead className="text-right">Prix unitaire</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {saleData.items.map((item: any) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.product_name}</TableCell>
-                        <TableCell className="text-right">
-                          {item.quantity} {item.unit || ''}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatAmount(item.unit_price)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatAmount(item.subtotal)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {saleData.items.map((item: SaleItem) => {
+                      const currency = item.currency || 'HTG';
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.product_name}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge 
+                              variant="outline" 
+                              className={currency === 'USD' 
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                              }
+                            >
+                              {currency === 'USD' ? '$ USD' : 'G HTG'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.quantity} {item.unit || ''}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrencyAmount(item.unit_price, currency)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrencyAmount(item.subtotal, currency)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -194,24 +271,55 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
 
             {/* Totals */}
             <div className="space-y-2 border-t pt-4">
-              <div className="flex justify-between">
-                <span>Sous-total:</span>
-                <span>{formatAmount(saleData.subtotal)}</span>
-              </div>
+              {/* Currency-specific subtotals */}
+              {currencySubtotals.hasMultipleCurrencies ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span>Sous-total USD:</span>
+                    <span className="text-green-600 dark:text-green-400">${formatNumber(currencySubtotals.usd)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Sous-total HTG:</span>
+                    <span className="text-blue-600 dark:text-blue-400">{formatNumber(currencySubtotals.htg)} HTG</span>
+                  </div>
+                  {companySettings && (
+                    <div className="flex justify-between text-xs text-muted-foreground border-t pt-2">
+                      <span>Taux de change:</span>
+                      <span>1 USD = {companySettings.usd_htg_rate || 132} HTG</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex justify-between">
+                  <span>Sous-total:</span>
+                  <span>
+                    {currencySubtotals.usd > 0 
+                      ? `$${formatNumber(currencySubtotals.usd)}`
+                      : `${formatNumber(currencySubtotals.htg)} HTG`
+                    }
+                  </span>
+                </div>
+              )}
+              
               {saleData.discount_amount > 0 && (
-                <div className="flex justify-between text-green-600">
+                <div className="flex justify-between text-red-600 dark:text-red-400">
                   <span>
                     Remise
                     {saleData.discount_type === 'percentage' &&
                       ` (${saleData.discount_value}%)`}:
                   </span>
-                  <span>-{formatAmount(saleData.discount_amount)}</span>
+                  <span>-{formatCurrencyAmount(saleData.discount_amount, companySettings?.default_display_currency || 'HTG')}</span>
                 </div>
               )}
+              
+              {/* Unified total */}
               <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total:</span>
-                <span>{formatAmount(saleData.total_amount)}</span>
+                <span>Total à payer:</span>
+                <span className="text-primary">
+                  {formatCurrencyAmount(getUnifiedTotal().amount, getUnifiedTotal().currency)}
+                </span>
               </div>
+              
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Méthode de paiement:</span>
                 <span className="capitalize">{saleData.payment_method}</span>
