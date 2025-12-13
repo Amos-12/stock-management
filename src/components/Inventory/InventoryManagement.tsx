@@ -42,6 +42,7 @@ import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { QuickInventoryMode } from './QuickInventoryMode';
 import { InventoryHistory } from './InventoryHistory';
+import { generateInventoryStockPDF, CompanySettings } from '@/lib/pdfGenerator';
 
 type Product = {
   id: string;
@@ -393,6 +394,48 @@ export const InventoryManagement = () => {
     XLSX.writeFile(wb, `inventaire_${format(new Date(), 'yyyy-MM-dd_HHmm')}.xlsx`);
   };
 
+  const exportToPDF = async () => {
+    const { data: settings } = await supabase
+      .from('company_settings')
+      .select('*')
+      .single();
+    
+    if (!settings) {
+      toast({
+        title: 'Erreur',
+        description: 'Paramètres de l\'entreprise non disponibles',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const pdfProducts = filteredProducts.map(p => {
+      const stock = getStockDisplay(p);
+      return {
+        name: p.name,
+        category: p.category,
+        stockValue: stock.value,
+        stockUnit: stock.unit,
+        alertThreshold: p.alert_threshold,
+        status: getStockStatus(p),
+        price: p.price,
+        stockTotalValue: stock.value * p.price
+      };
+    });
+
+    generateInventoryStockPDF(pdfProducts, settings as CompanySettings, {
+      totalValue: stats.totalValue,
+      alertProducts: stats.alerteCount,
+      ruptureProducts: stats.ruptureCount,
+      totalProducts: stats.totalProducts
+    });
+
+    toast({
+      title: 'Export réussi',
+      description: 'Le rapport PDF a été téléchargé'
+    });
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', { 
       minimumFractionDigits: 0,
@@ -430,7 +473,11 @@ export const InventoryManagement = () => {
           </Button>
           <Button variant="outline" onClick={exportToExcel}>
             <Download className="w-4 h-4 mr-2" />
-            Export
+            Excel
+          </Button>
+          <Button variant="outline" onClick={exportToPDF}>
+            <Download className="w-4 h-4 mr-2" />
+            PDF
           </Button>
         </div>
       </div>

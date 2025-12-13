@@ -1309,3 +1309,393 @@ export const generateInventoryReport = (
   const fileName = `inventaire_${data.sessionStart.toISOString().split('T')[0]}_${data.sessionEnd.toISOString().split('T')[0].replace(/-/g, '')}.pdf`;
   pdf.save(fileName);
 };
+
+// ============= INVENTORY HISTORY PDF =============
+
+export interface InventoryHistoryItem {
+  date: string;
+  productName: string;
+  category: string;
+  movementType: string;
+  quantity: number;
+  previousQuantity: number;
+  newQuantity: number;
+  reason: string | null;
+  userName: string;
+}
+
+export interface InventoryHistoryStats {
+  ins: number;
+  outs: number;
+  adjustments: number;
+  total: number;
+}
+
+const getMovementTypeLabel = (type: string): string => {
+  const labels: Record<string, string> = {
+    'restock': 'Réapprovisionnement',
+    'sale': 'Vente',
+    'adjustment': 'Ajustement',
+    'adjustment_in': 'Ajustement (+)',
+    'adjustment_out': 'Ajustement (-)',
+    'inventory_adjustment': 'Inventaire',
+    'return': 'Retour',
+    'loss': 'Perte'
+  };
+  return labels[type] || type;
+};
+
+export const generateInventoryHistoryPDF = (
+  movements: InventoryHistoryItem[],
+  companySettings: CompanySettings,
+  stats: InventoryHistoryStats,
+  dateRange: { from: Date; to: Date }
+) => {
+  const pdf = new jsPDF({
+    unit: 'mm',
+    format: 'a4',
+    orientation: 'portrait'
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - (margin * 2);
+  let yPos = 20;
+
+  const checkPageBreak = (needed: number) => {
+    if (yPos + needed > pageHeight - 20) {
+      pdf.addPage();
+      yPos = 20;
+    }
+  };
+
+  // Header - Company info
+  if (companySettings.logo_url) {
+    try {
+      const logoW = companySettings.logo_width || 30;
+      const logoH = companySettings.logo_height || 30;
+      pdf.addImage(companySettings.logo_url, 'PNG', margin, yPos - 5, logoW, logoH);
+    } catch (error) {
+      console.error('Error loading logo:', error);
+    }
+  }
+
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(companySettings.company_name, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 5;
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`${companySettings.address}, ${companySettings.city}`, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(`Tél: ${companySettings.phone}`, pageWidth - margin, yPos, { align: 'right' });
+
+  yPos = 55;
+
+  // Title
+  pdf.setFontSize(16);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text("HISTORIQUE DES MOUVEMENTS DE STOCK", pageWidth / 2, yPos, { align: 'center' });
+  yPos += 10;
+
+  // Date range
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  const fromDate = dateRange.from.toLocaleDateString('fr-FR');
+  const toDate = dateRange.to.toLocaleDateString('fr-FR');
+  pdf.text(`Période: ${fromDate} - ${toDate}`, pageWidth / 2, yPos, { align: 'center' });
+  yPos += 5;
+  pdf.text(`Généré le: ${new Date().toLocaleString('fr-FR')}`, pageWidth / 2, yPos, { align: 'center' });
+  yPos += 12;
+
+  // Stats boxes
+  const boxWidth = (contentWidth - 15) / 4;
+  const boxHeight = 20;
+  const boxY = yPos;
+
+  const drawStatBox = (x: number, label: string, value: string, bgColor: [number, number, number]) => {
+    pdf.setFillColor(...bgColor);
+    pdf.roundedRect(x, boxY, boxWidth, boxHeight, 2, 2, 'F');
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(value, x + boxWidth / 2, boxY + 10, { align: 'center' });
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(label, x + boxWidth / 2, boxY + 16, { align: 'center' });
+  };
+
+  drawStatBox(margin, 'Entrées', `+${formatNumber(stats.ins)}`, [34, 197, 94]);
+  drawStatBox(margin + boxWidth + 5, 'Sorties', `-${formatNumber(stats.outs)}`, [239, 68, 68]);
+  drawStatBox(margin + (boxWidth + 5) * 2, 'Ajustements', stats.adjustments.toString(), [59, 130, 246]);
+  drawStatBox(margin + (boxWidth + 5) * 3, 'Total', stats.total.toString(), [100, 100, 100]);
+
+  pdf.setTextColor(0, 0, 0);
+  yPos = boxY + boxHeight + 15;
+
+  // Table header
+  checkPageBreak(15);
+  pdf.setFillColor(50, 50, 50);
+  pdf.rect(margin, yPos, contentWidth, 8, 'F');
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(255, 255, 255);
+  pdf.text('Date', margin + 3, yPos + 5);
+  pdf.text('Produit', margin + 28, yPos + 5);
+  pdf.text('Type', margin + 80, yPos + 5);
+  pdf.text('Qté', margin + 110, yPos + 5);
+  pdf.text('Avant→Après', margin + 130, yPos + 5);
+  pdf.text('Utilisateur', margin + 165, yPos + 5);
+  pdf.setTextColor(0, 0, 0);
+  yPos += 10;
+
+  // Table rows
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7);
+
+  movements.slice(0, 100).forEach((m, idx) => { // Limit to 100 for PDF
+    checkPageBreak(7);
+
+    if (idx % 2 === 0) {
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(margin, yPos - 4, contentWidth, 6, 'F');
+    }
+
+    // Date
+    const date = new Date(m.date);
+    pdf.text(`${date.toLocaleDateString('fr-FR')} ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`, margin + 3, yPos);
+
+    // Product name (truncate)
+    const maxNameLen = 25;
+    const name = m.productName.length > maxNameLen 
+      ? m.productName.substring(0, maxNameLen - 2) + '...' 
+      : m.productName;
+    pdf.text(name, margin + 28, yPos);
+
+    // Type
+    pdf.text(getMovementTypeLabel(m.movementType), margin + 80, yPos);
+
+    // Quantity with color
+    const isIn = ['restock', 'adjustment_in', 'return'].includes(m.movementType);
+    const isOut = ['sale', 'adjustment_out', 'loss'].includes(m.movementType);
+    if (isIn) {
+      pdf.setTextColor(34, 197, 94);
+      pdf.text(`+${m.quantity}`, margin + 110, yPos);
+    } else if (isOut) {
+      pdf.setTextColor(239, 68, 68);
+      pdf.text(`-${m.quantity}`, margin + 110, yPos);
+    } else {
+      pdf.setTextColor(59, 130, 246);
+      const diff = m.newQuantity - m.previousQuantity;
+      pdf.text(diff >= 0 ? `+${diff}` : `${diff}`, margin + 110, yPos);
+    }
+    pdf.setTextColor(0, 0, 0);
+
+    // Stock before/after
+    pdf.text(`${m.previousQuantity} → ${m.newQuantity}`, margin + 130, yPos);
+
+    // User
+    const userName = m.userName.length > 12 ? m.userName.substring(0, 10) + '..' : m.userName;
+    pdf.text(userName, margin + 165, yPos);
+
+    yPos += 6;
+  });
+
+  // Show if truncated
+  if (movements.length > 100) {
+    yPos += 5;
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'italic');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`... et ${movements.length - 100} autres mouvements (utilisez l'export Excel pour la liste complète)`, pageWidth / 2, yPos, { align: 'center' });
+    pdf.setTextColor(0, 0, 0);
+  }
+
+  // Footer
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'italic');
+  pdf.setTextColor(100, 100, 100);
+  pdf.text(
+    `Généré par ${companySettings.company_name} - ${new Date().toLocaleDateString('fr-FR')}`,
+    pageWidth / 2,
+    pageHeight - 10,
+    { align: 'center' }
+  );
+
+  // Save PDF
+  const fileName = `historique_stock_${dateRange.from.toISOString().split('T')[0]}_${dateRange.to.toISOString().split('T')[0]}.pdf`;
+  pdf.save(fileName);
+};
+
+// ============= INVENTORY STOCK LIST PDF =============
+
+export interface InventoryStockItem {
+  name: string;
+  category: string;
+  stockValue: number;
+  stockUnit: string;
+  alertThreshold: number;
+  status: string;
+  price: number;
+  stockTotalValue: number;
+}
+
+export const generateInventoryStockPDF = (
+  products: InventoryStockItem[],
+  companySettings: CompanySettings,
+  stats: { totalValue: number; alertProducts: number; ruptureProducts: number; totalProducts: number }
+) => {
+  const pdf = new jsPDF({
+    unit: 'mm',
+    format: 'a4',
+    orientation: 'portrait'
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - (margin * 2);
+  let yPos = 20;
+
+  const checkPageBreak = (needed: number) => {
+    if (yPos + needed > pageHeight - 20) {
+      pdf.addPage();
+      yPos = 20;
+    }
+  };
+
+  // Header
+  if (companySettings.logo_url) {
+    try {
+      const logoW = companySettings.logo_width || 30;
+      const logoH = companySettings.logo_height || 30;
+      pdf.addImage(companySettings.logo_url, 'PNG', margin, yPos - 5, logoW, logoH);
+    } catch (error) {
+      console.error('Error loading logo:', error);
+    }
+  }
+
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(companySettings.company_name, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 5;
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`${companySettings.address}, ${companySettings.city}`, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(`Tél: ${companySettings.phone}`, pageWidth - margin, yPos, { align: 'right' });
+
+  yPos = 55;
+
+  // Title
+  pdf.setFontSize(16);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text("ÉTAT DES STOCKS", pageWidth / 2, yPos, { align: 'center' });
+  yPos += 8;
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`Généré le: ${new Date().toLocaleString('fr-FR')}`, pageWidth / 2, yPos, { align: 'center' });
+  yPos += 12;
+
+  // Stats boxes
+  const boxWidth = (contentWidth - 15) / 4;
+  const boxHeight = 20;
+  const boxY = yPos;
+
+  const drawStatBox = (x: number, label: string, value: string, bgColor: [number, number, number]) => {
+    pdf.setFillColor(...bgColor);
+    pdf.roundedRect(x, boxY, boxWidth, boxHeight, 2, 2, 'F');
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(value, x + boxWidth / 2, boxY + 10, { align: 'center' });
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(label, x + boxWidth / 2, boxY + 16, { align: 'center' });
+  };
+
+  drawStatBox(margin, 'Valeur totale', `${formatNumber(stats.totalValue)} HTG`, [34, 197, 94]);
+  drawStatBox(margin + boxWidth + 5, 'Produits', stats.totalProducts.toString(), [59, 130, 246]);
+  drawStatBox(margin + (boxWidth + 5) * 2, 'En alerte', stats.alertProducts.toString(), [249, 115, 22]);
+  drawStatBox(margin + (boxWidth + 5) * 3, 'En rupture', stats.ruptureProducts.toString(), [239, 68, 68]);
+
+  pdf.setTextColor(0, 0, 0);
+  yPos = boxY + boxHeight + 15;
+
+  // Table header
+  checkPageBreak(15);
+  pdf.setFillColor(50, 50, 50);
+  pdf.rect(margin, yPos, contentWidth, 8, 'F');
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(255, 255, 255);
+  pdf.text('Produit', margin + 3, yPos + 5);
+  pdf.text('Catégorie', margin + 60, yPos + 5);
+  pdf.text('Stock', margin + 100, yPos + 5);
+  pdf.text('Seuil', margin + 125, yPos + 5);
+  pdf.text('Statut', margin + 145, yPos + 5);
+  pdf.text('Valeur', margin + contentWidth - 3, yPos + 5, { align: 'right' });
+  pdf.setTextColor(0, 0, 0);
+  yPos += 10;
+
+  // Table rows
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+
+  products.forEach((p, idx) => {
+    checkPageBreak(7);
+
+    if (idx % 2 === 0) {
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(margin, yPos - 4, contentWidth, 6, 'F');
+    }
+
+    // Product name
+    const maxNameLen = 28;
+    const name = p.name.length > maxNameLen ? p.name.substring(0, maxNameLen - 2) + '...' : p.name;
+    pdf.text(name, margin + 3, yPos);
+
+    // Category
+    pdf.text(p.category, margin + 60, yPos);
+
+    // Stock
+    pdf.text(`${p.stockValue} ${p.stockUnit}`, margin + 100, yPos);
+
+    // Threshold
+    pdf.text(p.alertThreshold.toString(), margin + 125, yPos);
+
+    // Status with color
+    if (p.status === 'rupture') {
+      pdf.setTextColor(239, 68, 68);
+      pdf.text('Rupture', margin + 145, yPos);
+    } else if (p.status === 'alerte') {
+      pdf.setTextColor(249, 115, 22);
+      pdf.text('Alerte', margin + 145, yPos);
+    } else {
+      pdf.setTextColor(34, 197, 94);
+      pdf.text('Normal', margin + 145, yPos);
+    }
+    pdf.setTextColor(0, 0, 0);
+
+    // Value
+    pdf.text(`${formatNumber(p.stockTotalValue)} HTG`, margin + contentWidth - 3, yPos, { align: 'right' });
+
+    yPos += 6;
+  });
+
+  // Footer
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'italic');
+  pdf.setTextColor(100, 100, 100);
+  pdf.text(
+    `Généré par ${companySettings.company_name} - ${new Date().toLocaleDateString('fr-FR')}`,
+    pageWidth / 2,
+    pageHeight - 10,
+    { align: 'center' }
+  );
+
+  // Save PDF
+  const fileName = `etat_stocks_${new Date().toISOString().split('T')[0]}.pdf`;
+  pdf.save(fileName);
+};

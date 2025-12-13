@@ -224,23 +224,34 @@ export const AdvancedReports = () => {
         totalProfit += itemsData?.reduce((sum, item) => sum + (item.profit_amount || 0), 0) || 0;
       }
 
-      // Top products
-      const productSales: Record<string, ProductSales> = {};
+      // Top products with currency conversion
+      const productSales: Record<string, { product_name: string; quantity_sold: number; revenueUSD: number; revenueHTG: number }> = {};
       salesWithSellers.forEach(sale => {
         sale.sale_items?.forEach((item: any) => {
+          const currency = item.currency || 'HTG';
           if (!productSales[item.product_name]) {
             productSales[item.product_name] = {
               product_name: item.product_name,
               quantity_sold: 0,
-              total_revenue: 0
+              revenueUSD: 0,
+              revenueHTG: 0
             };
           }
           productSales[item.product_name].quantity_sold += item.quantity;
-          productSales[item.product_name].total_revenue += item.subtotal;
+          if (currency === 'USD') {
+            productSales[item.product_name].revenueUSD += item.subtotal;
+          } else {
+            productSales[item.product_name].revenueHTG += item.subtotal;
+          }
         });
       });
 
       const topProducts = Object.values(productSales)
+        .map(p => ({
+          product_name: p.product_name,
+          quantity_sold: p.quantity_sold,
+          total_revenue: p.revenueHTG + (p.revenueUSD * usdHtgRate) // Convert to HTG
+        }))
         .sort((a, b) => b.total_revenue - a.total_revenue)
         .slice(0, 10);
 
@@ -272,10 +283,10 @@ export const AdvancedReports = () => {
         .map(([period, data]) => ({ period, ...data }))
         .sort((a, b) => a.period.localeCompare(b.period));
 
-      // Category distribution from sales
+      // Category distribution from sales with currency conversion
       const { data: allSaleItems, error: itemsError } = await supabase
         .from('sale_items')
-        .select('product_name, subtotal, sale_id')
+        .select('product_name, subtotal, sale_id, currency')
         .in('sale_id', salesWithSellers.map(s => s.id));
 
       if (itemsError) throw itemsError;
@@ -287,25 +298,33 @@ export const AdvancedReports = () => {
         .select('name, category')
         .in('name', productNames);
 
-      const categoryRevenue: Record<string, { revenue: number; count: number }> = {};
+      const categoryRevenue: Record<string, { revenueUSD: number; revenueHTG: number; count: number }> = {};
       allSaleItems?.forEach(item => {
         const product = productsData?.find(p => p.name === item.product_name);
+        const currency = item.currency || 'HTG';
         if (product) {
           if (!categoryRevenue[product.category]) {
-            categoryRevenue[product.category] = { revenue: 0, count: 0 };
+            categoryRevenue[product.category] = { revenueUSD: 0, revenueHTG: 0, count: 0 };
           }
-          categoryRevenue[product.category].revenue += item.subtotal;
+          if (currency === 'USD') {
+            categoryRevenue[product.category].revenueUSD += item.subtotal;
+          } else {
+            categoryRevenue[product.category].revenueHTG += item.subtotal;
+          }
           categoryRevenue[product.category].count += 1;
         }
       });
 
       const categoryDistribution = Object.entries(categoryRevenue)
-        .map(([category, data]) => ({
-          category,
-          revenue: data.revenue,
-          count: data.count,
-          percentage: totalRevenueConverted > 0 ? (data.revenue / totalRevenueConverted) * 100 : 0
-        }))
+        .map(([category, data]) => {
+          const totalConverted = data.revenueHTG + (data.revenueUSD * usdHtgRate);
+          return {
+            category,
+            revenue: totalConverted, // Already converted to HTG
+            count: data.count,
+            percentage: totalRevenueConverted > 0 ? (totalConverted / totalRevenueConverted) * 100 : 0
+          };
+        })
         .sort((a, b) => b.revenue - a.revenue);
 
       setReportData({
