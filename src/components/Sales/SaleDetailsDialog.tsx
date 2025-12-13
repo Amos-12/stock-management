@@ -161,27 +161,38 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
     generateInvoice(saleData, companySettings, cartItems, sellerName);
   };
 
-  // Calculate unified total
-  const getUnifiedTotal = (): { amount: number; currency: string } => {
-    if (!companySettings || !saleData) return { amount: saleData?.total_amount || 0, currency: 'HTG' };
+  // Calculate unified total with TVA
+  const getUnifiedTotals = (): { subtotal: number; tva: number; total: number; currency: string; tvaRate: number } => {
+    if (!companySettings || !saleData) return { subtotal: 0, tva: 0, total: saleData?.total_amount || 0, currency: 'HTG', tvaRate: 0 };
     
     const rate = companySettings.usd_htg_rate || 132;
     const displayCurrency = companySettings.default_display_currency || 'HTG';
+    const tvaRate = companySettings.tva_rate || 0;
     
-    let unifiedTotal = 0;
+    let unifiedSubtotal = 0;
     if (displayCurrency === 'HTG') {
-      unifiedTotal = currencySubtotals.htg + (currencySubtotals.usd * rate);
+      unifiedSubtotal = currencySubtotals.htg + (currencySubtotals.usd * rate);
     } else {
-      unifiedTotal = currencySubtotals.usd + (currencySubtotals.htg / rate);
+      unifiedSubtotal = currencySubtotals.usd + (currencySubtotals.htg / rate);
     }
     
     // Apply discount if any
+    let subtotalAfterDiscount = unifiedSubtotal;
     if (saleData.discount_amount > 0) {
-      // discount_amount is stored in the display currency
-      unifiedTotal -= saleData.discount_amount;
+      subtotalAfterDiscount -= saleData.discount_amount;
     }
     
-    return { amount: unifiedTotal, currency: displayCurrency };
+    // Calculate TVA
+    const tvaAmount = tvaRate > 0 ? (subtotalAfterDiscount * tvaRate / 100) : 0;
+    const totalTTC = subtotalAfterDiscount + tvaAmount;
+    
+    return { 
+      subtotal: subtotalAfterDiscount, 
+      tva: tvaAmount, 
+      total: totalTTC, 
+      currency: displayCurrency,
+      tvaRate 
+    };
   };
 
   return (
@@ -312,11 +323,25 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
                 </div>
               )}
               
+              {/* TVA if configured */}
+              {getUnifiedTotals().tvaRate > 0 && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span>Sous-total HT:</span>
+                    <span>{formatCurrencyAmount(getUnifiedTotals().subtotal, getUnifiedTotals().currency)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>TVA ({getUnifiedTotals().tvaRate}%):</span>
+                    <span>{formatCurrencyAmount(getUnifiedTotals().tva, getUnifiedTotals().currency)}</span>
+                  </div>
+                </>
+              )}
+              
               {/* Unified total */}
               <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total à payer:</span>
+                <span>{getUnifiedTotals().tvaRate > 0 ? 'Total TTC:' : 'Total à payer:'}</span>
                 <span className="text-primary">
-                  {formatCurrencyAmount(getUnifiedTotal().amount, getUnifiedTotal().currency)}
+                  {formatCurrencyAmount(getUnifiedTotals().total, getUnifiedTotals().currency)}
                 </span>
               </div>
               
