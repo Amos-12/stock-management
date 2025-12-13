@@ -174,7 +174,7 @@ const Auth = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <img src={logo} alt="Logo" className="w-14 h-14 object-contain mx-auto mb-4 animate-pulse" />
           <p className="text-muted-foreground">Chargement...</p>
@@ -184,7 +184,7 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <div className="flex flex-col items-center justify-center mb-4">
