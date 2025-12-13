@@ -27,8 +27,11 @@ import {
   Printer,
   Trash2,
   ChevronDown,
-  Barcode
+  Barcode,
+  Grid3X3,
+  List
 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -129,6 +132,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [quantityUnit, setQuantityUnit] = useState<'barre' | 'tonne'>('barre');
   const [paymentMethod, setPaymentMethod] = useState<'espece' | 'cheque' | 'virement'>('espece');
   const [companySettings, setCompanySettings] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
 
   // Dynamic categories for filtering
   const availableDynamicCategories = useMemo(() => {
@@ -1251,10 +1255,33 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 <Badge variant="secondary" className="text-base">
                   {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''} disponible{filteredProducts.length > 1 ? 's' : ''}
                 </Badge>
+                
+                {/* View mode toggle */}
+                <div className="flex gap-1 bg-muted p-1 rounded-lg">
+                  <Button
+                    size="sm"
+                    variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                    onClick={() => setViewMode('cards')}
+                    className="h-8 px-3"
+                  >
+                    <Grid3X3 className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">Cartes</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    onClick={() => setViewMode('list')}
+                    className="h-8 px-3"
+                  >
+                    <List className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">Liste</span>
+                  </Button>
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent className="flex-1 pb-4 flex flex-col min-h-0">
+            {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 overflow-y-auto min-h-0">
               {filteredProducts.map((product) => {
                 const cartItem = cart.find(item => item.id === product.id);
@@ -1489,6 +1516,107 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 );
               })}
             </div>
+            ) : (
+            /* List view */
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Produit</TableHead>
+                    <TableHead className="hidden md:table-cell">Catégorie</TableHead>
+                    <TableHead>Prix</TableHead>
+                    <TableHead>Stock</TableHead>
+                    <TableHead className="text-right w-20">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.map((product) => {
+                    const cartItem = cart.find(item => item.id === product.id);
+                    let availableStock = product.quantity;
+                    let stockLabel = product.unit;
+                    
+                    if (product.category === 'ceramique' && product.stock_boite !== undefined) {
+                      const totalM2 = roundTo2Decimals((product.stock_boite || 0) * (product.surface_par_boite || 1));
+                      const cartQuantityM2 = cartItem?.cartQuantity || 0;
+                      availableStock = roundTo2Decimals(Math.max(0, totalM2 - cartQuantityM2));
+                      stockLabel = 'm²';
+                    }
+                    
+                    if (product.category === 'fer' && product.stock_barre !== undefined) {
+                      availableStock = product.stock_barre;
+                      stockLabel = 'barres';
+                    }
+                    
+                    const cartQuantity = cartItem?.cartQuantity || 0;
+                    const remainingStock = product.category === 'ceramique'
+                      ? roundTo2Decimals((product.stock_boite || 0) * (product.surface_par_boite || 1) - cartQuantity)
+                      : availableStock - cartQuantity;
+                    
+                    // Compact specs display
+                    const getCompactSpecs = () => {
+                      const specs: string[] = [];
+                      if (product.category === 'ceramique' && product.dimension) specs.push(`📐 ${product.dimension}`);
+                      if (product.category === 'fer' && product.diametre) specs.push(`⭕ ${product.diametre}`);
+                      if (product.electromenager_marque) specs.push(`🏭 ${product.electromenager_marque}`);
+                      if (product.electromenager_modele) specs.push(`📋 ${product.electromenager_modele}`);
+                      if (product.puissance) specs.push(`💪 ${product.puissance}W`);
+                      return specs.slice(0, 2).join(' • ');
+                    };
+                    
+                    return (
+                      <TableRow key={product.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <div>
+                            <span className="font-medium">{product.name}</span>
+                            {getCompactSpecs() && (
+                              <p className="text-xs text-muted-foreground mt-0.5">{getCompactSpecs()}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <Badge variant="outline" className="text-xs">
+                            {categories.find(c => c.value === product.category)?.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-bold text-success text-sm">
+                            {product.category === 'ceramique' && product.prix_m2 
+                              ? formatAmount(product.prix_m2, product.currency) + '/m²'
+                              : product.category === 'fer' && product.prix_par_barre
+                                ? formatAmount(product.prix_par_barre, product.currency) + '/b'
+                                : formatAmount(product.price, product.currency)
+                            }
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className={`text-sm ${remainingStock <= product.alert_threshold ? 'text-warning font-medium' : ''}`}>
+                              {product.category === 'ceramique' ? remainingStock.toFixed(2) : remainingStock} {stockLabel}
+                            </span>
+                            {cartQuantity > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {product.category === 'ceramique' ? cartQuantity.toFixed(2) : cartQuantity} panier
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            onClick={() => addToCart(product)}
+                            disabled={remainingStock === 0}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            )}
             
           </CardContent>
         </Card>
