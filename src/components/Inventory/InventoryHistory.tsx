@@ -23,8 +23,10 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Package
+  Package,
+  FileText
 } from 'lucide-react';
+import { generateInventoryHistoryPDF, CompanySettings } from '@/lib/pdfGenerator';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
@@ -197,7 +199,7 @@ export const InventoryHistory = () => {
     
     if (['sale', 'adjustment_out', 'loss'].includes(type)) {
       return (
-        <Badge className="bg-red-500/10 text-red-600 border-red-500/20 flex items-center gap-1">
+        <Badge className="bg-red-600 text-white border-red-700 flex items-center gap-1">
           <ArrowDownCircle className="w-3 h-3" />
           -{quantity}
         </Badge>
@@ -243,6 +245,44 @@ export const InventoryHistory = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Historique');
     XLSX.writeFile(wb, `historique_inventaire_${format(new Date(), 'yyyy-MM-dd_HHmm')}.xlsx`);
+  };
+
+  const exportToPDF = async () => {
+    const { data: settings } = await supabase
+      .from('company_settings')
+      .select('*')
+      .single();
+    
+    if (!settings) {
+      toast({
+        title: 'Erreur',
+        description: 'Paramètres de l\'entreprise non disponibles',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    generateInventoryHistoryPDF(
+      filteredMovements.map(m => ({
+        date: m.created_at,
+        productName: m.product_name || 'Produit inconnu',
+        category: m.product_category || '',
+        movementType: m.movement_type,
+        quantity: m.quantity,
+        previousQuantity: m.previous_quantity,
+        newQuantity: m.new_quantity,
+        reason: m.reason,
+        userName: m.user_name || 'Système'
+      })),
+      settings as CompanySettings,
+      stats,
+      dateRange
+    );
+
+    toast({
+      title: 'Export réussi',
+      description: 'Le rapport PDF a été téléchargé'
+    });
   };
 
   const formatNumber = (num: number) => {
@@ -363,6 +403,10 @@ export const InventoryHistory = () => {
               <Button variant="outline" onClick={exportToExcel}>
                 <Download className="w-4 h-4 mr-2" />
                 Excel
+              </Button>
+              <Button variant="outline" onClick={exportToPDF}>
+                <FileText className="w-4 h-4 mr-2" />
+                PDF
               </Button>
             </div>
           </div>
