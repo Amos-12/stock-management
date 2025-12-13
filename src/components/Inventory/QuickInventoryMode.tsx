@@ -27,13 +27,16 @@ import {
   WifiOff,
   FileText,
   Clock,
-  Loader2
+  Loader2,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useInventorySounds } from '@/hooks/useInventorySounds';
 import { generateInventoryReport, InventoryReportData, CompanySettings } from '@/lib/pdfGenerator';
 
 interface Product {
@@ -76,9 +79,12 @@ interface PendingOperation {
 const PENDING_OPS_KEY = 'inventory_pending_ops';
 const SESSION_START_KEY = 'inventory_session_start';
 
+const SOUND_ENABLED_KEY = 'inventory_sound_enabled';
+
 export const QuickInventoryMode = () => {
   const { user, profile } = useAuth();
   const isOnline = useOnlineStatus();
+  const { playScan, playVerified, playAdjusted, playError } = useInventorySounds();
   const [isActive, setIsActive] = useState(false);
   const [sessionStart, setSessionStart] = useState<Date | null>(null);
   const [scannedItems, setScannedItems] = useState<ScannedItem[]>([]);
@@ -91,6 +97,15 @@ export const QuickInventoryMode = () => {
   const [pendingOperations, setPendingOperations] = useState<PendingOperation[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem(SOUND_ENABLED_KEY);
+    return saved !== 'false';
+  });
+
+  // Save sound preference
+  useEffect(() => {
+    localStorage.setItem(SOUND_ENABLED_KEY, String(soundEnabled));
+  }, [soundEnabled]);
 
   // Load pending operations and session from localStorage
   useEffect(() => {
@@ -249,6 +264,7 @@ export const QuickInventoryMode = () => {
       if (error) throw error;
 
       if (!product) {
+        if (soundEnabled) playError();
         toast({
           title: "Produit non trouvé",
           description: `Aucun produit avec le code-barres: ${barcode}`,
@@ -264,6 +280,7 @@ export const QuickInventoryMode = () => {
       
       if (existingIndex >= 0) {
         // Re-scan: open adjustment dialog
+        if (soundEnabled) playScan();
         setCurrentProduct(product as Product);
         setNewStockValue(stockInfo.value.toString());
         setAdjustmentDialog(true);
@@ -283,6 +300,7 @@ export const QuickInventoryMode = () => {
           stockUnit: stockInfo.unit
         };
         
+        if (soundEnabled) playScan();
         setScannedItems(prev => [newItem, ...prev]);
         setCurrentProduct(product as Product);
         setNewStockValue(stockInfo.value.toString());
@@ -294,6 +312,7 @@ export const QuickInventoryMode = () => {
         });
       }
     } catch (error) {
+      if (soundEnabled) playError();
       console.error('Error fetching product:', error);
       toast({
         title: "Erreur",
@@ -301,7 +320,7 @@ export const QuickInventoryMode = () => {
         variant: "destructive"
       });
     }
-  }, [isActive, scannedItems]);
+  }, [isActive, scannedItems, soundEnabled, playScan, playError]);
 
   // Enable barcode scanner
   useBarcodeScanner({
@@ -334,6 +353,7 @@ export const QuickInventoryMode = () => {
 
   // Verify stock (mark as correct without adjustment)
   const verifyStock = (productId: string) => {
+    if (soundEnabled) playVerified();
     setScannedItems(prev => prev.map(item => 
       item.product.id === productId 
         ? { ...item, verified: true, actualStock: item.expectedStock }
@@ -353,6 +373,7 @@ export const QuickInventoryMode = () => {
     
     const newValue = parseFloat(newStockValue);
     if (isNaN(newValue) || newValue < 0) {
+      if (soundEnabled) playError();
       toast({
         title: "Valeur invalide",
         description: "Veuillez entrer une valeur numérique positive",
@@ -399,6 +420,7 @@ export const QuickInventoryMode = () => {
             : item
         ));
 
+        if (soundEnabled) playAdjusted();
         toast({
           title: "Enregistré hors-ligne",
           description: "L'ajustement sera synchronisé dès la connexion rétablie",
@@ -460,6 +482,7 @@ export const QuickInventoryMode = () => {
             : item
         ));
 
+        if (soundEnabled) playAdjusted();
         toast({
           title: "Stock ajusté",
           description: `${currentProduct.name}: ${previousValue} → ${newValue} ${stockInfo.unit}`,
@@ -471,6 +494,7 @@ export const QuickInventoryMode = () => {
       setNewStockValue('');
       setAdjustmentReason('');
     } catch (error) {
+      if (soundEnabled) playError();
       console.error('Error adjusting stock:', error);
       toast({
         title: "Erreur",
@@ -582,6 +606,19 @@ export const QuickInventoryMode = () => {
               )}
             </div>
             <div className="flex gap-2 flex-wrap">
+              {/* Sound toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                title={soundEnabled ? "Désactiver les sons" : "Activer les sons"}
+              >
+                {soundEnabled ? (
+                  <Volume2 className="w-4 h-4" />
+                ) : (
+                  <VolumeX className="w-4 h-4 text-muted-foreground" />
+                )}
+              </Button>
               {scannedItems.length > 0 && (
                 <Button variant="outline" onClick={generateReport} className="gap-2">
                   <FileText className="w-4 h-4" />
