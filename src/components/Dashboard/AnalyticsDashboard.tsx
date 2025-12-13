@@ -22,7 +22,7 @@ import {
   BarChart3,
   PieChart as PieChartIcon,
 } from 'lucide-react';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, calculateUnifiedTotal, calculateUnifiedProfit } from '@/lib/utils';
 import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, getDay, getHours } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -87,6 +87,7 @@ export const AnalyticsDashboard = () => {
   const [previousSales, setPreviousSales] = useState<Sale[]>([]);
   const [previousSaleItems, setPreviousSaleItems] = useState<SaleItem[]>([]);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [usdHtgRate, setUsdHtgRate] = useState(132);
 
   const getDateRange = (p: Period): { from: Date; to: Date; prevFrom: Date; prevTo: Date } => {
     const now = new Date();
@@ -131,6 +132,14 @@ export const AnalyticsDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     const { from, to, prevFrom, prevTo } = getDateRange(period);
+
+    // Fetch company settings for rate
+    const { data: settings } = await supabase
+      .from('company_settings')
+      .select('usd_htg_rate')
+      .single();
+    const rate = settings?.usd_htg_rate || 132;
+    setUsdHtgRate(rate);
 
     try {
       // Current period sales
@@ -193,11 +202,13 @@ export const AnalyticsDashboard = () => {
   }, [period, dateRange]);
 
   const kpis = useMemo<KPIData>(() => {
-    const currentRevenue = sales.reduce((sum, s) => sum + s.total_amount, 0);
-    const previousRevenue = previousSales.reduce((sum, s) => sum + s.total_amount, 0);
+    // Use proper currency conversion for revenue
+    const currentRevenue = calculateUnifiedTotal(saleItems, usdHtgRate).unified;
+    const previousRevenue = calculateUnifiedTotal(previousSaleItems, usdHtgRate).unified;
     
-    const currentProfit = saleItems.reduce((sum, i) => sum + (i.profit_amount || 0), 0);
-    const previousProfit = previousSaleItems.reduce((sum, i) => sum + (i.profit_amount || 0), 0);
+    // Use proper currency conversion for profit
+    const currentProfit = calculateUnifiedProfit(saleItems, usdHtgRate);
+    const previousProfit = calculateUnifiedProfit(previousSaleItems, usdHtgRate);
     
     const currentUniqueSellers = new Set(sales.map(s => s.seller_id)).size;
     const previousUniqueSellers = new Set(previousSales.map(s => s.seller_id)).size;
@@ -212,7 +223,7 @@ export const AnalyticsDashboard = () => {
       },
       uniqueSellers: { current: currentUniqueSellers, previous: previousUniqueSellers },
     };
-  }, [sales, previousSales, saleItems, previousSaleItems]);
+  }, [sales, previousSales, saleItems, previousSaleItems, usdHtgRate]);
 
   const trendData = useMemo(() => {
     const { from, to } = getDateRange(period);
@@ -233,12 +244,12 @@ export const AnalyticsDashboard = () => {
 
       return {
         date: format(day, 'dd/MM', { locale: fr }),
-        revenue: daySales.reduce((sum, s) => sum + s.total_amount, 0),
-        profit: dayItems.reduce((sum, i) => sum + (i.profit_amount || 0), 0),
+        revenue: calculateUnifiedTotal(dayItems, usdHtgRate).unified,
+        profit: calculateUnifiedProfit(dayItems, usdHtgRate),
         salesCount: daySales.length,
       };
     });
-  }, [sales, saleItems, period]);
+  }, [sales, saleItems, period, usdHtgRate]);
 
   const sparklineData = useMemo(() => {
     return trendData.map(d => ({ value: d.revenue }));
@@ -265,13 +276,21 @@ export const AnalyticsDashboard = () => {
         return saleDate >= prevDayStart && saleDate <= prevDayEnd;
       });
 
+      // Get items for each period's sales
+      const currentDayItems = saleItems.filter(i => 
+        currentDaySales.some(s => s.id === i.sale_id)
+      );
+      const prevDayItems = previousSaleItems.filter(i => 
+        prevDaySales.some(s => s.id === i.sale_id)
+      );
+
       return {
         label: format(day, 'EEE', { locale: fr }),
-        current: currentDaySales.reduce((sum, s) => sum + s.total_amount, 0),
-        previous: prevDaySales.reduce((sum, s) => sum + s.total_amount, 0),
+        current: calculateUnifiedTotal(currentDayItems, usdHtgRate).unified,
+        previous: calculateUnifiedTotal(prevDayItems, usdHtgRate).unified,
       };
     });
-  }, [sales, previousSales, period]);
+  }, [sales, previousSales, saleItems, previousSaleItems, period, usdHtgRate]);
 
   const heatmapData = useMemo(() => {
     const data: { day: number; hour: number; value: number }[] = [];
@@ -297,21 +316,29 @@ export const AnalyticsDashboard = () => {
       if (!productTotals[item.product_name]) {
         productTotals[item.product_name] = { name: item.product_name, revenue: 0, quantity: 0 };
       }
-      productTotals[item.product_name].revenue += item.subtotal;
+      // Convert USD to HTG for unified revenue
+      const itemRevenue = item.currency === 'USD' 
+        ? item.subtotal * usdHtgRate 
+        : item.subtotal;
+      productTotals[item.product_name].revenue += itemRevenue;
       productTotals[item.product_name].quantity += Number(item.quantity);
     });
     
     return Object.values(productTotals)
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
-  }, [saleItems]);
+  }, [saleItems, usdHtgRate]);
 
   const categoryDistribution = useMemo(() => {
     const categories: Record<string, number> = {};
     
     saleItems.forEach(item => {
       const category = item.product_name.split(' ')[0] || 'Autre';
-      categories[category] = (categories[category] || 0) + item.subtotal;
+      // Convert USD to HTG for unified total
+      const itemValue = item.currency === 'USD' 
+        ? item.subtotal * usdHtgRate 
+        : item.subtotal;
+      categories[category] = (categories[category] || 0) + itemValue;
     });
     
     return Object.entries(categories)

@@ -12,7 +12,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, calculateUnifiedTotal, calculateUnifiedProfit } from '@/lib/utils';
 
 export const SellerDashboardStats = () => {
   const { user } = useAuth();
@@ -30,78 +30,97 @@ export const SellerDashboardStats = () => {
   });
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usdHtgRate, setUsdHtgRate] = useState(132);
 
   useEffect(() => {
     if (user) {
+      fetchCompanySettings();
       fetchStats();
       fetchRecentSales();
     }
   }, [user]);
 
+  const fetchCompanySettings = async () => {
+    const { data } = await supabase
+      .from('company_settings')
+      .select('usd_htg_rate')
+      .single();
+    if (data?.usd_htg_rate) {
+      setUsdHtgRate(data.usd_htg_rate);
+    }
+  };
+
   const fetchStats = async () => {
     if (!user) return;
 
     try {
-      // Total sales count and revenue
+      // Get all sales for this seller
       const { data: allSales, error: allError } = await supabase
         .from('sales')
-        .select('id, total_amount')
+        .select('id, total_amount, created_at')
         .eq('seller_id', user.id);
 
       if (allError) throw allError;
 
-      // Today's sales
+      // Fetch company settings for rate
+      const { data: settings } = await supabase
+        .from('company_settings')
+        .select('usd_htg_rate')
+        .single();
+      const rate = settings?.usd_htg_rate || 132;
+
+      // Fetch ALL sale_items with currency for all sales
+      const saleIds = allSales?.map(s => s.id) || [];
+      let allSaleItems: any[] = [];
+      if (saleIds.length > 0) {
+        const { data: items } = await supabase
+          .from('sale_items')
+          .select('sale_id, product_name, quantity, subtotal, currency')
+          .in('sale_id', saleIds);
+        allSaleItems = items || [];
+      }
+
+      // Date calculations
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const { data: todaySales, error: todayError } = await supabase
-        .from('sales')
-        .select('total_amount')
-        .eq('seller_id', user.id)
-        .gte('created_at', today.toISOString());
-
-      if (todayError) throw todayError;
-
-      // Week sales
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       weekAgo.setHours(0, 0, 0, 0);
 
-      const { data: weekSales, error: weekError } = await supabase
-        .from('sales')
-        .select('total_amount')
-        .eq('seller_id', user.id)
-        .gte('created_at', weekAgo.toISOString());
-
-      if (weekError) throw weekError;
-
-      // Month sales
       const monthAgo = new Date();
       monthAgo.setDate(monthAgo.getDate() - 30);
       monthAgo.setHours(0, 0, 0, 0);
 
-      const { data: monthSales, error: monthError } = await supabase
-        .from('sales')
-        .select('total_amount')
-        .eq('seller_id', user.id)
-        .gte('created_at', monthAgo.toISOString());
+      // Filter sales by period
+      const todaySales = allSales?.filter(s => new Date(s.created_at) >= today) || [];
+      const weekSales = allSales?.filter(s => new Date(s.created_at) >= weekAgo) || [];
+      const monthSales = allSales?.filter(s => new Date(s.created_at) >= monthAgo) || [];
 
-      if (monthError) throw monthError;
+      // Calculate revenue with proper currency conversion
+      const calculateRevenue = (salesList: any[]) => {
+        const itemsForSales = allSaleItems.filter(i => 
+          salesList.some(s => s.id === i.sale_id)
+        );
+        return calculateUnifiedTotal(itemsForSales, rate).unified;
+      };
 
-      // Top products
-      const { data: saleItems, error: itemsError } = await supabase
-        .from('sale_items')
-        .select('product_name, quantity, subtotal, sale_id')
-        .in('sale_id', allSales?.map(s => s.id) || []);
+      const totalRevenue = calculateRevenue(allSales || []);
+      const todayRevenue = calculateRevenue(todaySales);
+      const weekRevenue = calculateRevenue(weekSales);
+      const monthRevenue = calculateRevenue(monthSales);
 
-      if (itemsError) throw itemsError;
-
-      const productStats = saleItems?.reduce((acc: any, item: any) => {
+      // Top products with unified currency
+      const productStats = allSaleItems.reduce((acc: any, item: any) => {
         if (!acc[item.product_name]) {
           acc[item.product_name] = { product_name: item.product_name, quantity: 0, revenue: 0 };
         }
-        acc[item.product_name].quantity += item.quantity;
-        acc[item.product_name].revenue += Number(item.subtotal);
+        acc[item.product_name].quantity += Number(item.quantity);
+        // Convert USD to HTG for unified total
+        const itemRevenue = item.currency === 'USD' 
+          ? item.subtotal * rate 
+          : item.subtotal;
+        acc[item.product_name].revenue += itemRevenue;
         return acc;
       }, {});
 
@@ -109,18 +128,17 @@ export const SellerDashboardStats = () => {
         .sort((a: any, b: any) => b.revenue - a.revenue)
         .slice(0, 5);
 
-      const totalRevenue = allSales?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0;
       const averageSale = allSales?.length ? totalRevenue / allSales.length : 0;
 
       setStats({
         totalSales: allSales?.length || 0,
-        todaySales: todaySales?.length || 0,
+        todaySales: todaySales.length,
         totalRevenue,
-        todayRevenue: todaySales?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0,
-        weekSales: weekSales?.length || 0,
-        weekRevenue: weekSales?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0,
-        monthSales: monthSales?.length || 0,
-        monthRevenue: monthSales?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0,
+        todayRevenue,
+        weekSales: weekSales.length,
+        weekRevenue,
+        monthSales: monthSales.length,
+        monthRevenue,
         averageSale,
         topProducts: topProducts as any
       });
