@@ -154,6 +154,7 @@ export type Database = {
       products: {
         Row: {
           alert_threshold: number
+          barcode: string | null
           bars_per_ton: number | null
           bloc_poids: number | null
           bloc_type: string | null
@@ -204,6 +205,7 @@ export type Database = {
         }
         Insert: {
           alert_threshold?: number
+          barcode?: string | null
           bars_per_ton?: number | null
           bloc_poids?: number | null
           bloc_type?: string | null
@@ -254,6 +256,7 @@ export type Database = {
         }
         Update: {
           alert_threshold?: number
+          barcode?: string | null
           bars_per_ton?: number | null
           bloc_poids?: number | null
           bloc_type?: string | null

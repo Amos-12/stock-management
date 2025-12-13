@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,8 @@ import {
   FileText,
   Printer,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  Barcode
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -35,10 +36,12 @@ import { generateReceipt, generateInvoice } from '@/lib/pdfGenerator';
 import jsPDF from 'jspdf';
 import logo from '@/assets/logo.png';
 import { useCategories, useSousCategories } from '@/hooks/useCategories';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 
 interface Product {
   id: string;
   name: string;
+  barcode?: string;
   category: string;
   unit: string;
   price: number;
@@ -283,10 +286,47 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     }
   };
 
+  // Barcode scan handler
+  const handleBarcodeScan = useCallback((barcode: string) => {
+    if (currentStep !== 'products') return;
+    
+    const product = products.find(p => p.barcode === barcode);
+    if (product) {
+      // For ceramics and iron, open quantity dialog
+      if (product.category === 'ceramique' || product.category === 'fer') {
+        setCustomQuantityDialog({ open: true, product });
+        setQuantityUnit('barre');
+      } else {
+        // For other products, add directly to cart
+        addToCart(product, 1);
+      }
+      toast({
+        title: "Produit scanné",
+        description: product.name,
+      });
+    } else {
+      toast({
+        title: "Code-barres non reconnu",
+        description: `Aucun produit trouvé avec le code: ${barcode}`,
+        variant: "destructive"
+      });
+    }
+  }, [products, currentStep]);
+
+  // Enable barcode scanner when on products step
+  useBarcodeScanner({
+    onScan: handleBarcodeScan,
+    enabled: currentStep === 'products' && !customQuantityDialog.open,
+    minLength: 5,
+    maxTimeBetweenKeys: 50
+  });
+
   useEffect(() => {
     const filtered = products.filter(product => {
+      // Match by name, category, OR barcode
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase());
+        product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.barcode && product.barcode.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesSaleType = saleTypeFilter === 'all' || product.sale_type === saleTypeFilter;
       
       // Dynamic category filter using categorie_id
@@ -1129,11 +1169,19 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Rechercher un produit..."
+                  placeholder="Rechercher ou scanner un code-barres..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 pr-24"
+                  data-barcode-input="true"
                 />
+                <Badge 
+                  variant="outline" 
+                  className="absolute right-2 top-2 text-xs bg-primary/10 text-primary border-primary/30"
+                >
+                  <Barcode className="w-3 h-3 mr-1" />
+                  Scanner prêt
+                </Badge>
               </div>
               <div className="flex gap-2">
                 <Button

@@ -29,6 +29,7 @@ import { TablePagination } from '@/components/ui/table-pagination';
 interface Product {
   id: string;
   name: string;
+  barcode?: string;
   category: string;
   unit: string;
   price: number;
@@ -133,6 +134,7 @@ export const ProductManagement = () => {
   
   const [formData, setFormData] = useState<{
     name: string;
+    barcode: string;
     category: ProductCategory;
     unit: string;
     price: string;
@@ -175,6 +177,7 @@ export const ProductManagement = () => {
     currency: 'USD' | 'HTG';
   }>({
     name: '',
+    barcode: '',
     category: 'alimentaires',
     unit: 'unité',
     price: '',
@@ -333,6 +336,7 @@ export const ProductManagement = () => {
   const resetForm = () => {
     setFormData({
       name: '',
+      barcode: '',
       category: 'alimentaires' as const,
       unit: 'unité',
       price: '',
@@ -399,6 +403,7 @@ export const ProductManagement = () => {
     
     setFormData({
       name: product.name,
+      barcode: product.barcode || '',
       category: product.category as ProductCategory,
       unit: product.unit || 'unité',
       price: product.price.toString(),
@@ -532,6 +537,7 @@ export const ProductManagement = () => {
     try {
       const productData: any = {
         name: formData.name,
+        barcode: formData.barcode || null,
         category: formData.category,
         unit: formData.unit,
         alert_threshold: parseInt(formData.alert_threshold),
@@ -830,6 +836,15 @@ export const ProductManagement = () => {
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                       placeholder="Nom du produit"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="barcode">Code-barres</Label>
+                    <Input
+                      id="barcode"
+                      value={formData.barcode}
+                      onChange={(e) => setFormData({...formData, barcode: e.target.value})}
+                      placeholder="Scanner ou saisir le code-barres"
                     />
                   </div>
                   {/* Dynamic Category Selection */}
@@ -1720,20 +1735,21 @@ export const ProductManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nom</TableHead>
+                <TableHead className="hidden md:table-cell">Code-barres</TableHead>
                 <TableHead>Catégorie</TableHead>
-                <TableHead>Unité</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead className="hidden sm:table-cell">Unité</TableHead>
+                <TableHead className="hidden sm:table-cell">Type</TableHead>
                 <TableHead>Devise</TableHead>
                 <TableHead>Prix</TableHead>
                 <TableHead>Stock</TableHead>
-                <TableHead>Statut</TableHead>
+                <TableHead className="hidden sm:table-cell">Statut</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                     Aucun produit trouvé
                   </TableCell>
                 </TableRow>
@@ -1741,15 +1757,22 @@ export const ProductManagement = () => {
                 paginatedProducts.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {product.barcode ? (
+                        <code className="text-xs bg-muted px-1 py-0.5 rounded">{product.barcode}</code>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">
                         {categories.find(c => c.value === product.category)?.label}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <span className="text-sm text-muted-foreground">{product.unit}</span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant={product.sale_type === 'retail' ? "default" : "secondary"}>
                         {product.sale_type === 'retail' ? 'Détail' : 'Gros'}
                       </Badge>
@@ -1781,7 +1804,7 @@ export const ProductManagement = () => {
                         );
                       })()}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant={product.is_active ? "default" : "secondary"}>
                         {product.is_active ? "Actif" : "Inactif"}
                       </Badge>
