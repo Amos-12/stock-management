@@ -41,6 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { QuickInventoryMode } from './QuickInventoryMode';
+import { InventoryHistory } from './InventoryHistory';
 
 type Product = {
   id: string;
@@ -436,20 +437,29 @@ export const InventoryManagement = () => {
 
       {/* Tabs for switching between standard and quick inventory */}
       <Tabs defaultValue="standard" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="standard" className="gap-2">
             <List className="w-4 h-4" />
-            Inventaire Standard
+            <span className="hidden sm:inline">Inventaire</span>
           </TabsTrigger>
           <TabsTrigger value="quick" className="gap-2">
             <ScanLine className="w-4 h-4" />
-            Scan Rapide
+            <span className="hidden sm:inline">Scan Rapide</span>
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            <span className="hidden sm:inline">Historique</span>
           </TabsTrigger>
         </TabsList>
 
         {/* Quick Inventory Tab */}
         <TabsContent value="quick" className="mt-6">
           <QuickInventoryMode />
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history" className="mt-6">
+          <InventoryHistory />
         </TabsContent>
 
         {/* Standard Inventory Tab */}
