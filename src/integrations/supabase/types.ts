@@ -695,6 +695,14 @@ export type Database = {
         | "product_deactivated"
         | "user_deleted"
         | "system_cleanup"
+        | "category_created"
+        | "category_updated"
+        | "category_deleted"
+        | "subcategory_created"
+        | "subcategory_updated"
+        | "subcategory_deleted"
+        | "sale_deleted"
+        | "sale_cancelled"
       app_role: "admin" | "seller"
       product_category:
         | "alimentaires"
@@ -854,6 +862,14 @@ export const Constants = {
         "product_deactivated",
         "user_deleted",
         "system_cleanup",
+        "category_created",
+        "category_updated",
+        "category_deleted",
+        "subcategory_created",
+        "subcategory_updated",
+        "subcategory_deleted",
+        "sale_deleted",
+        "sale_cancelled",
       ],
       app_role: ["admin", "seller"],
       product_category: [
