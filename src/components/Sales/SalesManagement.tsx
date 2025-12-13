@@ -273,81 +273,75 @@ export const SalesManagement = () => {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="shadow-md">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total des ventes</p>
-                <p className="text-2xl font-bold text-primary">{sales.length}</p>
+      <div className="flex flex-wrap gap-3">
+        <Card className="shadow-sm flex-1 min-w-[160px]">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Total ventes</p>
+                <p className="text-lg font-bold">{sales.length}</p>
               </div>
-              <ShoppingCart className="w-8 h-8 text-primary opacity-50" />
+              <ShoppingCart className="w-5 h-5 text-muted-foreground opacity-50 shrink-0" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-md">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Revenu HTG</p>
-                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{formatNumber(revenueStats.totalHTG)} HTG</p>
+        <Card className="shadow-sm flex-1 min-w-[160px]">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Revenu total</p>
+                <p className="text-lg font-bold">{formatNumber(revenueStats.totalHTG)} HTG</p>
                 {revenueStats.totalUSD > 0 && (
-                  <p className="text-sm text-green-600 dark:text-green-400">+ ${formatNumber(revenueStats.totalUSD)}</p>
+                  <p className="text-xs text-muted-foreground">+ ${formatNumber(revenueStats.totalUSD)}</p>
                 )}
               </div>
-              <TrendingUp className="w-8 h-8 text-blue-600 opacity-50" />
+              <TrendingUp className="w-5 h-5 text-muted-foreground opacity-50 shrink-0" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-md">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Aujourd'hui HTG</p>
-                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{formatNumber(revenueStats.todayHTG)} HTG</p>
+        <Card className="shadow-sm flex-1 min-w-[160px]">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Aujourd'hui</p>
+                <p className="text-lg font-bold">{formatNumber(revenueStats.todayHTG)} HTG</p>
                 {revenueStats.todayUSD > 0 && (
-                  <p className="text-sm text-green-600 dark:text-green-400">+ ${formatNumber(revenueStats.todayUSD)}</p>
+                  <p className="text-xs text-muted-foreground">+ ${formatNumber(revenueStats.todayUSD)}</p>
                 )}
               </div>
-              <Calendar className="w-8 h-8 text-blue-600 opacity-50" />
+              <Calendar className="w-5 h-5 text-muted-foreground opacity-50 shrink-0" />
             </div>
           </CardContent>
         </Card>
 
         {companySettings?.tva_rate > 0 && (
-          <Card className="shadow-md border-l-4 border-l-orange-500">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">TVA Collectée ({companySettings.tva_rate}%)</p>
-                  <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
-                    {formatNumber(tvaStats.totalTVA_HTG)} HTG
-                  </p>
-                  {tvaStats.totalTVA_USD > 0 && (
-                    <p className="text-sm text-green-600 dark:text-green-400">+ ${formatNumber(tvaStats.totalTVA_USD)}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Aujourd'hui: {formatNumber(tvaStats.todayTVA_HTG)} HTG
-                    {tvaStats.todayTVA_USD > 0 && ` + $${formatNumber(tvaStats.todayTVA_USD)}`}
+          <Card className="shadow-sm flex-1 min-w-[160px]">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">TVA ({companySettings.tva_rate}%)</p>
+                  <p className="text-lg font-bold">{formatNumber(tvaStats.totalTVA_HTG)} HTG</p>
+                  <p className="text-xs text-muted-foreground">
+                    Auj: {formatNumber(tvaStats.todayTVA_HTG)} HTG
                   </p>
                 </div>
-                <Receipt className="w-8 h-8 text-orange-500 opacity-50" />
+                <Receipt className="w-5 h-5 text-muted-foreground opacity-50 shrink-0" />
               </div>
             </CardContent>
           </Card>
         )}
 
         {(revenueStats.totalUSD > 0 || revenueStats.todayUSD > 0) && companySettings && (
-          <Card className="shadow-md">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Taux USD/HTG</p>
-                  <p className="text-xl font-bold">1 USD = {companySettings.usd_htg_rate || 132} HTG</p>
+          <Card className="shadow-sm flex-1 min-w-[160px]">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Taux change</p>
+                  <p className="text-lg font-bold">1 $ = {companySettings.usd_htg_rate || 132}</p>
                 </div>
-                <Badge variant="outline" className="text-xs">Convertir</Badge>
+                <Badge variant="outline" className="text-xs shrink-0">HTG</Badge>
               </div>
             </CardContent>
           </Card>
