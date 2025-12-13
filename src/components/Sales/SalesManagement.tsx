@@ -34,13 +34,24 @@ interface Sale {
   };
 }
 
+interface RevenueStats {
+  totalHTG: number;
+  totalUSD: number;
+  todayHTG: number;
+  todayUSD: number;
+}
+
+const formatNumber = (amount: number): string => {
+  return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+};
+
 export const SalesManagement = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [totalRevenue, setTotalRevenue] = useState(0);
-  const [todayRevenue, setTodayRevenue] = useState(0);
+  const [revenueStats, setRevenueStats] = useState<RevenueStats>({ totalHTG: 0, totalUSD: 0, todayHTG: 0, todayUSD: 0 });
+  const [companySettings, setCompanySettings] = useState<any>(null);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -60,8 +71,19 @@ export const SalesManagement = () => {
 
   useEffect(() => {
     fetchSales();
+    fetchCompanySettings();
     checkAdminRole();
   }, []);
+
+  const fetchCompanySettings = async () => {
+    const { data } = await supabase
+      .from('company_settings')
+      .select('usd_htg_rate, default_display_currency')
+      .single();
+    if (data) {
+      setCompanySettings(data);
+    }
+  };
 
   useEffect(() => {
     const filtered = sales.filter(sale =>
@@ -74,16 +96,34 @@ export const SalesManagement = () => {
 
   const fetchSales = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch sales and their items to calculate per-currency totals
+      const { data: salesData, error } = await supabase
         .from('sales')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
+      // Fetch all sale items to calculate currency-specific totals
+      const { data: allItems } = await supabase
+        .from('sale_items')
+        .select('sale_id, subtotal, currency');
+
+      // Build a map of sale_id -> currencies
+      const saleItemsMap = new Map<string, { htg: number; usd: number }>();
+      (allItems || []).forEach(item => {
+        const existing = saleItemsMap.get(item.sale_id) || { htg: 0, usd: 0 };
+        if (item.currency === 'USD') {
+          existing.usd += item.subtotal;
+        } else {
+          existing.htg += item.subtotal;
+        }
+        saleItemsMap.set(item.sale_id, existing);
+      });
+
       // Fetch seller names separately
       const salesWithSellers = await Promise.all(
-        (data || []).map(async (sale) => {
+        (salesData || []).map(async (sale) => {
           const { data: profileData } = await supabase
             .from('profiles')
             .select('full_name')
@@ -99,19 +139,26 @@ export const SalesManagement = () => {
 
       setSales(salesWithSellers as Sale[]);
 
-      // Calculate total revenue
-      const total = data?.reduce((sum, sale) => sum + parseFloat(sale.total_amount.toString()), 0) || 0;
-      setTotalRevenue(total);
-
-      // Calculate today's revenue
+      // Calculate revenue by currency
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayTotal = data?.filter(sale => {
+      
+      const stats: RevenueStats = { totalHTG: 0, totalUSD: 0, todayHTG: 0, todayUSD: 0 };
+      
+      (salesData || []).forEach(sale => {
+        const currencies = saleItemsMap.get(sale.id) || { htg: 0, usd: 0 };
+        stats.totalHTG += currencies.htg;
+        stats.totalUSD += currencies.usd;
+        
         const saleDate = new Date(sale.created_at);
         saleDate.setHours(0, 0, 0, 0);
-        return saleDate.getTime() === today.getTime();
-      }).reduce((sum, sale) => sum + parseFloat(sale.total_amount.toString()), 0) || 0;
-      setTodayRevenue(todayTotal);
+        if (saleDate.getTime() === today.getTime()) {
+          stats.todayHTG += currencies.htg;
+          stats.todayUSD += currencies.usd;
+        }
+      });
+      
+      setRevenueStats(stats);
 
     } catch (error) {
       console.error('Error fetching sales:', error);
@@ -206,7 +253,7 @@ export const SalesManagement = () => {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="shadow-md">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -223,10 +270,13 @@ export const SalesManagement = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Revenu total</p>
-                <p className="text-2xl font-bold text-success">{totalRevenue.toFixed(2)} HTG</p>
+                <p className="text-sm text-muted-foreground">Revenu HTG</p>
+                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{formatNumber(revenueStats.totalHTG)} HTG</p>
+                {revenueStats.totalUSD > 0 && (
+                  <p className="text-sm text-green-600 dark:text-green-400">+ ${formatNumber(revenueStats.totalUSD)}</p>
+                )}
               </div>
-              <TrendingUp className="w-8 h-8 text-success opacity-50" />
+              <TrendingUp className="w-8 h-8 text-blue-600 opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -235,13 +285,30 @@ export const SalesManagement = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Aujourd'hui</p>
-                <p className="text-2xl font-bold text-success">{todayRevenue.toFixed(2)} HTG</p>
+                <p className="text-sm text-muted-foreground">Aujourd'hui HTG</p>
+                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{formatNumber(revenueStats.todayHTG)} HTG</p>
+                {revenueStats.todayUSD > 0 && (
+                  <p className="text-sm text-green-600 dark:text-green-400">+ ${formatNumber(revenueStats.todayUSD)}</p>
+                )}
               </div>
-              <Calendar className="w-8 h-8 text-success opacity-50" />
+              <Calendar className="w-8 h-8 text-blue-600 opacity-50" />
             </div>
           </CardContent>
         </Card>
+
+        {(revenueStats.totalUSD > 0 || revenueStats.todayUSD > 0) && companySettings && (
+          <Card className="shadow-md">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Taux USD/HTG</p>
+                  <p className="text-xl font-bold">1 USD = {companySettings.usd_htg_rate || 132} HTG</p>
+                </div>
+                <Badge variant="outline" className="text-xs">Convertir</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Sales Table */}
