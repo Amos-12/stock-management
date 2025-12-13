@@ -21,7 +21,7 @@ import { Calendar, TrendingUp, Package, DollarSign, ShoppingCart, Users, Target 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { StatsCard } from './StatsCard';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, calculateUnifiedTotal, calculateUnifiedProfit } from '@/lib/utils';
 
 interface RevenueData {
   date: string;
@@ -78,10 +78,22 @@ export const AdminDashboardCharts = () => {
   const [yesterdayProfit, setYesterdayProfit] = useState(0);
   const [prevWeekRevenue, setPrevWeekRevenue] = useState(0);
   const [prevWeekProfit, setPrevWeekProfit] = useState(0);
+  const [usdHtgRate, setUsdHtgRate] = useState(132);
 
   useEffect(() => {
+    fetchCompanySettings();
     fetchChartData();
   }, [period]);
+
+  const fetchCompanySettings = async () => {
+    const { data } = await supabase
+      .from('company_settings')
+      .select('usd_htg_rate')
+      .single();
+    if (data?.usd_htg_rate) {
+      setUsdHtgRate(data.usd_htg_rate);
+    }
+  };
 
   const calcTrend = (current: number, previous: number) => {
     if (previous === 0) {
@@ -120,134 +132,103 @@ export const AdminDashboardCharts = () => {
 
   const fetchStatsData = async () => {
     try {
+      // Fetch rate first
+      const { data: settings } = await supabase
+        .from('company_settings')
+        .select('usd_htg_rate')
+        .single();
+      const rate = settings?.usd_htg_rate || 132;
+
       // Today's revenue, sales, and profit
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
       const { data: todayData, error: todayError } = await supabase
         .from('sales')
-        .select('total_amount, id')
+        .select('id')
         .gte('created_at', today.toISOString());
       
       if (todayError) throw todayError;
-      
-      const todayRev = todayData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0;
-      setTodayRevenue(todayRev);
       setTodaySales(todayData?.length || 0);
 
-      // Calculate today's profit from sale_items
-      const { data: todayItems, error: todayItemsError } = await supabase
+      // Calculate today's revenue and profit from sale_items with currency conversion
+      const { data: todayItems } = await supabase
         .from('sale_items')
-        .select('profit_amount, sales!inner(created_at)')
+        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', today.toISOString());
       
-      if (!todayItemsError) {
-      const todayPft = todayItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
-        setTodayProfit(todayPft);
-      }
+      const todayRev = calculateUnifiedTotal(todayItems || [], rate).unified;
+      const todayPft = calculateUnifiedProfit(todayItems || [], rate);
+      setTodayRevenue(todayRev);
+      setTodayProfit(todayPft);
 
       // Yesterday's revenue and profit
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
       
-      const { data: yesterdayData } = await supabase
-        .from('sales')
-        .select('total_amount')
-        .gte('created_at', yesterday.toISOString())
-        .lt('created_at', today.toISOString());
-      
-      const yesterdayRev = yesterdayData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0;
-      setYesterdayRevenue(yesterdayRev);
-
       const { data: yesterdayItems } = await supabase
         .from('sale_items')
-        .select('profit_amount, sales!inner(created_at)')
+        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', yesterday.toISOString())
         .lt('sales.created_at', today.toISOString());
       
-      const yesterdayPft = yesterdayItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
+      const yesterdayRev = calculateUnifiedTotal(yesterdayItems || [], rate).unified;
+      const yesterdayPft = calculateUnifiedProfit(yesterdayItems || [], rate);
+      setYesterdayRevenue(yesterdayRev);
       setYesterdayProfit(yesterdayPft);
 
       // Week revenue and profit
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const { data: weekData, error: weekError } = await supabase
-        .from('sales')
-        .select('total_amount')
-        .gte('created_at', weekAgo.toISOString());
       
-      if (weekError) throw weekError;
-      setWeekRevenue(weekData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0);
-
-      const { data: weekItems, error: weekItemsError } = await supabase
+      const { data: weekItems } = await supabase
         .from('sale_items')
-        .select('profit_amount, sales!inner(created_at)')
+        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', weekAgo.toISOString());
       
-      if (!weekItemsError) {
-        const weekPft = weekItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
-        setWeekProfit(weekPft);
-      }
+      const weekRev = calculateUnifiedTotal(weekItems || [], rate).unified;
+      const weekPft = calculateUnifiedProfit(weekItems || [], rate);
+      setWeekRevenue(weekRev);
+      setWeekProfit(weekPft);
 
       // Previous week revenue and profit (7-14 days ago)
       const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
       
-      const { data: prevWeekData } = await supabase
-        .from('sales')
-        .select('total_amount')
-        .gte('created_at', twoWeeksAgo.toISOString())
-        .lt('created_at', weekAgo.toISOString());
-      
-      const prevWeekRev = prevWeekData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0;
-      setPrevWeekRevenue(prevWeekRev);
-
       const { data: prevWeekItems } = await supabase
         .from('sale_items')
-        .select('profit_amount, sales!inner(created_at)')
+        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', twoWeeksAgo.toISOString())
         .lt('sales.created_at', weekAgo.toISOString());
       
-      const prevWeekPft = prevWeekItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
+      const prevWeekRev = calculateUnifiedTotal(prevWeekItems || [], rate).unified;
+      const prevWeekPft = calculateUnifiedProfit(prevWeekItems || [], rate);
+      setPrevWeekRevenue(prevWeekRev);
       setPrevWeekProfit(prevWeekPft);
 
       // Month revenue and profit
       const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const { data: monthData, error: monthError } = await supabase
-        .from('sales')
-        .select('total_amount')
-        .gte('created_at', monthAgo.toISOString());
       
-      if (monthError) throw monthError;
-      setMonthRevenue(monthData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0);
-
-      const { data: monthItems, error: monthItemsError } = await supabase
+      const { data: monthItems } = await supabase
         .from('sale_items')
-        .select('profit_amount, sales!inner(created_at)')
+        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', monthAgo.toISOString());
       
-      if (!monthItemsError) {
-        const monthPft = monthItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
-        setMonthProfit(monthPft);
-      }
+      const monthRev = calculateUnifiedTotal(monthItems || [], rate).unified;
+      const monthPft = calculateUnifiedProfit(monthItems || [], rate);
+      setMonthRevenue(monthRev);
+      setMonthProfit(monthPft);
 
       // Year revenue and profit
       const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-      const { data: yearData, error: yearError } = await supabase
-        .from('sales')
-        .select('total_amount')
-        .gte('created_at', yearAgo.toISOString());
       
-      if (yearError) throw yearError;
-      setYearRevenue(yearData?.reduce((sum, sale) => sum + sale.total_amount, 0) || 0);
-
-      const { data: yearItems, error: yearItemsError } = await supabase
+      const { data: yearItems } = await supabase
         .from('sale_items')
-        .select('profit_amount, sales!inner(created_at)')
+        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', yearAgo.toISOString());
       
-      if (!yearItemsError) {
-        const yearPft = yearItems?.reduce((sum: number, item: any) => sum + (item.profit_amount || 0), 0) || 0;
-        setYearProfit(yearPft);
-      }
+      const yearRev = calculateUnifiedTotal(yearItems || [], rate).unified;
+      const yearPft = calculateUnifiedProfit(yearItems || [], rate);
+      setYearRevenue(yearRev);
+      setYearProfit(yearPft);
 
       // Total products
       const { count: productsCount, error: productsError } = await supabase
