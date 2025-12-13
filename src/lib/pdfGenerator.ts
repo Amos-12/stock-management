@@ -1044,3 +1044,268 @@ export const generateAdvancedReportPDF = (
   const fileName = `rapport_ventes_${dateRange.from.toISOString().split('T')[0]}_${dateRange.to.toISOString().split('T')[0]}.pdf`;
   pdf.save(fileName);
 };
+
+// ============= INVENTORY REPORT =============
+
+export interface InventoryReportItem {
+  productName: string;
+  barcode?: string;
+  category: string;
+  expectedStock: number;
+  actualStock: number | null;
+  verified: boolean;
+  adjusted: boolean;
+  stockUnit: string;
+  pendingSync?: boolean;
+}
+
+export interface InventoryReportData {
+  sessionStart: Date;
+  sessionEnd: Date;
+  operatorName: string;
+  scannedItems: InventoryReportItem[];
+  stats: {
+    total: number;
+    verified: number;
+    adjusted: number;
+    pending: number;
+    pendingSync: number;
+  };
+}
+
+export const generateInventoryReport = (
+  data: InventoryReportData,
+  companySettings: CompanySettings
+) => {
+  const pdf = new jsPDF({
+    unit: 'mm',
+    format: 'a4',
+    orientation: 'portrait'
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - (margin * 2);
+  let yPos = 20;
+
+  const checkPageBreak = (needed: number) => {
+    if (yPos + needed > pageHeight - 20) {
+      pdf.addPage();
+      yPos = 20;
+    }
+  };
+
+  // Header - Company info
+  if (companySettings.logo_url) {
+    try {
+      const logoW = companySettings.logo_width || 30;
+      const logoH = companySettings.logo_height || 30;
+      pdf.addImage(companySettings.logo_url, 'PNG', margin, yPos - 5, logoW, logoH);
+    } catch (error) {
+      console.error('Error loading logo:', error);
+    }
+  }
+
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(companySettings.company_name, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 5;
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`${companySettings.address}, ${companySettings.city}`, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(`Tél: ${companySettings.phone}`, pageWidth - margin, yPos, { align: 'right' });
+
+  yPos = 55;
+
+  // Title
+  pdf.setFontSize(16);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text("RAPPORT D'INVENTAIRE", pageWidth / 2, yPos, { align: 'center' });
+  yPos += 12;
+
+  // Session info
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  const formatDateTime = (date: Date) => date.toLocaleString('fr-FR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+  pdf.text(`Période: ${formatDateTime(data.sessionStart)} - ${formatDateTime(data.sessionEnd)}`, margin, yPos);
+  yPos += 5;
+  pdf.text(`Opérateur: ${data.operatorName}`, margin, yPos);
+  yPos += 10;
+
+  // Stats boxes
+  const boxWidth = (contentWidth - 15) / 4;
+  const boxHeight = 20;
+  const boxY = yPos;
+
+  const drawStatBox = (x: number, label: string, value: number, bgColor: [number, number, number], textColor: [number, number, number]) => {
+    pdf.setFillColor(...bgColor);
+    pdf.roundedRect(x, boxY, boxWidth, boxHeight, 2, 2, 'F');
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...textColor);
+    pdf.text(value.toString(), x + boxWidth / 2, boxY + 10, { align: 'center' });
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(label, x + boxWidth / 2, boxY + 16, { align: 'center' });
+  };
+
+  drawStatBox(margin, 'Scannés', data.stats.total, [240, 240, 240], [50, 50, 50]);
+  drawStatBox(margin + boxWidth + 5, 'Vérifiés', data.stats.verified, [220, 252, 231], [22, 101, 52]);
+  drawStatBox(margin + (boxWidth + 5) * 2, 'Ajustés', data.stats.adjusted, [254, 243, 199], [161, 98, 7]);
+  drawStatBox(margin + (boxWidth + 5) * 3, 'En attente', data.stats.pending + data.stats.pendingSync, [224, 231, 255], [55, 48, 163]);
+
+  pdf.setTextColor(0, 0, 0);
+  yPos = boxY + boxHeight + 15;
+
+  // Pending sync warning
+  if (data.stats.pendingSync > 0) {
+    pdf.setFillColor(254, 226, 226);
+    pdf.roundedRect(margin, yPos, contentWidth, 10, 2, 2, 'F');
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(153, 27, 27);
+    pdf.text(`⚠ ${data.stats.pendingSync} opération(s) en attente de synchronisation`, pageWidth / 2, yPos + 6, { align: 'center' });
+    pdf.setTextColor(0, 0, 0);
+    yPos += 15;
+  }
+
+  // Table header
+  checkPageBreak(15);
+  pdf.setFillColor(50, 50, 50);
+  pdf.rect(margin, yPos, contentWidth, 8, 'F');
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(255, 255, 255);
+  pdf.text('Produit', margin + 3, yPos + 5);
+  pdf.text('Code-barres', margin + 55, yPos + 5);
+  pdf.text('Stock syst.', margin + 95, yPos + 5);
+  pdf.text('Stock réel', margin + 120, yPos + 5);
+  pdf.text('Écart', margin + 145, yPos + 5);
+  pdf.text('Statut', margin + 165, yPos + 5);
+  pdf.setTextColor(0, 0, 0);
+  yPos += 10;
+
+  // Table rows
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+
+  data.scannedItems.forEach((item, idx) => {
+    checkPageBreak(8);
+
+    if (idx % 2 === 0) {
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(margin, yPos - 4, contentWidth, 7, 'F');
+    }
+
+    // Product name (truncate if needed)
+    const maxNameLen = 25;
+    const name = item.productName.length > maxNameLen 
+      ? item.productName.substring(0, maxNameLen - 2) + '...' 
+      : item.productName;
+    pdf.text(name, margin + 3, yPos);
+
+    // Barcode
+    pdf.text(item.barcode || '-', margin + 55, yPos);
+
+    // Expected stock
+    pdf.text(`${item.expectedStock} ${item.stockUnit}`, margin + 95, yPos);
+
+    // Actual stock
+    const actualText = item.actualStock !== null ? `${item.actualStock} ${item.stockUnit}` : '-';
+    pdf.text(actualText, margin + 120, yPos);
+
+    // Difference
+    if (item.actualStock !== null && item.adjusted) {
+      const diff = item.actualStock - item.expectedStock;
+      const diffText = diff > 0 ? `+${diff}` : diff.toString();
+      pdf.setTextColor(diff === 0 ? 0 : diff > 0 ? 22 : 153, diff === 0 ? 0 : diff > 0 ? 101 : 27, diff === 0 ? 0 : diff > 0 ? 52 : 27);
+      pdf.text(diffText, margin + 145, yPos);
+      pdf.setTextColor(0, 0, 0);
+    } else {
+      pdf.text('-', margin + 145, yPos);
+    }
+
+    // Status
+    let status = '';
+    let statusColor: [number, number, number] = [100, 100, 100];
+    if (item.pendingSync) {
+      status = '⏳ Sync';
+      statusColor = [161, 98, 7];
+    } else if (item.adjusted) {
+      status = '⚠ Ajusté';
+      statusColor = [161, 98, 7];
+    } else if (item.verified) {
+      status = '✓ Vérifié';
+      statusColor = [22, 101, 52];
+    } else {
+      status = '○ En attente';
+      statusColor = [100, 100, 100];
+    }
+    pdf.setTextColor(...statusColor);
+    pdf.text(status, margin + 165, yPos);
+    pdf.setTextColor(0, 0, 0);
+
+    yPos += 7;
+  });
+
+  // Summary
+  yPos += 10;
+  checkPageBreak(30);
+
+  // Calculate discrepancy summary
+  let totalPositive = 0;
+  let totalNegative = 0;
+  data.scannedItems.forEach(item => {
+    if (item.actualStock !== null && item.adjusted) {
+      const diff = item.actualStock - item.expectedStock;
+      if (diff > 0) totalPositive += diff;
+      else totalNegative += Math.abs(diff);
+    }
+  });
+
+  pdf.setFillColor(245, 245, 245);
+  pdf.roundedRect(margin, yPos, contentWidth, 25, 3, 3, 'F');
+  
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Résumé des écarts', margin + 5, yPos + 8);
+  
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(22, 101, 52);
+  pdf.text(`Excédents: +${totalPositive}`, margin + 5, yPos + 16);
+  pdf.setTextColor(153, 27, 27);
+  pdf.text(`Manquants: -${totalNegative}`, margin + 60, yPos + 16);
+  pdf.setTextColor(0, 0, 0);
+  pdf.text(`Solde net: ${totalPositive - totalNegative >= 0 ? '+' : ''}${totalPositive - totalNegative}`, margin + 115, yPos + 16);
+
+  yPos += 35;
+
+  // Signature line
+  checkPageBreak(25);
+  pdf.setFontSize(9);
+  pdf.text('Signature de l\'opérateur:', margin, yPos);
+  pdf.line(margin + 45, yPos, margin + 100, yPos);
+  pdf.text('Date:', margin + 110, yPos);
+  pdf.line(margin + 120, yPos, margin + 165, yPos);
+
+  // Footer
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'italic');
+  pdf.setTextColor(100, 100, 100);
+  pdf.text(
+    `Généré par ${companySettings.company_name} - ${new Date().toLocaleDateString('fr-FR')}`,
+    pageWidth / 2,
+    pageHeight - 10,
+    { align: 'center' }
+  );
+
+  // Save PDF
+  const fileName = `inventaire_${data.sessionStart.toISOString().split('T')[0]}_${data.sessionEnd.toISOString().split('T')[0].replace(/-/g, '')}.pdf`;
+  pdf.save(fileName);
+};
