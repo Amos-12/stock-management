@@ -33,11 +33,14 @@ import {
   DollarSign,
   Info,
   LayoutGrid,
-  List
+  List,
+  ScanLine
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
+import { QuickInventoryMode } from './QuickInventoryMode';
 
 type Product = {
   id: string;
@@ -412,7 +415,26 @@ export const InventoryManagement = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Tabs for switching between standard and quick inventory */}
+      <Tabs defaultValue="standard" className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="standard" className="gap-2">
+            <List className="w-4 h-4" />
+            Inventaire Standard
+          </TabsTrigger>
+          <TabsTrigger value="quick" className="gap-2">
+            <ScanLine className="w-4 h-4" />
+            Scan Rapide
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Quick Inventory Tab */}
+        <TabsContent value="quick" className="mt-6">
+          <QuickInventoryMode />
+        </TabsContent>
+
+        {/* Standard Inventory Tab */}
+        <TabsContent value="standard" className="mt-6 space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
@@ -901,6 +923,8 @@ export const InventoryManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
