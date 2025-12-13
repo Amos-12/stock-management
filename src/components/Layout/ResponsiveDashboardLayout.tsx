@@ -21,7 +21,8 @@ import {
   Database,
   Warehouse,
   UserCheck,
-  FolderTree
+  FolderTree,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -99,6 +100,7 @@ export const ResponsiveDashboardLayout = ({
 
   const adminNavItems = [
     { icon: Home, label: 'Dashboard', value: 'dashboard' },
+    { icon: BarChart3, label: 'Analytics', value: 'analytics' },
     { icon: FolderTree, label: 'Catégories', value: 'categories' },
     { icon: Package, label: 'Produits', value: 'products' },
     { icon: ShoppingCart, label: 'Ventes', value: 'sales' },

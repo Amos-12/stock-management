@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ResponsiveDashboardLayout } from '@/components/Layout/ResponsiveDashboardLayout';
 import { AdminDashboardCharts } from '@/components/Dashboard/AdminDashboardCharts';
+import { AnalyticsDashboard } from '@/components/Dashboard/AnalyticsDashboard';
 import { UserManagementPanel } from '@/components/UserManagement/UserManagementPanel';
 import { AdvancedReports } from '@/components/Reports/AdvancedReports';
 import { StockAlerts } from '@/components/Notifications/StockAlerts';
@@ -21,6 +22,8 @@ const AdminDashboard = () => {
     switch (currentSection) {
       case 'dashboard':
         return <AdminDashboardCharts />;
+      case 'analytics':
+        return <AnalyticsDashboard />;
       case 'categories':
         return <CategoryManagement />;
       case 'products':
