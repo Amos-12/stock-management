@@ -22,7 +22,8 @@ import {
   Warehouse,
   UserCheck,
   FolderTree,
-  BarChart3
+  BarChart3,
+  Receipt
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -108,6 +109,7 @@ export const ResponsiveDashboardLayout = ({
     { icon: Users, label: 'Utilisateurs', value: 'users' },
     { icon: UserCheck, label: 'Perf. Vendeurs', value: 'seller-reports' },
     { icon: TrendingUp, label: 'Rapports', value: 'reports' },
+    { icon: Receipt, label: 'Rapport TVA', value: 'tva-report' },
     { icon: ClipboardList, label: "Logs", value: 'activity' },
     { icon: Bell, label: 'Notifications', value: 'notifications' },
     { icon: Settings, label: 'Paramètres', value: 'settings' },

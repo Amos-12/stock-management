@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2 } from 'lucide-react';
+import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2, Receipt } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { SaleDetailsDialog } from './SaleDetailsDialog';
@@ -41,6 +41,13 @@ interface RevenueStats {
   todayUSD: number;
 }
 
+interface TvaStats {
+  totalTVA_HTG: number;
+  totalTVA_USD: number;
+  todayTVA_HTG: number;
+  todayTVA_USD: number;
+}
+
 const formatNumber = (amount: number): string => {
   return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 };
@@ -51,6 +58,7 @@ export const SalesManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [revenueStats, setRevenueStats] = useState<RevenueStats>({ totalHTG: 0, totalUSD: 0, todayHTG: 0, todayUSD: 0 });
+  const [tvaStats, setTvaStats] = useState<TvaStats>({ totalTVA_HTG: 0, totalTVA_USD: 0, todayTVA_HTG: 0, todayTVA_USD: 0 });
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -78,7 +86,7 @@ export const SalesManagement = () => {
   const fetchCompanySettings = async () => {
     const { data } = await supabase
       .from('company_settings')
-      .select('usd_htg_rate, default_display_currency')
+      .select('usd_htg_rate, default_display_currency, tva_rate')
       .single();
     if (data) {
       setCompanySettings(data);
@@ -147,18 +155,30 @@ export const SalesManagement = () => {
       
       (salesData || []).forEach(sale => {
         const currencies = saleItemsMap.get(sale.id) || { htg: 0, usd: 0 };
-        stats.totalHTG += currencies.htg;
-        stats.totalUSD += currencies.usd;
+        // Calculate HT after discount
+        const totalRaw = currencies.htg + currencies.usd;
+        const discountRatio = totalRaw > 0 ? (sale.discount_amount || 0) / totalRaw : 0;
+        stats.totalHTG += currencies.htg * (1 - discountRatio);
+        stats.totalUSD += currencies.usd * (1 - discountRatio);
         
         const saleDate = new Date(sale.created_at);
         saleDate.setHours(0, 0, 0, 0);
         if (saleDate.getTime() === today.getTime()) {
-          stats.todayHTG += currencies.htg;
-          stats.todayUSD += currencies.usd;
+          stats.todayHTG += currencies.htg * (1 - discountRatio);
+          stats.todayUSD += currencies.usd * (1 - discountRatio);
         }
       });
       
       setRevenueStats(stats);
+      
+      // Calculate TVA stats based on configured tva_rate
+      const tvaRate = companySettings?.tva_rate || 0;
+      setTvaStats({
+        totalTVA_HTG: stats.totalHTG * tvaRate / 100,
+        totalTVA_USD: stats.totalUSD * tvaRate / 100,
+        todayTVA_HTG: stats.todayHTG * tvaRate / 100,
+        todayTVA_USD: stats.todayUSD * tvaRate / 100
+      });
 
     } catch (error) {
       console.error('Error fetching sales:', error);
@@ -295,6 +315,29 @@ export const SalesManagement = () => {
             </div>
           </CardContent>
         </Card>
+
+        {companySettings?.tva_rate > 0 && (
+          <Card className="shadow-md border-l-4 border-l-orange-500">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">TVA Collectée ({companySettings.tva_rate}%)</p>
+                  <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                    {formatNumber(tvaStats.totalTVA_HTG)} HTG
+                  </p>
+                  {tvaStats.totalTVA_USD > 0 && (
+                    <p className="text-sm text-green-600 dark:text-green-400">+ ${formatNumber(tvaStats.totalTVA_USD)}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Aujourd'hui: {formatNumber(tvaStats.todayTVA_HTG)} HTG
+                    {tvaStats.todayTVA_USD > 0 && ` + $${formatNumber(tvaStats.todayTVA_USD)}`}
+                  </p>
+                </div>
+                <Receipt className="w-8 h-8 text-orange-500 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {(revenueStats.totalUSD > 0 || revenueStats.todayUSD > 0) && companySettings && (
           <Card className="shadow-md">

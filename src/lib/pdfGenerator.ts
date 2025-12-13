@@ -434,15 +434,9 @@ export const generateReceipt = (
   const thanksWidth = pdf.getTextWidth(thanks);
   pdf.text(thanks, (width - thanksWidth) / 2, yPos);
   
-  // Open in new window for printing
-  const pdfBlob = pdf.output('blob');
-  const url = URL.createObjectURL(pdfBlob);
-  const printWindow = window.open(url, '_blank');
-  if (printWindow) {
-    printWindow.onload = () => {
-      printWindow.print();
-    };
-  }
+  // Download PDF directly to avoid popup blocker
+  const fileName = `recu_${saleData.id.substring(0, 8)}_${new Date().toISOString().split('T')[0]}.pdf`;
+  pdf.save(fileName);
 };
 
 export const generateInvoice = (
@@ -1709,5 +1703,279 @@ export const generateInventoryStockPDF = (
 
   // Save PDF
   const fileName = `etat_stocks_${new Date().toISOString().split('T')[0]}.pdf`;
+  pdf.save(fileName);
+};
+
+// ===================== TVA REPORT PDF =====================
+
+interface TvaSaleData {
+  id: string;
+  created_at: string;
+  customer_name: string | null;
+  htg_subtotal: number;
+  usd_subtotal: number;
+  discount_amount: number;
+}
+
+interface TvaTotals {
+  totalHT_HTG: number;
+  totalHT_USD: number;
+  totalTVA_HTG: number;
+  totalTVA_USD: number;
+  totalTTC_HTG: number;
+  totalTTC_USD: number;
+  unifiedTotalHT: number;
+  unifiedTotalTVA: number;
+  unifiedTotalTTC: number;
+}
+
+export const generateTvaReportPDF = (
+  salesData: TvaSaleData[],
+  companySettings: CompanySettings,
+  dateRange: { from: Date; to: Date },
+  totals: TvaTotals
+) => {
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  let yPos = 20;
+
+  const formatNumber = (num: number): string => {
+    return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  };
+
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  const displayCurrency = companySettings.default_display_currency || 'HTG';
+  const tvaRate = companySettings.tva_rate || 0;
+  const rate = companySettings.usd_htg_rate || 132;
+
+  // Logo
+  if (companySettings.logo_url) {
+    try {
+      const logoX = companySettings.logo_position_x || 15;
+      const logoY = companySettings.logo_position_y || 10;
+      const logoW = companySettings.logo_width || 30;
+      const logoH = companySettings.logo_height || 30;
+      pdf.addImage(companySettings.logo_url, 'PNG', logoX, logoY, logoW, logoH);
+    } catch (error) {
+      console.error('Error loading logo:', error);
+    }
+  }
+
+  // Company info (top right)
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(companySettings.company_name, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(companySettings.address, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(companySettings.city, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(`Tél: ${companySettings.phone}`, pageWidth - margin, yPos, { align: 'right' });
+
+  // Title
+  yPos = 50;
+  pdf.setFontSize(16);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('RAPPORT TVA COLLECTÉE', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 8;
+
+  // Period
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  const periodText = `Période: du ${dateRange.from.toLocaleDateString('fr-FR')} au ${dateRange.to.toLocaleDateString('fr-FR')}`;
+  pdf.text(periodText, pageWidth / 2, yPos, { align: 'center' });
+  yPos += 6;
+
+  // TVA Rate
+  pdf.setFontSize(9);
+  pdf.text(`Taux TVA appliqué: ${tvaRate}%`, pageWidth / 2, yPos, { align: 'center' });
+  yPos += 10;
+
+  // Summary Box
+  pdf.setFillColor(245, 245, 245);
+  pdf.roundedRect(margin, yPos, pageWidth - 2 * margin, 30, 3, 3, 'F');
+  
+  yPos += 8;
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('RÉCAPITULATIF', margin + 5, yPos);
+  
+  yPos += 7;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  
+  const currencySymbol = displayCurrency === 'HTG' ? ' HTG' : '$';
+  const formatAmount = (amount: number) => {
+    if (displayCurrency === 'HTG') {
+      return `${formatNumber(amount)} HTG`;
+    }
+    return `$${formatNumber(amount)}`;
+  };
+  
+  pdf.text(`Total HT: ${formatAmount(totals.unifiedTotalHT)}`, margin + 10, yPos);
+  pdf.text(`TVA Collectée: ${formatAmount(totals.unifiedTotalTVA)}`, margin + 80, yPos);
+  
+  yPos += 6;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(`Total TTC: ${formatAmount(totals.unifiedTotalTTC)}`, margin + 10, yPos);
+  pdf.text(`Nombre de ventes: ${salesData.length}`, margin + 80, yPos);
+
+  yPos += 15;
+
+  // Table Header
+  pdf.setFillColor(50, 50, 50);
+  pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
+  
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'bold');
+  
+  const colDate = margin + 2;
+  const colNum = margin + 25;
+  const colClient = margin + 50;
+  const colHT = margin + 95;
+  const colTVA = margin + 125;
+  const colTTC = margin + 155;
+  
+  pdf.text('Date', colDate, yPos + 5);
+  pdf.text('N° Vente', colNum, yPos + 5);
+  pdf.text('Client', colClient, yPos + 5);
+  pdf.text('HT', colHT, yPos + 5);
+  pdf.text('TVA', colTVA, yPos + 5);
+  pdf.text('TTC', colTTC, yPos + 5);
+  
+  yPos += 10;
+  pdf.setTextColor(0, 0, 0);
+
+  // Table Rows
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'normal');
+  
+  let rowCount = 0;
+  const maxRowsPerPage = 35;
+
+  salesData.forEach((sale, index) => {
+    if (rowCount >= maxRowsPerPage) {
+      pdf.addPage();
+      yPos = 20;
+      rowCount = 0;
+      
+      // Re-draw header
+      pdf.setFillColor(50, 50, 50);
+      pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
+      
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Date', colDate, yPos + 5);
+      pdf.text('N° Vente', colNum, yPos + 5);
+      pdf.text('Client', colClient, yPos + 5);
+      pdf.text('HT', colHT, yPos + 5);
+      pdf.text('TVA', colTVA, yPos + 5);
+      pdf.text('TTC', colTTC, yPos + 5);
+      
+      yPos += 10;
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+    }
+
+    // Alternate row background
+    if (rowCount % 2 === 0) {
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(margin, yPos - 3, pageWidth - 2 * margin, 6, 'F');
+    }
+
+    // Calculate amounts
+    const totalRaw = sale.htg_subtotal + sale.usd_subtotal;
+    const discountRatio = totalRaw > 0 ? sale.discount_amount / totalRaw : 0;
+    const htHTG = sale.htg_subtotal * (1 - discountRatio);
+    const htUSD = sale.usd_subtotal * (1 - discountRatio);
+
+    let ht: number;
+    if (displayCurrency === 'HTG') {
+      ht = htHTG + (htUSD * rate);
+    } else {
+      ht = htUSD + (htHTG / rate);
+    }
+    const tva = ht * tvaRate / 100;
+    const ttc = ht + tva;
+
+    pdf.text(formatDate(sale.created_at), colDate, yPos);
+    pdf.text(sale.id.substring(0, 8), colNum, yPos);
+    
+    const clientName = sale.customer_name || '-';
+    const truncatedClient = clientName.length > 20 ? clientName.substring(0, 18) + '...' : clientName;
+    pdf.text(truncatedClient, colClient, yPos);
+    
+    pdf.text(formatAmount(ht), colHT, yPos);
+    pdf.text(formatAmount(tva), colTVA, yPos);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(formatAmount(ttc), colTTC, yPos);
+    pdf.setFont('helvetica', 'normal');
+
+    yPos += 6;
+    rowCount++;
+  });
+
+  // Totals row
+  yPos += 2;
+  pdf.setDrawColor(0, 0, 0);
+  pdf.line(margin, yPos, pageWidth - margin, yPos);
+  yPos += 5;
+
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('TOTAUX:', margin + 2, yPos);
+  pdf.text(formatAmount(totals.unifiedTotalHT), colHT, yPos);
+  pdf.setTextColor(200, 100, 0);
+  pdf.text(formatAmount(totals.unifiedTotalTVA), colTVA, yPos);
+  pdf.setTextColor(0, 150, 0);
+  pdf.text(formatAmount(totals.unifiedTotalTTC), colTTC, yPos);
+  pdf.setTextColor(0, 0, 0);
+
+  // Multi-currency breakdown if applicable
+  if (totals.totalHT_HTG > 0 && totals.totalHT_USD > 0) {
+    yPos += 10;
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Détail par devise:', margin + 2, yPos);
+    yPos += 5;
+    pdf.text(`HTG - HT: ${formatNumber(totals.totalHT_HTG)} HTG | TVA: ${formatNumber(totals.totalTVA_HTG)} HTG | TTC: ${formatNumber(totals.totalTTC_HTG)} HTG`, margin + 5, yPos);
+    yPos += 4;
+    pdf.text(`USD - HT: $${formatNumber(totals.totalHT_USD)} | TVA: $${formatNumber(totals.totalTVA_USD)} | TTC: $${formatNumber(totals.totalTTC_USD)}`, margin + 5, yPos);
+    yPos += 4;
+    pdf.text(`Taux de conversion: 1 USD = ${rate} HTG`, margin + 5, yPos);
+  }
+
+  // Footer
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'italic');
+  pdf.setTextColor(100, 100, 100);
+  pdf.text(
+    `Généré le ${new Date().toLocaleString('fr-FR')}`,
+    pageWidth / 2,
+    pageHeight - 10,
+    { align: 'center' }
+  );
+
+  // Save PDF
+  const fileName = `rapport_tva_${dateRange.from.toISOString().split('T')[0]}_${dateRange.to.toISOString().split('T')[0]}.pdf`;
   pdf.save(fileName);
 };
