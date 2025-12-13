@@ -135,6 +135,7 @@ export const CategoryManagement = () => {
     
     try {
       const slug = formData.slug || generateSlug(formData.nom);
+      const { data: { user } } = await supabase.auth.getUser();
       
       if (editingCategory) {
         const { error } = await supabase
@@ -149,13 +150,27 @@ export const CategoryManagement = () => {
           .eq('id', editingCategory.id);
 
         if (error) throw error;
+
+        // Log activity
+        await supabase.from('activity_logs').insert({
+          user_id: user?.id,
+          action_type: 'category_updated',
+          entity_type: 'category',
+          entity_id: editingCategory.id,
+          description: `Catégorie "${formData.nom}" modifiée`,
+          metadata: {
+            category_name: formData.nom,
+            previous_values: { nom: editingCategory.nom, is_active: editingCategory.is_active },
+            new_values: { nom: formData.nom, is_active: formData.is_active }
+          }
+        });
         
         toast({
           title: "Catégorie mise à jour",
           description: `La catégorie "${formData.nom}" a été modifiée.`
         });
       } else {
-        const { error } = await supabase
+        const { data: newCategory, error } = await supabase
           .from('categories')
           .insert({
             nom: formData.nom,
@@ -163,9 +178,21 @@ export const CategoryManagement = () => {
             slug,
             is_active: formData.is_active,
             ordre: formData.ordre
-          });
+          })
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Log activity
+        await supabase.from('activity_logs').insert({
+          user_id: user?.id,
+          action_type: 'category_created',
+          entity_type: 'category',
+          entity_id: newCategory?.id,
+          description: `Catégorie "${formData.nom}" créée`,
+          metadata: { category_name: formData.nom, slug }
+        });
         
         toast({
           title: "Catégorie créée",
@@ -236,12 +263,24 @@ export const CategoryManagement = () => {
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+
       const { error } = await supabase
         .from('categories')
         .delete()
         .eq('id', deleteDialog.categoryId);
 
       if (error) throw error;
+
+      // Log activity
+      await supabase.from('activity_logs').insert({
+        user_id: user?.id,
+        action_type: 'category_deleted',
+        entity_type: 'category',
+        entity_id: deleteDialog.categoryId,
+        description: `Catégorie "${deleteDialog.categoryName}" supprimée`,
+        metadata: { category_name: deleteDialog.categoryName }
+      });
 
       toast({
         title: "Catégorie supprimée",

@@ -160,6 +160,7 @@ export const SubcategoryManagement = ({
 
     try {
       const slug = formData.slug || generateSlug(formData.nom);
+      const { data: { user } } = await supabase.auth.getUser();
       
       if (editingSousCategorie) {
         const { error } = await supabase
@@ -176,13 +177,27 @@ export const SubcategoryManagement = ({
           .eq('id', editingSousCategorie.id);
 
         if (error) throw error;
+
+        // Log activity
+        await supabase.from('activity_logs').insert({
+          user_id: user?.id,
+          action_type: 'subcategory_updated',
+          entity_type: 'sous_categorie',
+          entity_id: editingSousCategorie.id,
+          description: `Sous-catégorie "${formData.nom}" modifiée`,
+          metadata: {
+            subcategory_name: formData.nom,
+            previous_values: { nom: editingSousCategorie.nom, is_active: editingSousCategorie.is_active },
+            new_values: { nom: formData.nom, is_active: formData.is_active }
+          }
+        });
         
         toast({
           title: "Sous-catégorie mise à jour",
           description: `La sous-catégorie "${formData.nom}" a été modifiée.`
         });
       } else {
-        const { error } = await supabase
+        const { data: newSubcat, error } = await supabase
           .from('sous_categories')
           .insert({
             categorie_id: formData.categorie_id,
@@ -192,9 +207,21 @@ export const SubcategoryManagement = ({
             is_active: formData.is_active,
             ordre: formData.ordre,
             stock_type: formData.stock_type
-          });
+          })
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Log activity
+        await supabase.from('activity_logs').insert({
+          user_id: user?.id,
+          action_type: 'subcategory_created',
+          entity_type: 'sous_categorie',
+          entity_id: newSubcat?.id,
+          description: `Sous-catégorie "${formData.nom}" créée`,
+          metadata: { subcategory_name: formData.nom, slug, stock_type: formData.stock_type }
+        });
         
         toast({
           title: "Sous-catégorie créée",
@@ -250,12 +277,24 @@ export const SubcategoryManagement = ({
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+
       const { error } = await supabase
         .from('sous_categories')
         .delete()
         .eq('id', deleteDialog.id);
 
       if (error) throw error;
+
+      // Log activity
+      await supabase.from('activity_logs').insert({
+        user_id: user?.id,
+        action_type: 'subcategory_deleted',
+        entity_type: 'sous_categorie',
+        entity_id: deleteDialog.id,
+        description: `Sous-catégorie "${deleteDialog.name}" supprimée`,
+        metadata: { subcategory_name: deleteDialog.name }
+      });
 
       toast({
         title: "Sous-catégorie supprimée",

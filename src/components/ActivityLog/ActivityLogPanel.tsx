@@ -19,7 +19,11 @@ import {
   Edit,
   Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  XCircle,
+  FolderPlus,
+  Database,
+  Layers
 } from 'lucide-react';
 import { useActivityLog, ActivityLogFilter } from '@/hooks/useActivityLog';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,17 +32,29 @@ import { fr } from 'date-fns/locale';
 
 const ACTION_TYPES = [
   { value: 'sale_created', label: 'Vente créée', icon: ShoppingCart, color: 'bg-green-500' },
+  { value: 'sale_deleted', label: 'Vente supprimée', icon: Trash2, color: 'bg-red-500' },
+  { value: 'sale_cancelled', label: 'Vente annulée', icon: XCircle, color: 'bg-orange-500' },
   { value: 'product_added', label: 'Produit ajouté', icon: Package, color: 'bg-blue-500' },
   { value: 'product_updated', label: 'Produit modifié', icon: Edit, color: 'bg-yellow-500' },
   { value: 'product_deactivated', label: 'Produit désactivé', icon: Trash2, color: 'bg-red-500' },
   { value: 'product_deleted', label: 'Produit supprimé', icon: Trash2, color: 'bg-red-500' },
+  { value: 'stock_adjusted', label: 'Stock ajusté', icon: Package, color: 'bg-purple-500' },
+  { value: 'category_created', label: 'Catégorie créée', icon: FolderPlus, color: 'bg-green-500' },
+  { value: 'category_updated', label: 'Catégorie modifiée', icon: Layers, color: 'bg-yellow-500' },
+  { value: 'category_deleted', label: 'Catégorie supprimée', icon: Trash2, color: 'bg-red-500' },
+  { value: 'subcategory_created', label: 'Sous-cat. créée', icon: FolderPlus, color: 'bg-green-500' },
+  { value: 'subcategory_updated', label: 'Sous-cat. modifiée', icon: Layers, color: 'bg-yellow-500' },
+  { value: 'subcategory_deleted', label: 'Sous-cat. supprimée', icon: Trash2, color: 'bg-red-500' },
   { value: 'user_approved', label: 'Utilisateur approuvé', icon: UserCheck, color: 'bg-green-500' },
   { value: 'user_deactivated', label: 'Utilisateur désactivé', icon: UserX, color: 'bg-red-500' },
+  { value: 'user_deleted', label: 'Utilisateur supprimé', icon: Trash2, color: 'bg-red-500' },
   { value: 'user_login', label: 'Connexion', icon: UserCheck, color: 'bg-blue-500' },
   { value: 'user_logout', label: 'Déconnexion', icon: UserX, color: 'bg-gray-500' },
   { value: 'user_signup', label: 'Inscription', icon: UserCheck, color: 'bg-green-500' },
   { value: 'user_update_password', label: 'Changement mot de passe', icon: Edit, color: 'bg-orange-500' },
   { value: 'connection_failed', label: 'Échec connexion', icon: UserX, color: 'bg-red-500' },
+  { value: 'system_cleanup', label: 'Nettoyage système', icon: Database, color: 'bg-gray-500' },
+  { value: 'settings_updated', label: 'Paramètres modifiés', icon: Edit, color: 'bg-blue-500' },
 ];
 
 export const ActivityLogPanel = () => {
