@@ -22,12 +22,19 @@ import {
   History,
   Minus,
   Plus,
-  ScanLine
+  ScanLine,
+  Wifi,
+  WifiOff,
+  FileText,
+  Clock,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { generateInventoryReport, InventoryReportData, CompanySettings } from '@/lib/pdfGenerator';
 
 interface Product {
   id: string;
@@ -50,11 +57,30 @@ interface ScannedItem {
   verified: boolean;
   adjusted: boolean;
   stockUnit: string;
+  pendingSync?: boolean;
 }
 
+interface PendingOperation {
+  id: string;
+  type: 'adjustment' | 'verification';
+  productId: string;
+  productName: string;
+  previousValue: number;
+  newValue: number;
+  reason: string;
+  timestamp: Date;
+  stockUnit: string;
+  category: string;
+}
+
+const PENDING_OPS_KEY = 'inventory_pending_ops';
+const SESSION_START_KEY = 'inventory_session_start';
+
 export const QuickInventoryMode = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isOnline = useOnlineStatus();
   const [isActive, setIsActive] = useState(false);
+  const [sessionStart, setSessionStart] = useState<Date | null>(null);
   const [scannedItems, setScannedItems] = useState<ScannedItem[]>([]);
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [adjustmentDialog, setAdjustmentDialog] = useState(false);
@@ -62,6 +88,140 @@ export const QuickInventoryMode = () => {
   const [adjustmentReason, setAdjustmentReason] = useState('');
   const [manualBarcode, setManualBarcode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [pendingOperations, setPendingOperations] = useState<PendingOperation[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+
+  // Load pending operations and session from localStorage
+  useEffect(() => {
+    const savedOps = localStorage.getItem(PENDING_OPS_KEY);
+    if (savedOps) {
+      try {
+        const parsed = JSON.parse(savedOps);
+        setPendingOperations(parsed.map((op: any) => ({
+          ...op,
+          timestamp: new Date(op.timestamp)
+        })));
+      } catch (e) {
+        console.error('Error parsing pending operations:', e);
+      }
+    }
+
+    const savedSession = localStorage.getItem(SESSION_START_KEY);
+    if (savedSession) {
+      setSessionStart(new Date(savedSession));
+    }
+  }, []);
+
+  // Load company settings for PDF generation
+  useEffect(() => {
+    const fetchCompanySettings = async () => {
+      const { data } = await supabase
+        .from('company_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        setCompanySettings(data as CompanySettings);
+      }
+    };
+    fetchCompanySettings();
+  }, []);
+
+  // Sync pending operations when online
+  useEffect(() => {
+    if (isOnline && pendingOperations.length > 0 && !isSyncing) {
+      syncPendingOperations();
+    }
+  }, [isOnline, pendingOperations.length]);
+
+  // Sync pending operations to database
+  const syncPendingOperations = async () => {
+    if (!user || pendingOperations.length === 0) return;
+    
+    setIsSyncing(true);
+    let successCount = 0;
+    const failedOps: PendingOperation[] = [];
+
+    for (const op of pendingOperations) {
+      try {
+        // Determine which field to update based on category
+        let updateData: any = {};
+        if (op.category === 'ceramique') {
+          updateData.stock_boite = op.newValue;
+        } else if (op.category === 'fer') {
+          updateData.stock_barre = op.newValue;
+        } else {
+          updateData.quantity = op.newValue;
+        }
+
+        // Update product stock
+        const { error: updateError } = await supabase
+          .from('products')
+          .update(updateData)
+          .eq('id', op.productId);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        // Log stock movement
+        await supabase.from('stock_movements').insert({
+          product_id: op.productId,
+          movement_type: 'inventory_adjustment',
+          quantity: Math.abs(op.newValue - op.previousValue),
+          previous_quantity: op.previousValue,
+          new_quantity: op.newValue,
+          reason: `${op.reason} (sync hors-ligne)`,
+          created_by: user.id
+        });
+
+        // Log activity
+        await supabase.from('activity_logs').insert({
+          user_id: user.id,
+          action_type: 'stock_adjusted',
+          entity_type: 'product',
+          entity_id: op.productId,
+          description: `Ajustement inventaire (sync): ${op.productName} de ${op.previousValue} à ${op.newValue} ${op.stockUnit}`,
+          metadata: {
+            product_name: op.productName,
+            previous_stock: op.previousValue,
+            new_stock: op.newValue,
+            reason: op.reason,
+            synced_from_offline: true
+          }
+        });
+
+        successCount++;
+
+        // Update scanned items to remove pending sync flag
+        setScannedItems(prev => prev.map(item =>
+          item.product.id === op.productId
+            ? { ...item, pendingSync: false }
+            : item
+        ));
+      } catch (error) {
+        console.error('Sync error for operation:', op.id, error);
+        failedOps.push(op);
+      }
+    }
+
+    // Update pending operations
+    setPendingOperations(failedOps);
+    if (failedOps.length === 0) {
+      localStorage.removeItem(PENDING_OPS_KEY);
+    } else {
+      localStorage.setItem(PENDING_OPS_KEY, JSON.stringify(failedOps));
+    }
+
+    setIsSyncing(false);
+
+    toast({
+      title: "Synchronisation terminée",
+      description: `${successCount}/${pendingOperations.length} opération(s) synchronisée(s)`,
+      variant: failedOps.length > 0 ? "destructive" : "default"
+    });
+  };
 
   // Get stock info based on category
   const getStockInfo = (product: Product) => {
@@ -84,9 +244,11 @@ export const QuickInventoryMode = () => {
         .from('products')
         .select('*')
         .eq('barcode', barcode)
-        .single();
+        .maybeSingle();
 
-      if (error || !product) {
+      if (error) throw error;
+
+      if (!product) {
         toast({
           title: "Produit non trouvé",
           description: `Aucun produit avec le code-barres: ${barcode}`,
@@ -157,6 +319,19 @@ export const QuickInventoryMode = () => {
     }
   };
 
+  // Start session
+  const startSession = () => {
+    const start = new Date();
+    setSessionStart(start);
+    localStorage.setItem(SESSION_START_KEY, start.toISOString());
+    setIsActive(true);
+  };
+
+  // Stop session
+  const stopSession = () => {
+    setIsActive(false);
+  };
+
   // Verify stock (mark as correct without adjustment)
   const verifyStock = (productId: string) => {
     setScannedItems(prev => prev.map(item => 
@@ -172,7 +347,7 @@ export const QuickInventoryMode = () => {
     });
   };
 
-  // Adjust stock
+  // Adjust stock (online or offline)
   const adjustStock = async () => {
     if (!currentProduct || !user) return;
     
@@ -191,68 +366,105 @@ export const QuickInventoryMode = () => {
     try {
       const stockInfo = getStockInfo(currentProduct);
       const previousValue = stockInfo.value;
-      
-      // Determine which field to update
-      let updateData: any = {};
-      if (currentProduct.category === 'ceramique') {
-        updateData.stock_boite = newValue;
-      } else if (currentProduct.category === 'fer') {
-        updateData.stock_barre = newValue;
+
+      if (!isOnline) {
+        // OFFLINE MODE: Store operation locally
+        const pendingOp: PendingOperation = {
+          id: crypto.randomUUID(),
+          type: 'adjustment',
+          productId: currentProduct.id,
+          productName: currentProduct.name,
+          previousValue: previousValue,
+          newValue: newValue,
+          reason: adjustmentReason || 'Ajustement inventaire rapide',
+          timestamp: new Date(),
+          stockUnit: stockInfo.unit,
+          category: currentProduct.category
+        };
+
+        const newPendingOps = [...pendingOperations, pendingOp];
+        setPendingOperations(newPendingOps);
+        localStorage.setItem(PENDING_OPS_KEY, JSON.stringify(newPendingOps));
+
+        // Update local UI
+        setScannedItems(prev => prev.map(item => 
+          item.product.id === currentProduct.id 
+            ? { 
+                ...item, 
+                verified: true, 
+                adjusted: newValue !== previousValue,
+                actualStock: newValue,
+                pendingSync: true
+              }
+            : item
+        ));
+
+        toast({
+          title: "Enregistré hors-ligne",
+          description: "L'ajustement sera synchronisé dès la connexion rétablie",
+        });
       } else {
-        updateData.quantity = newValue;
-      }
-
-      // Update product stock
-      const { error: updateError } = await supabase
-        .from('products')
-        .update(updateData)
-        .eq('id', currentProduct.id);
-
-      if (updateError) throw updateError;
-
-      // Log stock movement
-      await supabase.from('stock_movements').insert({
-        product_id: currentProduct.id,
-        movement_type: 'inventory_adjustment',
-        quantity: Math.abs(newValue - previousValue),
-        previous_quantity: previousValue,
-        new_quantity: newValue,
-        reason: adjustmentReason || 'Ajustement inventaire rapide',
-        created_by: user.id
-      });
-
-      // Log activity
-      await supabase.from('activity_logs').insert({
-        user_id: user.id,
-        action_type: 'stock_adjusted',
-        entity_type: 'product',
-        entity_id: currentProduct.id,
-        description: `Ajustement inventaire: ${currentProduct.name} de ${previousValue} à ${newValue} ${stockInfo.unit}`,
-        metadata: {
-          product_name: currentProduct.name,
-          previous_stock: previousValue,
-          new_stock: newValue,
-          reason: adjustmentReason
+        // ONLINE MODE: Update database directly
+        let updateData: any = {};
+        if (currentProduct.category === 'ceramique') {
+          updateData.stock_boite = newValue;
+        } else if (currentProduct.category === 'fer') {
+          updateData.stock_barre = newValue;
+        } else {
+          updateData.quantity = newValue;
         }
-      });
 
-      // Update scanned items
-      setScannedItems(prev => prev.map(item => 
-        item.product.id === currentProduct.id 
-          ? { 
-              ...item, 
-              verified: true, 
-              adjusted: newValue !== previousValue,
-              actualStock: newValue,
-              product: { ...item.product, ...updateData }
-            }
-          : item
-      ));
+        const { error: updateError } = await supabase
+          .from('products')
+          .update(updateData)
+          .eq('id', currentProduct.id);
 
-      toast({
-        title: "Stock ajusté",
-        description: `${currentProduct.name}: ${previousValue} → ${newValue} ${stockInfo.unit}`,
-      });
+        if (updateError) throw updateError;
+
+        // Log stock movement
+        await supabase.from('stock_movements').insert({
+          product_id: currentProduct.id,
+          movement_type: 'inventory_adjustment',
+          quantity: Math.abs(newValue - previousValue),
+          previous_quantity: previousValue,
+          new_quantity: newValue,
+          reason: adjustmentReason || 'Ajustement inventaire rapide',
+          created_by: user.id
+        });
+
+        // Log activity
+        await supabase.from('activity_logs').insert({
+          user_id: user.id,
+          action_type: 'stock_adjusted',
+          entity_type: 'product',
+          entity_id: currentProduct.id,
+          description: `Ajustement inventaire: ${currentProduct.name} de ${previousValue} à ${newValue} ${stockInfo.unit}`,
+          metadata: {
+            product_name: currentProduct.name,
+            previous_stock: previousValue,
+            new_stock: newValue,
+            reason: adjustmentReason
+          }
+        });
+
+        // Update scanned items
+        setScannedItems(prev => prev.map(item => 
+          item.product.id === currentProduct.id 
+            ? { 
+                ...item, 
+                verified: true, 
+                adjusted: newValue !== previousValue,
+                actualStock: newValue,
+                product: { ...item.product, ...updateData }
+              }
+            : item
+        ));
+
+        toast({
+          title: "Stock ajusté",
+          description: `${currentProduct.name}: ${previousValue} → ${newValue} ${stockInfo.unit}`,
+        });
+      }
 
       setAdjustmentDialog(false);
       setCurrentProduct(null);
@@ -276,6 +488,51 @@ export const QuickInventoryMode = () => {
     setCurrentProduct(null);
     setNewStockValue('');
     setAdjustmentReason('');
+    setSessionStart(null);
+    localStorage.removeItem(SESSION_START_KEY);
+  };
+
+  // Generate PDF report
+  const generateReport = () => {
+    if (!companySettings || scannedItems.length === 0) {
+      toast({
+        title: "Impossible de générer le rapport",
+        description: "Aucun produit scanné ou paramètres de l'entreprise non disponibles",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reportData: InventoryReportData = {
+      sessionStart: sessionStart || new Date(),
+      sessionEnd: new Date(),
+      operatorName: profile?.full_name || user?.email || 'Inconnu',
+      scannedItems: scannedItems.map(item => ({
+        productName: item.product.name,
+        barcode: item.product.barcode,
+        category: item.product.category,
+        expectedStock: item.expectedStock,
+        actualStock: item.actualStock,
+        verified: item.verified,
+        adjusted: item.adjusted,
+        stockUnit: item.stockUnit,
+        pendingSync: item.pendingSync
+      })),
+      stats: {
+        total: scannedItems.length,
+        verified: scannedItems.filter(i => i.verified && !i.adjusted).length,
+        adjusted: scannedItems.filter(i => i.adjusted).length,
+        pending: scannedItems.filter(i => !i.verified).length,
+        pendingSync: scannedItems.filter(i => i.pendingSync).length
+      }
+    };
+
+    generateInventoryReport(reportData, companySettings);
+
+    toast({
+      title: "Rapport généré",
+      description: "Le fichier PDF a été téléchargé",
+    });
   };
 
   // Stats
@@ -283,7 +540,8 @@ export const QuickInventoryMode = () => {
     total: scannedItems.length,
     verified: scannedItems.filter(i => i.verified && !i.adjusted).length,
     adjusted: scannedItems.filter(i => i.adjusted).length,
-    pending: scannedItems.filter(i => !i.verified).length
+    pending: scannedItems.filter(i => !i.verified).length,
+    pendingSync: pendingOperations.length
   };
 
   return (
@@ -292,14 +550,47 @@ export const QuickInventoryMode = () => {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <CardTitle className="flex items-center gap-2">
-              <ScanLine className="w-5 h-5" />
-              Mode Inventaire Rapide
-            </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
+              <CardTitle className="flex items-center gap-2">
+                <ScanLine className="w-5 h-5" />
+                Mode Inventaire Rapide
+              </CardTitle>
+              {/* Online/Offline status */}
+              <Badge variant={isOnline ? "outline" : "destructive"} className="gap-1">
+                {isOnline ? (
+                  <>
+                    <Wifi className="w-3 h-3" />
+                    En ligne
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-3 h-3" />
+                    Hors-ligne
+                  </>
+                )}
+              </Badge>
+              {/* Pending sync indicator */}
+              {stats.pendingSync > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  {isSyncing ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Clock className="w-3 h-3" />
+                  )}
+                  {stats.pendingSync} en attente
+                </Badge>
+              )}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {scannedItems.length > 0 && (
+                <Button variant="outline" onClick={generateReport} className="gap-2">
+                  <FileText className="w-4 h-4" />
+                  Rapport PDF
+                </Button>
+              )}
               <Button
                 variant={isActive ? "destructive" : "default"}
-                onClick={() => setIsActive(!isActive)}
+                onClick={() => isActive ? stopSession() : startSession()}
                 className="gap-2"
               >
                 {isActive ? (
@@ -352,7 +643,7 @@ export const QuickInventoryMode = () => {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <div className="p-3 rounded-lg bg-muted text-center">
                   <div className="text-2xl font-bold">{stats.total}</div>
                   <div className="text-xs text-muted-foreground">Scannés</div>
@@ -369,6 +660,12 @@ export const QuickInventoryMode = () => {
                   <div className="text-2xl font-bold text-sky-700 dark:text-sky-400">{stats.pending}</div>
                   <div className="text-xs text-sky-600 dark:text-sky-500">En attente</div>
                 </div>
+                {stats.pendingSync > 0 && (
+                  <div className="p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-center">
+                    <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">{stats.pendingSync}</div>
+                    <div className="text-xs text-orange-600 dark:text-orange-500">À sync</div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -399,24 +696,32 @@ export const QuickInventoryMode = () => {
                     <div 
                       key={`${item.product.id}-${index}`}
                       className={`p-3 rounded-lg border ${
-                        item.adjusted 
-                          ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/20' 
-                          : item.verified 
-                            ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20'
-                            : 'border-border bg-muted/50'
+                        item.pendingSync
+                          ? 'border-orange-300 bg-orange-50 dark:bg-orange-900/20'
+                          : item.adjusted 
+                            ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/20' 
+                            : item.verified 
+                              ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20'
+                              : 'border-border bg-muted/50'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium truncate">{item.product.name}</span>
-                            {item.verified && !item.adjusted && (
+                            {item.pendingSync && (
+                              <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Sync
+                              </Badge>
+                            )}
+                            {item.verified && !item.adjusted && !item.pendingSync && (
                               <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-300">
                                 <Check className="w-3 h-3 mr-1" />
                                 Vérifié
                               </Badge>
                             )}
-                            {item.adjusted && (
+                            {item.adjusted && !item.pendingSync && (
                               <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
                                 <AlertTriangle className="w-3 h-3 mr-1" />
                                 Ajusté
@@ -472,6 +777,18 @@ export const QuickInventoryMode = () => {
                   <code className="text-xs text-muted-foreground">{currentProduct.barcode}</code>
                 )}
               </div>
+
+              {!isOnline && (
+                <div className="p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30 border border-orange-300">
+                  <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                    <WifiOff className="w-4 h-4" />
+                    <span className="text-sm font-medium">Mode hors-ligne</span>
+                  </div>
+                  <p className="text-xs text-orange-600 dark:text-orange-500 mt-1">
+                    Les modifications seront synchronisées dès la connexion rétablie
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
