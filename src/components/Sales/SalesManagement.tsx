@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2, Receipt } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2, Receipt, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { SaleDetailsDialog } from './SaleDetailsDialog';
@@ -32,6 +33,10 @@ interface Sale {
   profiles?: {
     full_name: string;
   };
+  currencies?: {
+    htg: number;
+    usd: number;
+  };
 }
 
 interface RevenueStats {
@@ -56,6 +61,7 @@ export const SalesManagement = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currencyFilter, setCurrencyFilter] = useState<'all' | 'HTG' | 'USD' | 'mixed'>('all');
   const [loading, setLoading] = useState(true);
   const [revenueStats, setRevenueStats] = useState<RevenueStats>({ totalHTG: 0, totalUSD: 0, todayHTG: 0, todayUSD: 0 });
   const [tvaStats, setTvaStats] = useState<TvaStats>({ totalTVA_HTG: 0, totalTVA_USD: 0, todayTVA_HTG: 0, todayTVA_USD: 0 });
@@ -94,13 +100,29 @@ export const SalesManagement = () => {
   };
 
   useEffect(() => {
-    const filtered = sales.filter(sale =>
+    let filtered = sales.filter(sale =>
       sale.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    // Apply currency filter
+    if (currencyFilter !== 'all') {
+      filtered = filtered.filter(sale => {
+        const currencies = sale.currencies || { htg: 0, usd: 0 };
+        if (currencyFilter === 'HTG') {
+          return currencies.htg > 0 && currencies.usd === 0;
+        } else if (currencyFilter === 'USD') {
+          return currencies.usd > 0 && currencies.htg === 0;
+        } else if (currencyFilter === 'mixed') {
+          return currencies.htg > 0 && currencies.usd > 0;
+        }
+        return true;
+      });
+    }
+
     setFilteredSales(filtered);
     resetPage();
-  }, [searchTerm, sales]);
+  }, [searchTerm, currencyFilter, sales]);
 
   const fetchSales = async () => {
     try {
@@ -138,9 +160,11 @@ export const SalesManagement = () => {
             .eq('user_id', sale.seller_id)
             .single();
           
+          const currencies = saleItemsMap.get(sale.id) || { htg: 0, usd: 0 };
           return {
             ...sale,
-            profiles: profileData || { full_name: 'N/A' }
+            profiles: profileData || { full_name: 'N/A' },
+            currencies
           };
         })
       );
@@ -355,14 +379,28 @@ export const SalesManagement = () => {
             <ShoppingCart className="w-5 h-5" />
             Historique des Ventes
           </CardTitle>
-          <div className="relative mt-4">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher par client ou vendeur..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher par client ou vendeur..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={currencyFilter} onValueChange={(value: 'all' | 'HTG' | 'USD' | 'mixed') => setCurrencyFilter(value)}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Devise" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes devises</SelectItem>
+                <SelectItem value="HTG">HTG uniquement</SelectItem>
+                <SelectItem value="USD">USD uniquement</SelectItem>
+                <SelectItem value="mixed">Mixte (HTG + USD)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <CardContent>
@@ -397,8 +435,18 @@ export const SalesManagement = () => {
                       <TableCell>
                         {sale.profiles?.full_name || <span className="text-muted-foreground italic">N/A</span>}
                       </TableCell>
-                      <TableCell className="font-bold text-success">
-                        {parseFloat(sale.total_amount.toString()).toFixed(2)} HTG
+                      <TableCell className="font-bold">
+                        <div className="flex flex-col">
+                          {sale.currencies?.htg ? (
+                            <span>{formatNumber(sale.currencies.htg)} HTG</span>
+                          ) : null}
+                          {sale.currencies?.usd ? (
+                            <span className="text-muted-foreground text-sm">${formatNumber(sale.currencies.usd)}</span>
+                          ) : null}
+                          {!sale.currencies?.htg && !sale.currencies?.usd && (
+                            <span>{formatNumber(sale.total_amount)} HTG</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="capitalize">
