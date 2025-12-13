@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Database, HardDrive, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
@@ -150,15 +151,44 @@ export const DatabaseMonitoring = () => {
               </ul>
             </div>
 
-            <Button
-              onClick={handleManualCleanup}
-              disabled={cleaning}
-              variant={dbSize.needs_cleanup ? 'destructive' : 'outline'}
-              className="w-full"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {cleaning ? 'Nettoyage en cours...' : 'Nettoyer maintenant'}
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  disabled={cleaning}
+                  variant={dbSize.needs_cleanup ? 'destructive' : 'outline'}
+                  className="w-full"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {cleaning ? 'Nettoyage en cours...' : 'Nettoyer maintenant'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-destructive" />
+                    Confirmer le nettoyage
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3">
+                    <p>Cette action est <strong className="text-destructive">irréversible</strong>. Elle supprimera :</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>Les logs d'activité de plus de 6 mois</li>
+                      <li>Les mouvements de stock de plus de 1 an</li>
+                      <li>Les ventes de plus de 2 ans</li>
+                    </ul>
+                    <p className="font-medium text-destructive pt-2">Voulez-vous vraiment continuer ?</p>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleManualCleanup}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Confirmer le nettoyage
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             <p className="text-xs text-muted-foreground text-center">
               Le nettoyage automatique s'exécute quotidiennement à 3h du matin

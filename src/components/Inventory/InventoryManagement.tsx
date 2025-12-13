@@ -278,6 +278,7 @@ export const InventoryManagement = () => {
       const product = adjustmentModal.product;
       const qty = parseFloat(adjustmentQuantity);
       const stock = getStockDisplay(product);
+      const { data: { user } } = await supabase.auth.getUser();
       
       let newQuantity: number;
       let movementType: string;
@@ -326,10 +327,28 @@ export const InventoryManagement = () => {
           previous_quantity: stock.raw,
           new_quantity: newQuantity,
           reason: adjustmentReason,
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          created_by: user?.id
         });
 
       if (movementError) console.error('Error recording movement:', movementError);
+
+      // Log activity
+      await supabase.from('activity_logs').insert({
+        user_id: user?.id,
+        action_type: 'stock_adjusted',
+        entity_type: 'product',
+        entity_id: product.id,
+        description: `Stock ajusté pour "${product.name}": ${stock.raw} → ${newQuantity} ${stock.unit}`,
+        metadata: {
+          product_name: product.name,
+          previous_stock: stock.raw,
+          new_stock: newQuantity,
+          difference: newQuantity - stock.raw,
+          unit: stock.unit,
+          reason: adjustmentReason,
+          adjustment_type: adjustmentModal.type
+        }
+      });
 
       toast({
         title: 'Stock mis à jour',
