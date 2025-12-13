@@ -366,7 +366,12 @@ export const AnalyticsDashboard = () => {
           </p>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="outline" className="flex items-center gap-2 text-sm px-3 py-1.5 bg-muted/50">
+            <DollarSign className="h-4 w-4 text-primary" />
+            <span>1 USD = {formatNumber(usdHtgRate)} HTG</span>
+          </Badge>
+
           <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
             <SelectTrigger className="w-[150px]">
               <SelectValue />

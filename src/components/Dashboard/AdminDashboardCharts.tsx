@@ -442,6 +442,14 @@ export const AdminDashboardCharts = () => {
 
   return (
     <div className="space-y-6">
+      {/* Exchange Rate Indicator */}
+      <div className="flex justify-end">
+        <Badge variant="outline" className="flex items-center gap-2 text-sm px-3 py-1.5 bg-muted/50">
+          <DollarSign className="h-4 w-4 text-primary" />
+          <span>Taux: 1 USD = {formatNumber(usdHtgRate)} HTG</span>
+        </Badge>
+      </div>
+
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
