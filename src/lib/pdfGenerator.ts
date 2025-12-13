@@ -1442,11 +1442,11 @@ export const generateInventoryHistoryPDF = (
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(255, 255, 255);
   pdf.text('Date', margin + 3, yPos + 5);
-  pdf.text('Produit', margin + 28, yPos + 5);
-  pdf.text('Type', margin + 80, yPos + 5);
-  pdf.text('Qté', margin + 110, yPos + 5);
-  pdf.text('Avant > Apres', margin + 130, yPos + 5);
-  pdf.text('Utilisateur', margin + 165, yPos + 5);
+  pdf.text('Produit', margin + 25, yPos + 5);
+  pdf.text('Type', margin + 68, yPos + 5);
+  pdf.text('Qte', margin + 95, yPos + 5);
+  pdf.text('Avant > Apres', margin + 112, yPos + 5);
+  pdf.text('Utilisateur', margin + 150, yPos + 5);
   pdf.setTextColor(0, 0, 0);
   yPos += 10;
 
@@ -1467,37 +1467,39 @@ export const generateInventoryHistoryPDF = (
     pdf.text(`${date.toLocaleDateString('fr-FR')} ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`, margin + 3, yPos);
 
     // Product name (truncate)
-    const maxNameLen = 25;
+    const maxNameLen = 20;
     const name = m.productName.length > maxNameLen 
-      ? m.productName.substring(0, maxNameLen - 2) + '...' 
+      ? m.productName.substring(0, maxNameLen - 2) + '..' 
       : m.productName;
-    pdf.text(name, margin + 28, yPos);
+    pdf.text(name, margin + 25, yPos);
 
-    // Type
-    pdf.text(getMovementTypeLabel(m.movementType), margin + 80, yPos);
+    // Type (shortened)
+    const typeLabel = getMovementTypeLabel(m.movementType);
+    const shortType = typeLabel.length > 12 ? typeLabel.substring(0, 10) + '..' : typeLabel;
+    pdf.text(shortType, margin + 68, yPos);
 
     // Quantity with color
-    const isIn = ['restock', 'adjustment_in', 'return'].includes(m.movementType);
-    const isOut = ['sale', 'adjustment_out', 'loss'].includes(m.movementType);
+    const isIn = ['restock', 'adjustment_in', 'return', 'in'].includes(m.movementType);
+    const isOut = ['sale', 'adjustment_out', 'loss', 'out'].includes(m.movementType);
     if (isIn) {
       pdf.setTextColor(34, 197, 94);
-      pdf.text(`+${m.quantity}`, margin + 110, yPos);
+      pdf.text(`+${m.quantity.toFixed(2)}`, margin + 95, yPos);
     } else if (isOut) {
       pdf.setTextColor(239, 68, 68);
-      pdf.text(`-${m.quantity}`, margin + 110, yPos);
+      pdf.text(`-${m.quantity.toFixed(2)}`, margin + 95, yPos);
     } else {
       pdf.setTextColor(59, 130, 246);
       const diff = m.newQuantity - m.previousQuantity;
-      pdf.text(diff >= 0 ? `+${diff}` : `${diff}`, margin + 110, yPos);
+      pdf.text(diff >= 0 ? `+${diff.toFixed(2)}` : `${diff.toFixed(2)}`, margin + 95, yPos);
     }
     pdf.setTextColor(0, 0, 0);
 
-    // Stock before/after
-    pdf.text(`${m.previousQuantity} > ${m.newQuantity}`, margin + 130, yPos);
+    // Stock before/after with 2 decimals
+    pdf.text(`${m.previousQuantity.toFixed(2)} > ${m.newQuantity.toFixed(2)}`, margin + 112, yPos);
 
-    // User
-    const userName = m.userName.length > 12 ? m.userName.substring(0, 10) + '..' : m.userName;
-    pdf.text(userName, margin + 165, yPos);
+    // User (more space)
+    const userName = m.userName.length > 20 ? m.userName.substring(0, 18) + '..' : m.userName;
+    pdf.text(userName, margin + 150, yPos);
 
     yPos += 6;
   });

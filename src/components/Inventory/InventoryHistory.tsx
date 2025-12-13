@@ -136,8 +136,8 @@ export const InventoryHistory = () => {
 
       // Movement type filter
       if (movementFilter !== 'all') {
-        const isIn = ['restock', 'adjustment_in', 'return'].includes(m.movement_type);
-        const isOut = ['sale', 'adjustment_out', 'loss'].includes(m.movement_type);
+        const isIn = ['restock', 'adjustment_in', 'return', 'in'].includes(m.movement_type);
+        const isOut = ['sale', 'adjustment_out', 'loss', 'out'].includes(m.movement_type);
         const isAdjust = ['adjustment', 'inventory_adjustment'].includes(m.movement_type);
         
         if (movementFilter === 'in' && !isIn) return false;
@@ -170,11 +170,11 @@ export const InventoryHistory = () => {
   // Stats
   const stats = useMemo(() => {
     const ins = movements.filter(m => 
-      ['restock', 'adjustment_in', 'return'].includes(m.movement_type)
+      ['restock', 'adjustment_in', 'return', 'in'].includes(m.movement_type)
     ).reduce((sum, m) => sum + m.quantity, 0);
     
     const outs = movements.filter(m => 
-      ['sale', 'adjustment_out', 'loss'].includes(m.movement_type)
+      ['sale', 'adjustment_out', 'loss', 'out'].includes(m.movement_type)
     ).reduce((sum, m) => sum + m.quantity, 0);
     
     const adjustments = movements.filter(m => 
@@ -188,20 +188,20 @@ export const InventoryHistory = () => {
     const isPositive = next > prev;
     const isNegative = next < prev;
     
-    if (['restock', 'adjustment_in', 'return'].includes(type)) {
+    if (['restock', 'adjustment_in', 'return', 'in'].includes(type)) {
       return (
-        <Badge className="bg-green-500/10 text-green-600 border-green-500/20 flex items-center gap-1">
+        <Badge className="bg-green-600 text-white border-green-700 flex items-center gap-1">
           <ArrowUpCircle className="w-3 h-3" />
-          +{quantity}
+          +{quantity.toFixed(2)}
         </Badge>
       );
     }
     
-    if (['sale', 'adjustment_out', 'loss'].includes(type)) {
+    if (['sale', 'adjustment_out', 'loss', 'out'].includes(type)) {
       return (
         <Badge className="bg-red-600 text-white border-red-700 flex items-center gap-1">
           <ArrowDownCircle className="w-3 h-3" />
-          -{quantity}
+          -{quantity.toFixed(2)}
         </Badge>
       );
     }
@@ -466,9 +466,9 @@ export const InventoryHistory = () => {
                         {getMovementBadge(m.movement_type, m.quantity, m.previous_quantity, m.new_quantity)}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-center">
-                        <span className="text-muted-foreground">{formatNumber(m.previous_quantity)}</span>
+                        <span className="text-muted-foreground">{m.previous_quantity.toFixed(2)}</span>
                         <span className="mx-1">→</span>
-                        <span className="font-medium">{formatNumber(m.new_quantity)}</span>
+                        <span className="font-medium">{m.new_quantity.toFixed(2)}</span>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell max-w-[200px] truncate">
                         {m.reason || <span className="text-muted-foreground">-</span>}
