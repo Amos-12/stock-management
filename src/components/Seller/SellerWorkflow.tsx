@@ -1161,8 +1161,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       {/* Step Content */}
       {currentStep === 'products' && (
-        <Card className="shadow-lg flex flex-col h-[calc(100vh-200px)] min-h-[500px]">
-          <CardHeader className="pb-6 space-y-4">
+        <Card className="shadow-lg flex flex-col h-[calc(100vh-160px)] min-h-[600px]">
+          <CardHeader className="pb-4 space-y-3 shrink-0">
             <CardTitle className="flex items-center gap-2">
               <Package className="w-5 h-5" />
               Étape 1: Sélection des Produits
@@ -1254,7 +1254,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 pb-24 flex flex-col min-h-0">
+          <CardContent className="flex-1 pb-4 flex flex-col min-h-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 overflow-y-auto min-h-0">
               {filteredProducts.map((product) => {
                 const cartItem = cart.find(item => item.id === product.id);
