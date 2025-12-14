@@ -236,16 +236,16 @@ export const ResponsiveDashboardLayout = ({
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header */}
-      <header className="bg-background/90 backdrop-blur-md border-b border-border shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+      <header className="bg-background/90 backdrop-blur-md border-b border-border shadow-md sticky top-0 z-50 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+          <div className="flex items-center justify-between h-16 min-w-0">
             {/* Left side - Mobile menu button + Logo */}
-            <div className="flex items-center">
+            <div className="flex items-center min-w-0 flex-1">
               <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="lg:hidden mr-2">
+                  <Button variant="ghost" size="icon" className="lg:hidden mr-1 sm:mr-2 flex-shrink-0">
                     <Menu className="w-5 h-5" />
                   </Button>
                 </SheetTrigger>
@@ -254,25 +254,25 @@ export const ResponsiveDashboardLayout = ({
                 </SheetContent>
               </Sheet>
               
-              <div className="flex items-center">
+              <div className="flex items-center min-w-0">
                 {companySettings?.logo_url ? (
                   <img 
                     src={companySettings.logo_url} 
                     alt="Logo" 
-                    className="w-10 h-10 object-contain mr-3" 
+                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain mr-2 sm:mr-3 flex-shrink-0" 
                   />
                 ) : (
                   <img 
                     src={logo} 
                     alt="Logo" 
-                    className="w-10 h-10 object-contain mr-3" 
+                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain mr-2 sm:mr-3 flex-shrink-0" 
                   />
                 )}
                 <h1 className={cn(
-                  "font-bold text-primary hidden sm:block",
+                  "font-bold text-primary hidden sm:block max-w-[150px] md:max-w-[250px] lg:max-w-none truncate",
                   (companySettings?.company_name || 'GF Distribution & Multi-Services').length > 30 
-                    ? "text-lg" 
-                    : "text-xl"
+                    ? "text-base lg:text-lg" 
+                    : "text-lg lg:text-xl"
                 )}>
                   {companySettings?.company_name || 'GF Distribution & Multi-Services'}
                 </h1>
@@ -280,17 +280,17 @@ export const ResponsiveDashboardLayout = ({
             </div>
 
             {/* Right side - User info and actions */}
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="hidden sm:flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0">
+              <div className="hidden lg:flex items-center gap-2 text-sm">
                 <User className="w-4 h-4" />
-                <span className="font-medium">{profile?.full_name}</span>
+                <span className="font-medium max-w-[120px] truncate">{profile?.full_name}</span>
               </div>
 
               {role === 'admin' && (
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  className="hover:bg-primary/10 relative"
+                  className="hover:bg-primary/10 relative flex-shrink-0"
                   onClick={() => {
                     if (onSectionChange) {
                       onSectionChange('notifications');
@@ -314,7 +314,7 @@ export const ResponsiveDashboardLayout = ({
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="hover:bg-primary/10"
+                className="hover:bg-primary/10 flex-shrink-0 hidden sm:flex"
                 onClick={() => navigate('/profile')}
                 title="Profil"
               >
@@ -327,10 +327,10 @@ export const ResponsiveDashboardLayout = ({
                 variant="outline"
                 size="sm"
                 onClick={signOut}
-                className="hover:bg-destructive hover:text-destructive-foreground transition-smooth"
+                className="hover:bg-destructive hover:text-destructive-foreground transition-smooth flex-shrink-0"
               >
                 <LogOut className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Déconnexion</span>
+                <span className="hidden md:inline">Déconnexion</span>
               </Button>
             </div>
           </div>
