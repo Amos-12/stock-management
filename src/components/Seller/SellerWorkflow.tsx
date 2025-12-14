@@ -1410,135 +1410,162 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                         <div>
                           <h4 className="font-semibold text-base">{product.name}</h4>
                           
-                          {/* Ceramic product details */}
-                          {product.category === 'ceramique' && (
-                            <div className="space-y-1 mt-1">
-                              {product.dimension && (
-                                <p className="text-xs text-muted-foreground">📐 Dimension: {product.dimension}</p>
-                              )}
-                              {product.surface_par_boite && (
-                                <p className="text-xs text-muted-foreground">📦 Surface/boîte: {product.surface_par_boite} m²</p>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Iron bar details */}
-                          {product.category === 'fer' && (
-                            <div className="space-y-1 mt-1">
-                              {product.diametre && (
-                                <p className="text-xs text-muted-foreground">⭕ Diamètre: {product.diametre}</p>
-                              )}
-                              {product.longueur_barre_ft && (
-                                <p className="text-xs text-muted-foreground">📏 Longueur: {product.longueur_barre_ft} ft</p>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Energy product details */}
-                          {product.category === 'energie' && (
-                            <div className="space-y-1 mt-1">
-                              {product.type_energie && (
-                                <p className="text-xs text-muted-foreground">⚡ Type: {product.type_energie}</p>
-                              )}
-                              {product.puissance && (
-                                <p className="text-xs text-muted-foreground">💪 Puissance: {product.puissance}W</p>
-                              )}
-                              {product.voltage && (
-                                <p className="text-xs text-muted-foreground">🔌 Voltage: {product.voltage}V</p>
-                              )}
-                              {product.capacite && (
-                                <p className="text-xs text-muted-foreground">🔋 Capacité: {product.capacite}Ah</p>
-                              )}
-                            </div>
-                          )}
+                          {/* Product specifications as horizontal colored badges */}
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {/* Ceramic specs */}
+                            {product.category === 'ceramique' && (
+                              <>
+                                {product.dimension && (
+                                  <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 border-blue-500/30">
+                                    📐 {product.dimension}
+                                  </Badge>
+                                )}
+                                {product.surface_par_boite && (
+                                  <Badge variant="outline" className="text-[10px] bg-cyan-500/10 text-cyan-600 border-cyan-500/30">
+                                    📦 {product.surface_par_boite} m²/boîte
+                                  </Badge>
+                                )}
+                              </>
+                            )}
+                            
+                            {/* Iron bar specs */}
+                            {product.category === 'fer' && (
+                              <>
+                                {product.diametre && (
+                                  <Badge variant="outline" className="text-[10px] bg-orange-500/10 text-orange-600 border-orange-500/30">
+                                    ⭕ {product.diametre}
+                                  </Badge>
+                                )}
+                                {product.longueur_barre_ft && (
+                                  <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/30">
+                                    📏 {product.longueur_barre_ft} ft
+                                  </Badge>
+                                )}
+                              </>
+                            )}
+                            
+                            {/* Energy specs */}
+                            {product.category === 'energie' && (
+                              <>
+                                {product.type_energie && (
+                                  <Badge variant="outline" className="text-[10px] bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                                    ⚡ {product.type_energie}
+                                  </Badge>
+                                )}
+                                {product.puissance && (
+                                  <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-600 border-red-500/30">
+                                    💪 {product.puissance}W
+                                  </Badge>
+                                )}
+                                {product.voltage && (
+                                  <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/30">
+                                    🔌 {product.voltage}V
+                                  </Badge>
+                                )}
+                                {product.capacite && (
+                                  <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-600 border-green-500/30">
+                                    🔋 {product.capacite}Ah
+                                  </Badge>
+                                )}
+                              </>
+                            )}
 
-                          {/* Blocs product details */}
-                          {product.category === 'blocs' && (
-                            <div className="space-y-1 mt-1">
-                              {product.bloc_type && (
-                                <p className="text-xs text-muted-foreground">🧱 Type: {product.bloc_type}</p>
-                              )}
-                              {product.bloc_poids && (
-                                <p className="text-xs text-muted-foreground">⚖️ Poids: {product.bloc_poids} kg</p>
-                              )}
-                            </div>
-                          )}
+                            {/* Blocs specs */}
+                            {product.category === 'blocs' && (
+                              <>
+                                {product.bloc_type && (
+                                  <Badge variant="outline" className="text-[10px] bg-stone-500/10 text-stone-600 border-stone-500/30">
+                                    🧱 {product.bloc_type}
+                                  </Badge>
+                                )}
+                                {product.bloc_poids && (
+                                  <Badge variant="outline" className="text-[10px] bg-gray-500/10 text-gray-600 border-gray-500/30">
+                                    ⚖️ {product.bloc_poids} kg
+                                  </Badge>
+                                )}
+                              </>
+                            )}
 
-                          {/* Vêtements product details */}
-                          {product.category === 'vetements' && (
-                            <div className="space-y-1 mt-1">
-                              {product.vetement_taille && (
-                                <p className="text-xs text-muted-foreground">📏 Taille: {product.vetement_taille}</p>
-                              )}
-                              {product.vetement_genre && (
-                                <p className="text-xs text-muted-foreground">👤 Genre: {product.vetement_genre}</p>
-                              )}
-                              {product.vetement_couleur && (
-                                <p className="text-xs text-muted-foreground">🎨 Couleur: {product.vetement_couleur}</p>
-                              )}
-                            </div>
-                          )}
+                            {/* Vêtements specs */}
+                            {product.category === 'vetements' && (
+                              <>
+                                {product.vetement_taille && (
+                                  <Badge variant="outline" className="text-[10px] bg-pink-500/10 text-pink-600 border-pink-500/30">
+                                    📏 {product.vetement_taille}
+                                  </Badge>
+                                )}
+                                {product.vetement_genre && (
+                                  <Badge variant="outline" className="text-[10px] bg-violet-500/10 text-violet-600 border-violet-500/30">
+                                    👤 {product.vetement_genre}
+                                  </Badge>
+                                )}
+                                {product.vetement_couleur && (
+                                  <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-600 border-rose-500/30">
+                                    🎨 {product.vetement_couleur}
+                                  </Badge>
+                                )}
+                              </>
+                            )}
 
-                          {/* Électroménager product details */}
-                          {product.category === 'electromenager' && (
-                            <div className="space-y-1 mt-1">
-                              {product.electromenager_marque && (
-                                <p className="text-xs text-muted-foreground">🏭 Marque: {product.electromenager_marque}</p>
-                              )}
-                              {product.electromenager_modele && (
-                                <p className="text-xs text-muted-foreground">📋 Modèle: {product.electromenager_modele}</p>
-                              )}
-                              {product.puissance && (
-                                <p className="text-xs text-muted-foreground">💪 Puissance: {product.puissance}W</p>
-                              )}
-                              {product.voltage && (
-                                <p className="text-xs text-muted-foreground">🔌 Voltage: {product.voltage}V</p>
-                              )}
-                              {product.capacite && (
-                                <p className="text-xs text-muted-foreground">📦 Capacité: {product.capacite}L</p>
-                              )}
-                              {product.electromenager_garantie_mois && (
-                                <p className="text-xs text-muted-foreground">🛡️ Garantie: {product.electromenager_garantie_mois} mois</p>
-                              )}
-                              {product.electromenager_classe_energie && (
-                                <p className="text-xs text-muted-foreground">⚡ Classe énergie: {product.electromenager_classe_energie}</p>
-                              )}
-                              {product.electromenager_couleur && (
-                                <p className="text-xs text-muted-foreground">🎨 Couleur: {product.electromenager_couleur}</p>
-                              )}
-                            </div>
-                          )}
+                            {/* Électroménager specs */}
+                            {product.category === 'electromenager' && (
+                              <>
+                                {product.electromenager_marque && (
+                                  <Badge variant="outline" className="text-[10px] bg-indigo-500/10 text-indigo-600 border-indigo-500/30">
+                                    🏭 {product.electromenager_marque}
+                                  </Badge>
+                                )}
+                                {product.electromenager_modele && (
+                                  <Badge variant="outline" className="text-[10px] bg-slate-500/10 text-slate-600 border-slate-500/30">
+                                    📋 {product.electromenager_modele}
+                                  </Badge>
+                                )}
+                                {product.puissance && (
+                                  <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-600 border-red-500/30">
+                                    💪 {product.puissance}W
+                                  </Badge>
+                                )}
+                                {product.electromenager_classe_energie && (
+                                  <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+                                    ⚡ {product.electromenager_classe_energie}
+                                  </Badge>
+                                )}
+                              </>
+                            )}
 
-                          {/* Électronique product details */}
-                          {product.category === 'electronique' && (
-                            <div className="space-y-1 mt-1">
-                              {product.electromenager_marque && (
-                                <p className="text-xs text-muted-foreground">🏭 Marque: {product.electromenager_marque}</p>
-                              )}
-                              {product.electromenager_modele && (
-                                <p className="text-xs text-muted-foreground">📋 Modèle: {product.electromenager_modele}</p>
-                              )}
-                              {product.electromenager_couleur && (
-                                <p className="text-xs text-muted-foreground">🎨 Couleur: {product.electromenager_couleur}</p>
-                              )}
-                            </div>
-                          )}
+                            {/* Électronique specs */}
+                            {product.category === 'electronique' && (
+                              <>
+                                {product.electromenager_marque && (
+                                  <Badge variant="outline" className="text-[10px] bg-indigo-500/10 text-indigo-600 border-indigo-500/30">
+                                    🏭 {product.electromenager_marque}
+                                  </Badge>
+                                )}
+                                {product.electromenager_modele && (
+                                  <Badge variant="outline" className="text-[10px] bg-slate-500/10 text-slate-600 border-slate-500/30">
+                                    📋 {product.electromenager_modele}
+                                  </Badge>
+                                )}
+                                {product.electromenager_couleur && (
+                                  <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-600 border-rose-500/30">
+                                    🎨 {product.electromenager_couleur}
+                                  </Badge>
+                                )}
+                              </>
+                            )}
 
-                          {/* Dynamic specifications from specifications_techniques */}
-                          {product.specifications_techniques && 
-                           Object.keys(product.specifications_techniques).length > 0 && (
-                            <div className="space-y-1 mt-1">
-                              {Object.entries(product.specifications_techniques)
-                                .filter(([_, value]) => value !== null && value !== '' && value !== undefined)
-                                .slice(0, 4)
-                                .map(([key, value]) => (
-                                  <p key={key} className="text-xs text-muted-foreground">
-                                    ℹ️ {key.replace(/_/g, ' ')}: {String(value)}
-                                  </p>
-                                ))
-                              }
-                            </div>
-                          )}
+                            {/* Dynamic specifications from specifications_techniques */}
+                            {product.specifications_techniques && 
+                             Object.entries(product.specifications_techniques)
+                               .filter(([_, value]) => value !== null && value !== '' && value !== undefined)
+                               .slice(0, 3)
+                               .map(([key, value]) => (
+                                 <Badge key={key} variant="outline" className="text-[10px] bg-teal-500/10 text-teal-600 border-teal-500/30">
+                                   ℹ️ {String(value)}
+                                 </Badge>
+                               ))
+                            }
+                          </div>
                           
                           <div className="flex items-center gap-2 text-sm flex-wrap mt-2">
                             <Badge variant="outline" className="text-xs">
