@@ -1546,6 +1546,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                                     📋 {product.electromenager_modele}
                                   </Badge>
                                 )}
+                                {product.capacite && (
+                                  <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-600 border-green-500/30">
+                                    💾 {product.capacite}
+                                  </Badge>
+                                )}
                                 {product.electromenager_couleur && (
                                   <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-600 border-rose-500/30">
                                     🎨 {product.electromenager_couleur}
@@ -1554,11 +1559,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                               </>
                             )}
 
-                            {/* Dynamic specifications from specifications_techniques */}
+                            {/* Dynamic specifications from specifications_techniques - minimum 4 specs */}
                             {product.specifications_techniques && 
                              Object.entries(product.specifications_techniques)
                                .filter(([_, value]) => value !== null && value !== '' && value !== undefined)
-                               .slice(0, 3)
+                               .slice(0, 4)
                                .map(([key, value]) => (
                                  <Badge key={key} variant="outline" className="text-[10px] bg-teal-500/10 text-teal-600 border-teal-500/30">
                                    ℹ️ {String(value)}
