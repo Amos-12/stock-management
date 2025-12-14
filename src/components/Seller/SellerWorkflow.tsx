@@ -1124,37 +1124,33 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Workflow Progress */}
+      {/* Workflow Progress - Compact */}
       <Card className="shadow-lg">
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <CardContent className="p-2 sm:p-3">
+          <div className="flex items-center justify-between gap-2">
             {steps.map((step, index) => {
               const StepIcon = step.icon;
               const isActive = step.id === currentStep;
               const isCompleted = index < getCurrentStepIndex();
               
               return (
-                <div key={step.id} className="flex items-center w-full sm:w-auto">
-                  <div className="flex items-center flex-1 sm:flex-initial">
-                    <div
-                      className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-smooth ${
-                        isActive
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : isCompleted
-                          ? 'border-success bg-success text-success-foreground'
-                          : 'border-muted-foreground text-muted-foreground'
-                      }`}
-                    >
-                      <StepIcon className="w-5 h-5" />
-                    </div>
-                    <div className="ml-3">
-                      <div className={`text-sm font-medium ${isActive ? 'text-primary' : isCompleted ? 'text-success' : 'text-muted-foreground'}`}>
-                        {step.label}
-                      </div>
-                    </div>
+                <div key={step.id} className="flex items-center">
+                  <div
+                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-smooth ${
+                      isActive
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : isCompleted
+                        ? 'border-success bg-success text-success-foreground'
+                        : 'border-muted-foreground text-muted-foreground'
+                    }`}
+                  >
+                    <StepIcon className="w-4 h-4" />
                   </div>
+                  <span className={`hidden sm:block ml-2 text-xs font-medium ${isActive ? 'text-primary' : isCompleted ? 'text-success' : 'text-muted-foreground'}`}>
+                    {step.label}
+                  </span>
                   {index < steps.length - 1 && (
-                    <ArrowRight className="hidden sm:block w-5 h-5 mx-4 text-muted-foreground" />
+                    <ArrowRight className="hidden sm:block w-4 h-4 mx-2 text-muted-foreground" />
                   )}
                 </div>
               );
@@ -1166,115 +1162,116 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       {/* Step Content */}
       {currentStep === 'products' && (
         <Card className="shadow-lg flex flex-col h-[calc(100vh-160px)] min-h-[600px]">
-          <CardHeader className="pb-4 space-y-3 shrink-0">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Étape 1: Sélection des Produits
+          <CardHeader className="pb-2 space-y-2 shrink-0">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Package className="w-4 h-4" />
+              Sélection des Produits
             </CardTitle>
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Rechercher ou scanner un code-barres..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 pr-24"
+                  className="pl-9 pr-24 h-9"
                   data-barcode-input="true"
                 />
                 <Badge 
                   variant="outline" 
-                  className="absolute right-2 top-2 text-xs bg-primary/10 text-primary border-primary/30"
+                  className="absolute right-2 top-1.5 text-xs bg-primary/10 text-primary border-primary/30"
                 >
                   <Barcode className="w-3 h-3 mr-1" />
                   Scanner prêt
                 </Badge>
               </div>
-              <div className="flex gap-2 py-2">
-                <Button
-                  size="sm"
-                  variant={saleTypeFilter === 'all' ? 'default' : 'outline'}
-                  onClick={() => setSaleTypeFilter('all')}
-                >
-                  Tous
-                </Button>
-                <Button
-                  size="sm"
-                  variant={saleTypeFilter === 'retail' ? 'default' : 'outline'}
-                  onClick={() => setSaleTypeFilter('retail')}
-                >
-                  Détail
-                </Button>
-                <Button
-                  size="sm"
-                  variant={saleTypeFilter === 'wholesale' ? 'default' : 'outline'}
-                  onClick={() => setSaleTypeFilter('wholesale')}
-                >
-                  Gros
-                </Button>
-              </div>
               
-              <div className="flex flex-col sm:flex-row flex-wrap gap-4 mt-3 py-2">
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                  <Label htmlFor="category-filter" className="text-sm font-medium text-muted-foreground hidden sm:block self-center">
-                    Catégorie:
-                  </Label>
-                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger id="category-filter" className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="Catégorie" />
-                    </SelectTrigger>
-                    <SelectContent className="z-50 bg-popover">
-                      {availableDynamicCategories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.nom}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {/* Tous les filtres sur une seule ligne */}
+              <div className="flex flex-wrap items-center gap-2 py-1">
+                {/* Boutons type de vente */}
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant={saleTypeFilter === 'all' ? 'default' : 'outline'}
+                    onClick={() => setSaleTypeFilter('all')}
+                    className="h-8"
+                  >
+                    Tous
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={saleTypeFilter === 'retail' ? 'default' : 'outline'}
+                    onClick={() => setSaleTypeFilter('retail')}
+                    className="h-8"
+                  >
+                    Détail
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={saleTypeFilter === 'wholesale' ? 'default' : 'outline'}
+                    onClick={() => setSaleTypeFilter('wholesale')}
+                    className="h-8"
+                  >
+                    Gros
+                  </Button>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                  <Label htmlFor="subcategory-filter" className="text-sm font-medium text-muted-foreground hidden sm:block self-center">
-                    Sous-catégorie:
-                  </Label>
-                  <Select value={sousCategoryFilter} onValueChange={setSousCategoryFilter}>
-                    <SelectTrigger id="subcategory-filter" className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="Sous-catégorie" />
-                    </SelectTrigger>
-                    <SelectContent className="z-50 bg-popover">
-                      {availableSousCategories.map((sc) => (
-                        <SelectItem key={sc.id} value={sc.id}>
-                          {sc.nom}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Séparateur vertical */}
+                <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
+                
+                {/* Dropdown Catégorie */}
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[140px] h-8">
+                    <SelectValue placeholder="Catégorie" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 bg-popover">
+                    {availableDynamicCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {/* Dropdown Sous-catégorie */}
+                <Select value={sousCategoryFilter} onValueChange={setSousCategoryFilter}>
+                  <SelectTrigger className="w-[150px] h-8">
+                    <SelectValue placeholder="Sous-catégorie" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 bg-popover">
+                    {availableSousCategories.map((sc) => (
+                      <SelectItem key={sc.id} value={sc.id}>
+                        {sc.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
-              <div className="flex justify-between items-center mt-4 px-1">
-                <Badge variant="secondary" className="text-base">
-                  {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''} disponible{filteredProducts.length > 1 ? 's' : ''}
+              <div className="flex justify-between items-center px-1">
+                <Badge variant="secondary" className="text-sm">
+                  {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
                 </Badge>
                 
                 {/* View mode toggle */}
-                <div className="flex gap-1 bg-muted p-1 rounded-lg">
+                <div className="flex gap-1 bg-muted p-0.5 rounded-lg">
                   <Button
                     size="sm"
                     variant={viewMode === 'cards' ? 'default' : 'ghost'}
                     onClick={() => setViewMode('cards')}
-                    className="h-8 px-3"
+                    className="h-7 px-2"
                   >
-                    <Grid3X3 className="w-4 h-4 mr-1" />
-                    <span className="hidden sm:inline">Cartes</span>
+                    <Grid3X3 className="w-3.5 h-3.5 mr-1" />
+                    <span className="hidden sm:inline text-xs">Cartes</span>
                   </Button>
                   <Button
                     size="sm"
                     variant={viewMode === 'list' ? 'default' : 'ghost'}
                     onClick={() => setViewMode('list')}
-                    className="h-8 px-3"
+                    className="h-7 px-2"
                   >
-                    <List className="w-4 h-4 mr-1" />
-                    <span className="hidden sm:inline">Liste</span>
+                    <List className="w-3.5 h-3.5 mr-1" />
+                    <span className="hidden sm:inline text-xs">Liste</span>
                   </Button>
                 </div>
               </div>
