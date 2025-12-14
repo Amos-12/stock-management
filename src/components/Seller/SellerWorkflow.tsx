@@ -1831,197 +1831,257 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       )}
 
       {currentStep === 'checkout' && (
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Receipt className="w-5 h-5" />
-              Étape 3: Finalisation de la Vente
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="customer-name">Nom du client (optionnel)</Label>
-              <Input
-                id="customer-name"
-                placeholder="Nom du client"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="customer-address">Adresse du client (optionnel)</Label>
-              <Input
-                id="customer-address"
-                placeholder="Adresse du client"
-                value={customerAddress}
-                onChange={(e) => setCustomerAddress(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="payment-method">Méthode de paiement</Label>
-              <Select
-                value={paymentMethod}
-                onValueChange={(value: 'espece' | 'cheque' | 'virement') => setPaymentMethod(value)}
-              >
-                <SelectTrigger id="payment-method">
-                  <SelectValue placeholder="Sélectionner" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="espece">Espèce</SelectItem>
-                  <SelectItem value="cheque">Chèque</SelectItem>
-                  <SelectItem value="virement">Virement</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="border rounded-lg p-4 bg-muted/50">
-              <h4 className="font-medium mb-3">Résumé de la commande</h4>
-              {cart.map((item) => {
-                const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
-                const displayQuantity = item.category === 'ceramique' ? `${item.cartQuantity.toFixed(2)} m²` : `${item.cartQuantity} ${item.unit}`;
-                return (
-                  <div key={item.id} className="flex justify-between text-sm mb-2 gap-2">
-                    <span className="break-words">{item.name} × {displayQuantity}</span>
-                    <span className="font-medium shrink-0">{formatAmount(itemTotal, item.currency)}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-200px)] min-h-[500px]">
+          {/* Left Column - Client Info & Payment */}
+          <div className="space-y-4">
+            {/* Client Info Card */}
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Package className="w-4 h-4 text-primary" />
                   </div>
-                );
-              })}
-              <div className="border-t mt-3 pt-3 space-y-2">
-                {/* Subtotals by currency */}
-                
-                {/* Discount Section */}
-                <div className="space-y-2 border-t pt-2">
-                  <Label htmlFor="discount-type" className="text-sm">Type de remise</Label>
-                  <Select
-                    value={discountType}
-                    onValueChange={(value: 'none' | 'percentage' | 'amount') => setDiscountType(value)}
-                  >
-                    <SelectTrigger id="discount-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Aucune remise</SelectItem>
-                      <SelectItem value="percentage">Pourcentage (%)</SelectItem>
-                      <SelectItem value="amount">Montant fixe (HTG)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  Informations client
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="customer-name" className="text-xs text-muted-foreground">Nom (optionnel)</Label>
+                  <Input
+                    id="customer-name"
+                    placeholder="Nom du client"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="customer-address" className="text-xs text-muted-foreground">Adresse (optionnel)</Label>
+                  <Input
+                    id="customer-address"
+                    placeholder="Adresse du client"
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Payment Method Card */}
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Receipt className="w-4 h-4 text-primary" />
+                  </div>
+                  Paiement
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Payment method as styled radio buttons */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'espece', label: 'Espèce', icon: '💵' },
+                    { value: 'cheque', label: 'Chèque', icon: '📝' },
+                    { value: 'virement', label: 'Virement', icon: '🏦' },
+                  ].map((method) => (
+                    <button
+                      key={method.value}
+                      onClick={() => setPaymentMethod(method.value as 'espece' | 'cheque' | 'virement')}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
+                        paymentMethod === method.value
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                      }`}
+                    >
+                      <span className="text-xl">{method.icon}</span>
+                      <span className="text-xs font-medium">{method.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Discount Section - Compact */}
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">Remise</Label>
+                    <div className="flex gap-1">
+                      {['none', 'percentage', 'amount'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setDiscountType(type as 'none' | 'percentage' | 'amount')}
+                          className={`px-2 py-1 text-xs rounded transition-all ${
+                            discountType === type
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted hover:bg-muted/80'
+                          }`}
+                        >
+                          {type === 'none' ? 'Aucune' : type === 'percentage' ? '%' : 'HTG'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   
                   {discountType !== 'none' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="discount-value" className="text-sm">
-                        Valeur de la remise {discountType === 'percentage' ? '(%)' : '(HTG)'}
-                      </Label>
+                    <div className="flex gap-2">
+                      {/* Quick discount buttons */}
+                      {discountType === 'percentage' && (
+                        <div className="flex gap-1 flex-wrap">
+                          {[5, 10, 15, 20].map((pct) => (
+                            <button
+                              key={pct}
+                              onClick={() => setDiscountValue(pct.toString())}
+                              className={`px-2 py-1 text-xs rounded border transition-all ${
+                                discountValue === pct.toString()
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-border hover:border-primary/50'
+                              }`}
+                            >
+                              {pct}%
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <Input
-                        id="discount-value"
                         type="number"
                         min="0"
-                        max={discountType === 'percentage' ? '100' : getSubtotal().toString()}
+                        max={discountType === 'percentage' ? '100' : undefined}
                         step={discountType === 'percentage' ? '1' : '0.01'}
                         value={discountValue}
                         onChange={(e) => setDiscountValue(e.target.value)}
                         placeholder="0"
+                        className="h-8 w-20 text-sm"
                       />
                     </div>
                   )}
                 </div>
-                
-                {/* Total Section - Affichage complet des calculs */}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Center Column - Order Summary */}
+          <Card className="border-2 flex flex-col lg:col-span-1">
+            <CardHeader className="pb-2 border-b shrink-0">
+              <CardTitle className="text-base flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" />
+                  Résumé
+                </span>
+                <Badge variant="secondary" className="text-xs">
+                  {cart.length} article{cart.length > 1 ? 's' : ''}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-auto p-3">
+              <div className="space-y-2">
+                {cart.map((item) => {
+                  const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
+                  const displayQuantity = item.category === 'ceramique' ? `${item.cartQuantity.toFixed(2)} m²` : `${item.cartQuantity} ${item.unit}`;
+                  return (
+                    <div key={item.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border">
+                      <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                        <Package className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">{displayQuantity}</p>
+                      </div>
+                      <span className="text-sm font-semibold shrink-0">{formatAmount(itemTotal, item.currency)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Right Column - Totals & Actions */}
+          <div className="flex flex-col gap-4">
+            {/* Totals Card */}
+            <Card className="border-2 flex-1">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Total</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
                 {(() => {
                   const { totalUSD, totalHTG } = getTotalsByCurrency();
                   const hasMultipleCurrencies = totalUSD > 0 && totalHTG > 0;
                   const rate = companySettings?.usd_htg_rate || 132;
                   const displayCurrency = companySettings?.default_display_currency || 'HTG';
                   
-                  // Calculer le sous-total unifié HT
                   const unifiedSubtotal = displayCurrency === 'HTG'
                     ? totalHTG + (totalUSD * rate)
                     : totalUSD + (totalHTG / rate);
                   
-                  // Remise
                   const discountAmount = getDiscountAmount();
-                  
-                  // Montant après remise
                   const afterDiscount = unifiedSubtotal - discountAmount;
-                  
-                  // TCA/TVA
                   const tvaRate = companySettings?.tva_rate || 0;
                   const tvaAmount = afterDiscount * (tvaRate / 100);
-                  
-                  // Total TTC final
                   const finalTTC = afterDiscount + tvaAmount;
                   
                   return (
-                    <div className="border-t pt-3 space-y-2">
-                      {/* Sous-totaux par devise */}
+                    <>
+                      {/* Currency subtotals */}
                       {totalUSD > 0 && (
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>Sous-total USD</span>
-                          <span>{formatAmount(totalUSD, 'USD')}</span>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Sous-total USD</span>
+                          <Badge variant="outline" className="font-mono">{formatAmount(totalUSD, 'USD')}</Badge>
                         </div>
                       )}
                       {totalHTG > 0 && (
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>Sous-total HTG</span>
-                          <span>{formatAmount(totalHTG, 'HTG')}</span>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Sous-total HTG</span>
+                          <Badge variant="outline" className="font-mono">{formatAmount(totalHTG, 'HTG')}</Badge>
                         </div>
                       )}
                       
-                      {/* Taux de change si multi-devises */}
                       {hasMultipleCurrencies && (
-                        <div className="text-xs text-muted-foreground italic">
-                          Taux: 1 USD = {rate.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG
-                        </div>
+                        <p className="text-xs text-muted-foreground italic text-center">
+                          1 USD = {rate.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG
+                        </p>
                       )}
                       
-                      {/* Séparateur et calculs détaillés */}
-                      <div className="border-t pt-2 mt-2 space-y-1">
-                        {/* Sous-total HT unifié */}
-                        <div className="flex justify-between text-sm font-medium">
+                      <Separator />
+                      
+                      <div className="space-y-1.5 text-sm">
+                        <div className="flex justify-between">
                           <span>Sous-total HT</span>
-                          <span>{formatAmount(unifiedSubtotal, displayCurrency)}</span>
+                          <span className="font-medium">{formatAmount(unifiedSubtotal, displayCurrency)}</span>
                         </div>
                         
-                        {/* Remise appliquée */}
                         {discountAmount > 0 && (
-                          <div className="flex justify-between text-sm text-destructive">
-                            <span>
-                              {discountType === 'percentage' 
-                                ? `Remise (${discountValue}%)` 
-                                : 'Remise'}
-                            </span>
+                          <div className="flex justify-between text-destructive">
+                            <span>{discountType === 'percentage' ? `Remise (${discountValue}%)` : 'Remise'}</span>
                             <span>-{formatAmount(discountAmount, displayCurrency)}</span>
                           </div>
                         )}
                         
-                        {/* TCA/TVA */}
-                        <div className="flex justify-between text-sm">
-                          <span>TCA ({tvaRate}%)</span>
-                          <span>{formatAmount(tvaAmount, displayCurrency)}</span>
-                        </div>
+                        {tvaRate > 0 && (
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>TCA ({tvaRate}%)</span>
+                            <span>{formatAmount(tvaAmount, displayCurrency)}</span>
+                          </div>
+                        )}
                       </div>
                       
-                      {/* Total TTC final - EN GRAS avec fond coloré */}
-                      <div className="flex justify-between font-bold text-lg pt-2 mt-2 bg-primary/10 p-3 rounded-lg border">
-                        <span>TOTAL TTC</span>
-                        <span className="text-primary">
-                          {formatAmount(finalTTC, displayCurrency)}
-                        </span>
+                      {/* Final Total - Prominent */}
+                      <div className="bg-primary text-primary-foreground rounded-xl p-4 text-center mt-4">
+                        <p className="text-xs opacity-80 mb-1">TOTAL TTC</p>
+                        <p className="text-2xl font-bold">{formatAmount(finalTTC, displayCurrency)}</p>
                       </div>
-                    </div>
+                    </>
                   );
                 })()}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="flex flex-col sm:flex-row gap-2">
+            {/* Action Buttons - Sticky */}
+            <div className="flex gap-2">
               <Button
                 onClick={() => setCurrentStep('cart')}
                 variant="outline"
                 className="flex-1"
               >
-                Retour au panier
+                ← Panier
               </Button>
               <Button
                 onClick={processSale}
@@ -2031,14 +2091,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               >
                 {isProcessing ? 'Traitement...' : (
                   <>
-                    Confirmer la vente
+                    Confirmer
                     <CheckCircle className="w-4 h-4" />
                   </>
                 )}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {currentStep === 'success' && (
