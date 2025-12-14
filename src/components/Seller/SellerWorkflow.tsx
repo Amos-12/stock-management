@@ -43,6 +43,7 @@ import logo from '@/assets/logo.png';
 import { useCategories, useSousCategories } from '@/hooks/useCategories';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useInventorySounds } from '@/hooks/useInventorySounds';
+import { CartSection } from './CartSection';
 
 interface Product {
   id: string;
@@ -1812,136 +1813,21 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       )}
 
       {currentStep === 'cart' && (
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5" />
-              Étape 2: Révision du Panier
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {cart.length === 0 ? (
-              <div className="text-center py-8">
-                <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">Votre panier est vide</p>
-                <Button 
-                  onClick={() => setCurrentStep('products')} 
-                  className="mt-4"
-                  variant="outline"
-                >
-                  Retour aux produits
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col h-[55vh] md:h-[60vh] lg:h-[65vh]">
-                {/* Scrollable products list */}
-                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-                  {cart.map((item) => {
-                    const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
-                    const displayQuantity = item.category === 'ceramique' ? item.cartQuantity.toFixed(2) : item.cartQuantity;
-                    return (
-                      <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 border rounded-lg">
-                         <div className="flex-1 min-w-0">
-                          <h5 className="font-medium break-words">{item.name}</h5>
-                          <p className="text-sm text-muted-foreground break-words">
-                            {item.category === 'fer' && item.bars_per_ton 
-                              ? item.sourceUnit === 'tonne' 
-                                ? `${item.cartQuantity} barres (≈ ${getTonnageLabel(barresToTonnage(item.cartQuantity, item.bars_per_ton))})`
-                                : item.cartQuantity % item.bars_per_ton === 0
-                                  ? `${item.cartQuantity} barres (= ${item.cartQuantity / item.bars_per_ton} tonne${item.cartQuantity / item.bars_per_ton > 1 ? 's' : ''})`
-                                  : `${item.cartQuantity} barres`
-                              : item.category === 'ceramique' && item.surface_par_boite
-                                ? `${displayQuantity} m² (${(item.cartQuantity / item.surface_par_boite).toFixed(2)} boîtes)`
-                                : `${displayQuantity} ${item.unit}`
-                            }
-                          </p>
-                          <p className="text-sm font-medium text-success mt-1">
-                            {formatAmount(itemTotal, item.currency)}
-                          </p>
-                        </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {item.category === 'ceramique' ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => removeFromCart(item.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      ) : (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.id, -1)}
-                          >
-                            <Minus className="w-3 h-3" />
-                          </Button>
-                          <Input
-                            type="number"
-                            min="1"
-                            max={item.category === 'fer' ? item.stock_barre : item.quantity}
-                            value={item.cartQuantity}
-                            onChange={(e) => handleDirectQuantityChange(item.id, e.target.value)}
-                            className="w-16 text-center text-sm font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.id, 1)}
-                            disabled={item.cartQuantity >= item.quantity}
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </>
-                      )}
-                      {item.category !== 'ceramique' && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => removeFromCart(item.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Fixed footer with total and buttons */}
-                <div className="border-t pt-4 mt-4 bg-background sticky bottom-0">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-lg font-semibold">Total:</span>
-                    <span className="text-xl font-bold text-success">
-                      {formatAmount(getTotalAmount())}
-                    </span>
-                  </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button 
-                      onClick={() => setCurrentStep('products')} 
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Continuer les achats
-                    </Button>
-                    <Button 
-                      onClick={() => setCurrentStep('checkout')} 
-                      className="flex-1 gap-2"
-                    >
-                      Finaliser
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <CartSection
+          cart={cart}
+          onContinueShopping={() => setCurrentStep('products')}
+          onCheckout={() => setCurrentStep('checkout')}
+          onRemoveItem={removeFromCart}
+          onUpdateQuantity={updateQuantity}
+          onDirectQuantityChange={handleDirectQuantityChange}
+          onClearCart={() => setCart([])}
+          formatAmount={formatAmount}
+          getTotalAmount={getTotalAmount}
+          getTotalsByCurrency={getTotalsByCurrency}
+          getTonnageLabel={getTonnageLabel}
+          barresToTonnage={barresToTonnage}
+          companySettings={companySettings}
+        />
       )}
 
       {currentStep === 'checkout' && (
