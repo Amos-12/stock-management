@@ -510,7 +510,7 @@ export const AnalyticsDashboard = () => {
                           borderRadius: '8px',
                         }}
                       />
-                      <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="revenue" fill="#2563eb" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
