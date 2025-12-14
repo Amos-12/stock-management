@@ -134,6 +134,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [paymentMethod, setPaymentMethod] = useState<'espece' | 'cheque' | 'virement'>('espece');
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+  const [cartPulse, setCartPulse] = useState(false);
 
   // Dynamic categories for filtering
   const availableDynamicCategories = useMemo(() => {
@@ -340,9 +341,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     maxTimeBetweenKeys: 50
   });
 
-  // Keyboard shortcuts: Ctrl+L toggle view, Ctrl+P go to cart
+  // Keyboard shortcuts: Ctrl+L toggle view, Ctrl+P go to cart, Escape go back
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if in input/textarea
+      const target = e.target as HTMLElement;
+      const isInput = ['INPUT', 'TEXTAREA'].includes(target.tagName);
+      
       if (e.ctrlKey && e.key.toLowerCase() === 'l') {
         e.preventDefault();
         if (currentStep === 'products') {
@@ -352,6 +357,14 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       if (e.ctrlKey && e.key.toLowerCase() === 'p') {
         e.preventDefault();
         if (currentStep === 'products' && cart.length > 0) {
+          setCurrentStep('cart');
+        }
+      }
+      if (e.key === 'Escape' && !isInput) {
+        e.preventDefault();
+        if (currentStep === 'cart') {
+          setCurrentStep('products');
+        } else if (currentStep === 'checkout') {
           setCurrentStep('cart');
         }
       }
@@ -578,6 +591,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         }];
       }
     });
+
+    // Trigger pulse animation on cart button
+    setCartPulse(true);
+    setTimeout(() => setCartPulse(false), 600);
 
     setCustomQuantityDialog({open: false, product: null});
     setCustomQuantityValue('');
@@ -2271,7 +2288,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             <Button
               onClick={() => setCurrentStep('cart')}
               size="lg"
-              className="h-16 w-16 rounded-full shadow-2xl hover:scale-110 transition-transform duration-200 bg-primary hover:bg-primary/90 relative group p-0"
+              className={`h-16 w-16 rounded-full shadow-2xl hover:scale-110 transition-transform duration-200 bg-primary hover:bg-primary/90 relative group p-0 ${cartPulse ? 'animate-[pulse_0.6s_ease-in-out]' : ''}`}
             >
               <div className="flex flex-col items-center gap-0.5">
                 <ShoppingCart className="w-6 h-6" />
