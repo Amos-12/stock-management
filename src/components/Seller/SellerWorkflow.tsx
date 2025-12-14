@@ -300,7 +300,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   };
 
   // Sound effects for barcode scanning
-  const { playScan, playError } = useInventorySounds();
+  const { playScan, playError, playSuccess } = useInventorySounds();
   
   // Confetti animation for successful sales
   const { triggerConfetti } = useConfetti();
@@ -1010,6 +1010,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       setCurrentStep('success');
       triggerConfetti();
+      playSuccess();
       setCompletedSale({
         ...data.sale,
         payment_method: paymentMethod,
@@ -1410,7 +1411,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   : availableStock - cartQuantity;
                 
                 return (
-                  <Card key={product.id} className="border hover:shadow-md transition-smooth">
+                  <Card 
+                    key={product.id} 
+                    className="border hover:shadow-xl hover:scale-[1.02] hover:border-primary/50 transition-all duration-300 cursor-pointer group"
+                  >
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div>

@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
 
-type SoundType = 'verified' | 'adjusted' | 'error' | 'scan';
+type SoundType = 'verified' | 'adjusted' | 'error' | 'scan' | 'success';
 
 export const useInventorySounds = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -65,6 +65,14 @@ export const useInventorySounds = () => {
           volume = 0.3;
           break;
 
+        case 'success':
+          // Celebratory ascending tone
+          frequency = 523; // C5
+          duration = 0.5;
+          waveType = 'sine';
+          volume = 0.35;
+          break;
+
         default:
           frequency = 440;
           duration = 0.1;
@@ -98,6 +106,24 @@ export const useInventorySounds = () => {
         oscillator2.start(ctx.currentTime + 0.15);
         oscillator2.stop(ctx.currentTime + 0.3);
       }
+
+      // For success sound, add ascending chord (C5 -> E5 -> G5)
+      if (type === 'success') {
+        const notes = [659, 784]; // E5, G5
+        notes.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.value = freq;
+          osc.type = 'sine';
+          const startTime = ctx.currentTime + (i + 1) * 0.12;
+          gain.gain.setValueAtTime(0.3, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
+          osc.start(startTime);
+          osc.stop(startTime + 0.25);
+        });
+      }
     } catch (error) {
       console.warn('Audio playback failed:', error);
     }
@@ -107,6 +133,7 @@ export const useInventorySounds = () => {
   const playVerified = useCallback(() => playSound('verified'), [playSound]);
   const playAdjusted = useCallback(() => playSound('adjusted'), [playSound]);
   const playError = useCallback(() => playSound('error'), [playSound]);
+  const playSuccess = useCallback(() => playSound('success'), [playSound]);
 
-  return { playScan, playVerified, playAdjusted, playError };
+  return { playScan, playVerified, playAdjusted, playError, playSuccess };
 };
