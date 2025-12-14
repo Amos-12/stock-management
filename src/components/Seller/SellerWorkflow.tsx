@@ -2102,55 +2102,143 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       )}
 
       {currentStep === 'success' && (
-        <Card className="shadow-lg">
-          <CardContent className="p-8 text-center">
-            <CheckCircle className="w-16 h-16 text-success mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Vente confirmée !</h3>
-            <p className="text-muted-foreground mb-6">
-              La vente de {formatAmount(getUnifiedFinalTotal().amount, getUnifiedFinalTotal().currency)} a été enregistrée avec succès.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              {completedSale && (
-                <>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        className="gap-2 w-full sm:w-auto"
-                      >
-                        <Printer className="w-4 h-4" />
-                        Imprimer Reçu Thermique
-                        <ChevronDown className="w-4 h-4 ml-1" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={printReceipt58mm}>
-                        <Printer className="w-4 h-4 mr-2" />
-                        Format 58 mm
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={printReceipt80mm}>
-                        <Printer className="w-4 h-4 mr-2" />
-                        Format 80 mm
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Button 
-                    onClick={printInvoice}
-                    variant="outline" 
-                    className="gap-2 w-full sm:w-auto"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Imprimer Facture A4
-                  </Button>
-                </>
-              )}
-              <Button onClick={resetWorkflow} className="gap-2 w-full sm:w-auto">
-                <Plus className="w-4 h-4" />
-                Nouvelle vente
-              </Button>
+        <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-500">
+          <Card className="shadow-2xl border-2 border-success/20 overflow-hidden">
+            {/* Header avec animation */}
+            <div className="bg-gradient-to-br from-success/10 via-success/5 to-transparent p-8 text-center relative">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsl(var(--success)/0.15),transparent_70%)]" />
+              <div className="relative">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-success/20 flex items-center justify-center animate-in zoom-in duration-700">
+                  <CheckCircle className="w-12 h-12 text-success animate-in spin-in-180 duration-700" />
+                </div>
+                <h2 className="text-2xl font-bold text-foreground mb-2">Vente confirmée avec succès !</h2>
+                <p className="text-muted-foreground">
+                  Transaction enregistrée le {new Date().toLocaleDateString('fr-FR', { 
+                    weekday: 'long', 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+
+            <CardContent className="p-6 space-y-6">
+              {/* Récapitulatif de la vente */}
+              <div className="bg-muted/50 rounded-xl p-5 space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Receipt className="w-5 h-5 text-primary" />
+                  Récapitulatif
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {customerName && (
+                    <div className="col-span-2 sm:col-span-1">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Client</p>
+                      <p className="font-medium">{customerName}</p>
+                    </div>
+                  )}
+                  <div className="col-span-2 sm:col-span-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Mode de paiement</p>
+                    <p className="font-medium capitalize flex items-center gap-2">
+                      {paymentMethod === 'espece' ? 'Espèces' : paymentMethod === 'cheque' ? 'Chèque' : 'Virement'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Articles</p>
+                    <p className="font-medium">{completedSale?.items?.length || 0} produit(s)</p>
+                  </div>
+                  {getDiscountAmount() > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Remise</p>
+                      <p className="font-medium text-destructive">-{formatAmount(getDiscountAmount())}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Total en vedette */}
+                <div className="pt-4 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-semibold">Total payé</span>
+                    <span className="text-2xl font-bold text-success">
+                      {formatAmount(getUnifiedFinalTotal().amount, getUnifiedFinalTotal().currency)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions d'impression */}
+              {completedSale && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Printer className="w-4 h-4" />
+                    Options d'impression
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="w-full gap-2 h-12 hover:bg-muted/80 transition-colors"
+                        >
+                          <div className="flex flex-col items-start">
+                            <span className="flex items-center gap-2">
+                              <Receipt className="w-4 h-4" />
+                              Reçu Thermique
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">58mm / 80mm</span>
+                          </div>
+                          <ChevronDown className="w-4 h-4 ml-auto" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="center" className="w-48">
+                        <DropdownMenuItem onClick={printReceipt58mm} className="gap-2">
+                          <Printer className="w-4 h-4" />
+                          Format 58 mm
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={printReceipt80mm} className="gap-2">
+                          <Printer className="w-4 h-4" />
+                          Format 80 mm
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    <Button 
+                      onClick={printInvoice}
+                      variant="outline" 
+                      className="w-full gap-2 h-12 hover:bg-muted/80 transition-colors"
+                    >
+                      <div className="flex flex-col items-start">
+                        <span className="flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          Facture A4
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">Format standard</span>
+                      </div>
+                    </Button>
+
+                    <Button 
+                      onClick={resetWorkflow} 
+                      className="w-full gap-2 h-12 bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02]"
+                    >
+                      <Plus className="w-5 h-5" />
+                      <span>Nouvelle vente</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Raccourci clavier */}
+              <div className="text-center pt-2">
+                <p className="text-xs text-muted-foreground">
+                  Appuyez sur <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono border">Ctrl+N</kbd> pour démarrer une nouvelle vente
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Custom Quantity Dialog */}
