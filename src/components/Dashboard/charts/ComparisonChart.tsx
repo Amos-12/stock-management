@@ -107,8 +107,8 @@ export const ComparisonChart = ({
                 stroke="hsl(var(--primary))"
                 strokeWidth={2.5}
                 dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 4 }}
-                activeDot={{ r: 6, strokeWidth: 0 }}
-                animationDuration={1000}
+                activeDot={{ r: 6, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
+                animationDuration={800}
               />
               
               <Line
@@ -119,8 +119,8 @@ export const ComparisonChart = ({
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={{ fill: 'hsl(var(--muted-foreground))', strokeWidth: 0, r: 3 }}
-                activeDot={{ r: 5, strokeWidth: 0 }}
-                animationDuration={1000}
+                activeDot={{ r: 5, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
+                animationDuration={800}
                 animationBegin={200}
               />
             </LineChart>

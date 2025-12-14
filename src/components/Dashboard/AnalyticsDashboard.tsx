@@ -498,12 +498,19 @@ export const AnalyticsDashboard = () => {
                 <div className="h-[450px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={topProducts} layout="vertical" margin={{ left: 5, right: 60, top: 5, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} height={25} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        type="number" 
+                        tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} 
+                        tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }} 
+                        stroke="hsl(var(--foreground))"
+                        height={25} 
+                      />
                       <YAxis 
                         type="category" 
                         dataKey="name" 
-                        tick={{ fontSize: 10 }}
+                        tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
+                        stroke="hsl(var(--foreground))"
                         width={100}
                         tickFormatter={(v) => v.length > 14 ? `${v.slice(0, 14)}...` : v}
                       />
@@ -516,7 +523,7 @@ export const AnalyticsDashboard = () => {
                           color: 'hsl(var(--card-foreground))',
                         }}
                       />
-                      <Bar dataKey="revenue" fill="#2563eb" radius={[0, 4, 4, 0]}>
+                      <Bar dataKey="revenue" fill="#2563eb" radius={[0, 4, 4, 0]} animationDuration={800}>
                         <LabelList 
                           dataKey="revenue" 
                           position="right" 
@@ -552,8 +559,10 @@ export const AnalyticsDashboard = () => {
                         outerRadius={140}
                         innerRadius={80}
                         paddingAngle={2}
+                        animationBegin={0}
+                        animationDuration={800}
                         label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
+                        labelLine={{ stroke: 'hsl(var(--foreground))', strokeWidth: 1 }}
                       >
                         {categoryDistribution.map((_, index) => (
                           <Cell key={index} fill={COLORS[index % COLORS.length]} />
@@ -567,6 +576,8 @@ export const AnalyticsDashboard = () => {
                           borderRadius: '8px',
                           color: 'hsl(var(--card-foreground))',
                         }}
+                        itemStyle={{ color: 'hsl(var(--card-foreground))' }}
+                        labelStyle={{ color: 'hsl(var(--card-foreground))' }}
                       />
                     </PieChart>
                   </ResponsiveContainer>

@@ -63,7 +63,7 @@ export const KPICard = ({
       : 'hsl(var(--primary))';
 
   return (
-    <Card className="relative overflow-hidden">
+    <Card className="relative overflow-hidden bg-card transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
