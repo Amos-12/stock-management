@@ -340,6 +340,21 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     maxTimeBetweenKeys: 50
   });
 
+  // Keyboard shortcut Ctrl+L to toggle view mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        if (currentStep === 'products') {
+          setViewMode(prev => prev === 'cards' ? 'list' : 'cards');
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentStep]);
+
   useEffect(() => {
     const filtered = products.filter(product => {
       // Match by name, category, OR barcode
