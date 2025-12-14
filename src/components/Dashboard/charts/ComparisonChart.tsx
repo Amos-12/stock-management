@@ -46,8 +46,8 @@ export const ComparisonChart = ({
     const change = previous > 0 ? ((current - previous) / previous) * 100 : 0;
 
     return (
-      <div className="bg-background/95 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-border">
-        <p className="font-medium text-foreground text-sm mb-2">{label}</p>
+      <div className="bg-card/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-border text-card-foreground">
+        <p className="font-medium text-sm mb-2">{label}</p>
         {payload.map((entry, index) => (
           <p key={index} className="text-sm" style={{ color: entry.color }}>
             {entry.name}: {formatNumber(entry.value)} HTG
@@ -63,7 +63,7 @@ export const ComparisonChart = ({
   };
 
   return (
-    <Card>
+    <Card className="bg-card">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-semibold">{title}</CardTitle>
       </CardHeader>
@@ -71,20 +71,20 @@ export const ComparisonChart = ({
         <div style={{ height }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               
               <XAxis 
                 dataKey="label" 
-                tick={{ fontSize: 12 }}
-                className="text-muted-foreground"
+                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                stroke="hsl(var(--foreground))"
                 tickLine={false}
                 axisLine={false}
               />
               
               <YAxis 
                 tickFormatter={formatYAxis}
-                tick={{ fontSize: 12 }}
-                className="text-muted-foreground"
+                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                stroke="hsl(var(--foreground))"
                 tickLine={false}
                 axisLine={false}
                 width={50}

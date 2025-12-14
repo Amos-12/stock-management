@@ -31,8 +31,8 @@ export const EnhancedTooltip = ({
   const margin = revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : '0.0';
 
   return (
-    <div className="bg-background/95 backdrop-blur-sm p-4 rounded-lg shadow-lg border border-border">
-      <p className="font-semibold text-foreground mb-2">{label}</p>
+    <div className="bg-card/95 backdrop-blur-sm p-4 rounded-lg shadow-xl border border-border text-card-foreground">
+      <p className="font-semibold mb-2">{label}</p>
       <div className="space-y-1.5">
         {payload.map((entry, index) => (
           <div key={index} className="flex items-center justify-between gap-4">
@@ -87,8 +87,8 @@ export const SimpleTooltip = ({
   if (!active || !payload || payload.length === 0) return null;
 
   return (
-    <div className="bg-background/95 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-border">
-      <p className="font-medium text-foreground text-sm mb-1">{label}</p>
+    <div className="bg-card/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-border text-card-foreground">
+      <p className="font-medium text-sm mb-1">{label}</p>
       {payload.map((entry, index) => (
         <p key={index} className="text-sm" style={{ color: entry.color }}>
           {entry.name}: {valueFormatter(entry.value)}
