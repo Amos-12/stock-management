@@ -40,6 +40,7 @@ import jsPDF from 'jspdf';
 import logo from '@/assets/logo.png';
 import { useCategories, useSousCategories } from '@/hooks/useCategories';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { useInventorySounds } from '@/hooks/useInventorySounds';
 
 interface Product {
   id: string;
@@ -292,12 +293,18 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     }
   };
 
+  // Sound effects for barcode scanning
+  const { playScan, playError } = useInventorySounds();
+
   // Barcode scan handler
   const handleBarcodeScan = useCallback((barcode: string) => {
     if (currentStep !== 'products') return;
     
     const product = products.find(p => p.barcode === barcode);
     if (product) {
+      // Play success sound
+      playScan();
+      
       // Clear search field after successful scan
       setSearchTerm('');
       
@@ -314,6 +321,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         description: product.name,
       });
     } else {
+      // Play error sound
+      playError();
+      
       toast({
         title: "Code-barres non reconnu",
         description: `Aucun produit trouvé avec le code: ${barcode}`,
