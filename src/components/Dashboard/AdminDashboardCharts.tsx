@@ -47,7 +47,8 @@ interface SellerData {
   revenue: number;
 }
 
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))', 'hsl(var(--muted))'];
+// Fixed hex colors that work in both light and dark mode
+const COLORS = ['#2563eb', '#22c55e', '#f59e0b', '#ef4444', '#6b7280'];
 
 export const AdminDashboardCharts = () => {
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');

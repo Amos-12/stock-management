@@ -67,13 +67,14 @@ interface KPIData {
   uniqueSellers: { current: number; previous: number };
 }
 
+// Fixed hex colors that work in both light and dark mode
 const COLORS = [
-  'hsl(var(--primary))',
-  'hsl(142, 76%, 36%)',
-  'hsl(38, 92%, 50%)',
-  'hsl(262, 83%, 58%)',
-  'hsl(0, 84%, 60%)',
-  'hsl(199, 89%, 48%)',
+  '#2563eb', // blue
+  '#22c55e', // green
+  '#f59e0b', // orange
+  '#8b5cf6', // purple
+  '#ef4444', // red
+  '#06b6d4', // cyan
 ];
 
 export const AnalyticsDashboard = () => {
@@ -551,7 +552,7 @@ export const AnalyticsDashboard = () => {
                         innerRadius={80}
                         paddingAngle={2}
                         label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+                        labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
                       >
                         {categoryDistribution.map((_, index) => (
                           <Cell key={index} fill={COLORS[index % COLORS.length]} />
