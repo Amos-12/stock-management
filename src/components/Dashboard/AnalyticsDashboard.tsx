@@ -534,9 +534,9 @@ export const AnalyticsDashboard = () => {
             </Card>
 
             {/* Category Distribution - Full height */}
-            <Card className="flex flex-col">
+            <Card className="flex flex-col bg-card">
               <CardHeader className="pb-2 shrink-0">
-                <CardTitle className="text-lg font-semibold">Distribution par catégorie</CardTitle>
+                <CardTitle className="text-lg font-semibold text-card-foreground">Distribution par catégorie</CardTitle>
               </CardHeader>
               <CardContent className="flex-1">
                 <div className="h-[450px]">
@@ -561,9 +561,10 @@ export const AnalyticsDashboard = () => {
                       <Tooltip 
                         formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
                         contentStyle={{ 
-                          backgroundColor: 'hsl(var(--background))',
+                          backgroundColor: 'hsl(var(--card))',
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px',
+                          color: 'hsl(var(--card-foreground))',
                         }}
                       />
                     </PieChart>
