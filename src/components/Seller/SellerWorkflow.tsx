@@ -44,6 +44,7 @@ import { useCategories, useSousCategories } from '@/hooks/useCategories';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useInventorySounds } from '@/hooks/useInventorySounds';
 import { CartSection } from './CartSection';
+import { useConfetti } from '@/hooks/useConfetti';
 
 interface Product {
   id: string;
@@ -300,6 +301,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
   // Sound effects for barcode scanning
   const { playScan, playError } = useInventorySounds();
+  
+  // Confetti animation for successful sales
+  const { triggerConfetti } = useConfetti();
 
   // Barcode scan handler
   const handleBarcodeScan = useCallback((barcode: string) => {
@@ -1005,6 +1009,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       });
 
       setCurrentStep('success');
+      triggerConfetti();
       setCompletedSale({
         ...data.sale,
         payment_method: paymentMethod,

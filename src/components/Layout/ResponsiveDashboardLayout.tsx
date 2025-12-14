@@ -182,25 +182,35 @@ export const ResponsiveDashboardLayout = ({
       </div>
       
       <ScrollArea className="flex-1 px-6 py-4">
-        <nav className="space-y-2">
-          {navItems.map((item: any) => {
+        <nav className="space-y-1.5">
+          {navItems.map((item: any, index: number) => {
             const Icon = item.icon;
             return (
               <Button
                 key={item.value}
                 variant={currentSection === item.value ? 'default' : 'ghost'}
                 className={cn(
-                  "w-full transition-smooth",
+                  "w-full transition-all duration-200 group",
                   isDesktop && sidebarCollapsed ? "justify-center px-2" : "justify-start",
                   currentSection === item.value 
-                    ? "bg-primary text-primary-foreground shadow-primary" 
-                    : "hover:bg-primary/10 hover:text-primary"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-[1.02]" 
+                    : "hover:bg-primary/10 hover:text-primary hover:translate-x-1"
                 )}
+                style={{ 
+                  animationDelay: `${index * 30}ms`,
+                  animation: !isDesktop ? 'fade-in 0.3s ease-out forwards' : undefined
+                }}
                 onClick={() => handleNavClick(item.value, item.route)}
                 title={isDesktop && sidebarCollapsed ? item.label : undefined}
               >
-                <Icon className={cn("w-4 h-4", !(isDesktop && sidebarCollapsed) && "mr-3")} />
-                {!(isDesktop && sidebarCollapsed) && item.label}
+                <Icon className={cn(
+                  "w-4 h-4 transition-transform duration-200",
+                  !(isDesktop && sidebarCollapsed) && "mr-3",
+                  currentSection === item.value ? "scale-110" : "group-hover:scale-110"
+                )} />
+                {!(isDesktop && sidebarCollapsed) && (
+                  <span className="transition-colors duration-200">{item.label}</span>
+                )}
               </Button>
             );
           })}
@@ -361,13 +371,19 @@ export const ResponsiveDashboardLayout = ({
 
       <div className="flex">
         <div className="flex w-full">
-          {/* Desktop Sidebar */}
+          {/* Desktop Sidebar - Fixed */}
           <aside className={cn(
-            "flex-shrink-0 hidden lg:block bg-background border-r border-border h-[calc(100vh-64px)] sticky top-0 transition-all duration-300",
+            "flex-shrink-0 hidden lg:block bg-background border-r border-border fixed left-0 top-16 h-[calc(100vh-64px)] transition-all duration-300 z-40",
             sidebarCollapsed ? "w-20" : "w-64"
           )}>
             <SidebarContent isDesktop={true} />
           </aside>
+
+          {/* Spacer for fixed sidebar */}
+          <div className={cn(
+            "hidden lg:block flex-shrink-0 transition-all duration-300",
+            sidebarCollapsed ? "w-20" : "w-64"
+          )} />
 
           {/* Main Content */}
           <main className="flex-1 min-w-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
