@@ -95,7 +95,8 @@ export const TrendChart = ({
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 fill="url(#revenueGradient)"
-                animationDuration={1000}
+                animationDuration={800}
+                animationBegin={0}
               />
               
               <Area
@@ -105,7 +106,7 @@ export const TrendChart = ({
                 stroke="hsl(142, 76%, 36%)"
                 strokeWidth={2}
                 fill="url(#profitGradient)"
-                animationDuration={1000}
+                animationDuration={800}
                 animationBegin={200}
               />
               
