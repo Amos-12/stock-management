@@ -537,8 +537,8 @@ export const AdminDashboardCharts = () => {
 
       {/* Period Selector */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <TrendingUp className="w-5 h-5" />
+        <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+          <TrendingUp className="w-5 h-5 text-primary" />
           Analyse des Performances
         </h2>
         <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
@@ -556,16 +556,16 @@ export const AdminDashboardCharts = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Chart */}
-        <Card className="shadow-lg">
+        <Card className="shadow-lg bg-card">
           <CardHeader>
-            <CardTitle className="text-lg">Évolution du Chiffre d'Affaires</CardTitle>
+            <CardTitle className="text-lg text-card-foreground">Évolution du Chiffre d'Affaires</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" stroke="hsl(var(--foreground))" tick={{ fill: 'hsl(var(--foreground))' }} />
+                <YAxis stroke="hsl(var(--foreground))" tick={{ fill: 'hsl(var(--foreground))' }} />
                 <Tooltip 
                   formatter={(value: any, name: any) => [
                     name === 'revenue' ? `${value} HTG` : value,
@@ -585,16 +585,16 @@ export const AdminDashboardCharts = () => {
         </Card>
 
         {/* Profit Chart */}
-        <Card className="shadow-lg">
+        <Card className="shadow-lg bg-card">
           <CardHeader>
-            <CardTitle className="text-lg">Évolution des Bénéfices</CardTitle>
+            <CardTitle className="text-lg text-card-foreground">Évolution des Bénéfices</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={profitData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" stroke="hsl(var(--foreground))" tick={{ fill: 'hsl(var(--foreground))' }} />
+                <YAxis stroke="hsl(var(--foreground))" tick={{ fill: 'hsl(var(--foreground))' }} />
                 <Tooltip 
                   formatter={(value: any) => [`${value} HTG`, 'Bénéfices']}
                 />
@@ -611,21 +611,22 @@ export const AdminDashboardCharts = () => {
         </Card>
 
         {/* Top Products */}
-        <Card className="shadow-lg">
+        <Card className="shadow-lg bg-card">
           <CardHeader>
-            <CardTitle className="text-lg">Top 10 des Produits</CardTitle>
+            <CardTitle className="text-lg text-card-foreground">Top 10 des Produits</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={topProducts} layout="vertical" margin={{ left: 5, right: 50, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }} stroke="hsl(var(--foreground))" />
                 <YAxis 
                   type="category" 
                   dataKey="name" 
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
                   width={100}
                   tickFormatter={(v) => v.length > 14 ? `${v.slice(0, 14)}...` : v}
+                  stroke="hsl(var(--foreground))"
                 />
                 <Tooltip formatter={(value: any) => [`${formatNumber(value)} HTG`, 'Revenus']} />
                 <Bar dataKey="revenue" fill="hsl(var(--success))" radius={[0, 4, 4, 0]} />
@@ -635,9 +636,9 @@ export const AdminDashboardCharts = () => {
         </Card>
 
         {/* Category Distribution */}
-        <Card className="shadow-lg">
+        <Card className="shadow-lg bg-card">
           <CardHeader>
-            <CardTitle className="text-lg">Répartition par Catégorie</CardTitle>
+            <CardTitle className="text-lg text-card-foreground">Répartition par Catégorie</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -650,21 +651,22 @@ export const AdminDashboardCharts = () => {
                   fill="#8884d8"
                   dataKey="value"
                   label={(entry) => entry.name}
+                  labelLine={{ stroke: '#94a3b8' }}
                 >
                   {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--card-foreground))' }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Top Sellers */}
-        <Card className="shadow-lg">
+        <Card className="shadow-lg bg-card">
           <CardHeader>
-            <CardTitle className="text-lg">Top 5 des Vendeurs</CardTitle>
+            <CardTitle className="text-lg text-card-foreground">Top 5 des Vendeurs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
