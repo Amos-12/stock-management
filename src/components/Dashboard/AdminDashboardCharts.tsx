@@ -321,9 +321,14 @@ export const AdminDashboardCharts = () => {
   };
 
   const fetchTopProducts = async () => {
+    // Apply period filter for consistency with Analytics dashboard
+    const daysBack = period === 'daily' ? 7 : period === 'weekly' ? 28 : 365;
+    const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
+    
     const { data, error } = await supabase
       .from('sale_items')
-      .select('product_name, quantity, subtotal')
+      .select('product_name, quantity, subtotal, currency, sales!inner(created_at)')
+      .gte('sales.created_at', startDate.toISOString())
       .order('subtotal', { ascending: false });
 
     if (error) throw error;
@@ -332,21 +337,25 @@ export const AdminDashboardCharts = () => {
       if (!acc[item.product_name]) {
         acc[item.product_name] = { sales: 0, revenue: 0 };
       }
-      acc[item.product_name].sales += item.quantity;
-      acc[item.product_name].revenue += item.subtotal;
+      acc[item.product_name].sales += Number(item.quantity);
+      // Convert USD to HTG for unified revenue
+      const itemRevenue = item.currency === 'USD' 
+        ? item.subtotal * usdHtgRate 
+        : item.subtotal;
+      acc[item.product_name].revenue += itemRevenue;
       return acc;
     }, {}) || {};
 
-    const topProducts = Object.entries(grouped)
+    const topProductsData = Object.entries(grouped)
       .map(([name, data]: [string, any]) => ({
         name,
         sales: data.sales,
         revenue: data.revenue
       }))
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
+      .slice(0, 10);
 
-    setTopProducts(topProducts);
+    setTopProducts(topProductsData);
   };
 
   const fetchCategoryData = async () => {
@@ -603,16 +612,22 @@ export const AdminDashboardCharts = () => {
         {/* Top Products */}
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-lg">Top 5 des Produits</CardTitle>
+            <CardTitle className="text-lg">Top 10 des Produits</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topProducts}>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={topProducts} layout="vertical" margin={{ left: 5, right: 50, top: 5, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={(value: any) => [`${value} HTG`, 'Revenus']} />
-                <Bar dataKey="revenue" fill="hsl(var(--success))" />
+                <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
+                <YAxis 
+                  type="category" 
+                  dataKey="name" 
+                  tick={{ fontSize: 10 }}
+                  width={100}
+                  tickFormatter={(v) => v.length > 14 ? `${v.slice(0, 14)}...` : v}
+                />
+                <Tooltip formatter={(value: any) => [`${formatNumber(value)} HTG`, 'Revenus']} />
+                <Bar dataKey="revenue" fill="hsl(var(--success))" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
