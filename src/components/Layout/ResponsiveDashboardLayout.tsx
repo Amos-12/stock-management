@@ -262,23 +262,22 @@ export const ResponsiveDashboardLayout = ({
                 <SheetContent side="left" className="w-80 p-0">
                   <SidebarContent />
                   
-                  {/* Profile section in mobile menu */}
-                  <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-background p-4">
+                  {/* Compact Profile section in mobile menu */}
+                  <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-background p-3">
                     <div 
-                      className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
                       onClick={() => {
                         setIsMobileMenuOpen(false);
                         navigate('/profile');
                       }}
                     >
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-5 h-5 text-primary" />
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="w-4 h-4 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{profile?.full_name || 'Utilisateur'}</p>
-                        <p className="text-xs text-muted-foreground truncate">Mon profil</p>
+                        <p className="font-medium text-xs truncate">{profile?.full_name || 'Utilisateur'}</p>
                       </div>
-                      <Badge variant={role === 'admin' ? 'default' : 'secondary'} className="text-[10px]">
+                      <Badge variant={role === 'admin' ? 'default' : 'secondary'} className="text-[9px] px-1.5 py-0.5">
                         {role === 'admin' ? 'Admin' : 'Vendeur'}
                       </Badge>
                     </div>
