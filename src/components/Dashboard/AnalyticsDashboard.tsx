@@ -492,15 +492,15 @@ export const AnalyticsDashboard = () => {
               <CardContent className="flex-1">
                 <div className="h-[450px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topProducts} layout="vertical" margin={{ left: 20, right: 30, top: 10, bottom: 10 }}>
+                    <BarChart data={topProducts} layout="vertical" margin={{ left: 10, right: 30, top: 10, bottom: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                       <YAxis 
                         type="category" 
                         dataKey="name" 
-                        tick={{ fontSize: 12 }}
-                        width={95}
-                        tickFormatter={(v) => v.length > 15 ? `${v.slice(0, 15)}...` : v}
+                        tick={{ fontSize: 11 }}
+                        width={150}
+                        tickFormatter={(v) => v.length > 22 ? `${v.slice(0, 22)}...` : v}
                       />
                       <Tooltip 
                         formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
