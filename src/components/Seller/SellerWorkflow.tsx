@@ -2297,6 +2297,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                       return total + itemPrice;
                     }, 0))}
                   </div>
+                  <div className="text-xs text-muted-foreground mt-1 border-t pt-1">
+                    Raccourci : <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">Ctrl+P</kbd>
+                  </div>
                 </div>
               </div>
             </Button>
