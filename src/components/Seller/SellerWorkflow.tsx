@@ -298,6 +298,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     
     const product = products.find(p => p.barcode === barcode);
     if (product) {
+      // Clear search field after successful scan
+      setSearchTerm('');
+      
       // For ceramics and iron, open quantity dialog
       if (product.category === 'ceramique' || product.category === 'fer') {
         setCustomQuantityDialog({ open: true, product });
@@ -1123,7 +1126,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Workflow Progress - Compact */}
       <Card className="shadow-lg">
         <CardContent className="p-2 sm:p-3">
@@ -1161,7 +1164,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       {/* Step Content */}
       {currentStep === 'products' && (
-        <Card className="shadow-lg flex flex-col h-[calc(100vh-160px)] min-h-[600px]">
+        <Card className="shadow-lg flex flex-col h-[calc(100vh-120px)] min-h-[600px]">
           <CardHeader className="pb-2 space-y-2 shrink-0">
             <CardTitle className="flex items-center gap-2 text-base">
               <Package className="w-4 h-4" />
