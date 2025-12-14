@@ -354,7 +354,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     maxTimeBetweenKeys: 50
   });
 
-  // Keyboard shortcuts: Ctrl+L toggle view, Ctrl+P go to cart, Escape go back, Ctrl+? help
+  // Keyboard shortcuts: Ctrl+L toggle view, Ctrl+P go to cart, Escape go back, Ctrl+? help, Ctrl+N new sale
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if in input/textarea (except for shortcuts modal)
@@ -365,6 +365,15 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       if (e.ctrlKey && (e.key === '?' || e.key === '/')) {
         e.preventDefault();
         setShowShortcutsHelp(prev => !prev);
+        return;
+      }
+      
+      // Ctrl+N for new sale (only on success step)
+      if (e.ctrlKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        if (currentStep === 'success') {
+          resetWorkflow();
+        }
         return;
       }
       
@@ -1203,6 +1212,16 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       <Card className="shadow-lg">
         <CardContent className="p-2 sm:p-3">
           <div className="flex items-center justify-between gap-2">
+            {/* Help button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowShortcutsHelp(true)}
+              className="h-8 w-8 p-0 shrink-0"
+              title="Raccourcis clavier (Ctrl+?)"
+            >
+              <Keyboard className="w-4 h-4" />
+            </Button>
             {steps.map((step, index) => {
               const StepIcon = step.icon;
               const isActive = step.id === currentStep;
@@ -2382,6 +2401,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               <div className="flex items-center justify-between py-2 border-b border-dashed">
                 <span className="text-sm">Scanner code-barres</span>
                 <span className="text-xs text-muted-foreground">Taper + Enter</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-dashed">
+                <span className="text-sm">Nouvelle vente (après confirmation)</span>
+                <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Ctrl+N</kbd>
               </div>
               <div className="flex items-center justify-between py-2">
                 <span className="text-sm">Afficher cette aide</span>
