@@ -29,7 +29,9 @@ import {
   ChevronDown,
   Barcode,
   Grid3X3,
-  List
+  List,
+  Keyboard,
+  X
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
@@ -135,6 +137,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
   const [cartPulse, setCartPulse] = useState(false);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
   // Dynamic categories for filtering
   const availableDynamicCategories = useMemo(() => {
@@ -306,6 +309,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       // Play success sound
       playScan();
       
+      // Haptic vibration on mobile (short vibration for success)
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+      
       // Clear search field after successful scan
       setSearchTerm('');
       
@@ -325,6 +333,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       // Play error sound
       playError();
       
+      // Haptic vibration on mobile (longer vibration for error)
+      if ('vibrate' in navigator) {
+        navigator.vibrate([100, 50, 100]);
+      }
+      
       toast({
         title: "Code-barres non reconnu",
         description: `Aucun produit trouvé avec le code: ${barcode}`,
@@ -341,12 +354,19 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     maxTimeBetweenKeys: 50
   });
 
-  // Keyboard shortcuts: Ctrl+L toggle view, Ctrl+P go to cart, Escape go back
+  // Keyboard shortcuts: Ctrl+L toggle view, Ctrl+P go to cart, Escape go back, Ctrl+? help
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if in input/textarea
+      // Ignore if in input/textarea (except for shortcuts modal)
       const target = e.target as HTMLElement;
       const isInput = ['INPUT', 'TEXTAREA'].includes(target.tagName);
+      
+      // Ctrl+? or Ctrl+/ to show shortcuts help
+      if (e.ctrlKey && (e.key === '?' || e.key === '/')) {
+        e.preventDefault();
+        setShowShortcutsHelp(prev => !prev);
+        return;
+      }
       
       if (e.ctrlKey && e.key.toLowerCase() === 'l') {
         e.preventDefault();
@@ -360,19 +380,23 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           setCurrentStep('cart');
         }
       }
-      if (e.key === 'Escape' && !isInput) {
+      if (e.key === 'Escape') {
         e.preventDefault();
-        if (currentStep === 'cart') {
-          setCurrentStep('products');
-        } else if (currentStep === 'checkout') {
-          setCurrentStep('cart');
+        if (showShortcutsHelp) {
+          setShowShortcutsHelp(false);
+        } else if (!isInput) {
+          if (currentStep === 'cart') {
+            setCurrentStep('products');
+          } else if (currentStep === 'checkout') {
+            setCurrentStep('cart');
+          }
         }
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, cart.length]);
+  }, [currentStep, cart.length, showShortcutsHelp]);
 
   useEffect(() => {
     const filtered = products.filter(product => {
@@ -2320,6 +2344,55 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                 </div>
               </div>
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal d'aide des raccourcis clavier */}
+      {showShortcutsHelp && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="bg-card border rounded-xl shadow-2xl w-full max-w-md mx-4 animate-scale-in">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                <Keyboard className="w-5 h-5 text-primary" />
+                <h3 className="font-semibold text-lg">Raccourcis clavier</h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowShortcutsHelp(false)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between py-2 border-b border-dashed">
+                <span className="text-sm">Basculer vue Cartes/Liste</span>
+                <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Ctrl+L</kbd>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-dashed">
+                <span className="text-sm">Aller au panier</span>
+                <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Ctrl+P</kbd>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-dashed">
+                <span className="text-sm">Étape précédente</span>
+                <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Escape</kbd>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-dashed">
+                <span className="text-sm">Scanner code-barres</span>
+                <span className="text-xs text-muted-foreground">Taper + Enter</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm">Afficher cette aide</span>
+                <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Ctrl+?</kbd>
+              </div>
+            </div>
+            <div className="p-4 border-t bg-muted/30 rounded-b-xl">
+              <p className="text-xs text-muted-foreground text-center">
+                Appuyez sur <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] font-mono">Escape</kbd> pour fermer
+              </p>
+            </div>
           </div>
         </div>
       )}
