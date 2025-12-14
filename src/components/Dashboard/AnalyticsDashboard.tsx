@@ -510,9 +510,10 @@ export const AnalyticsDashboard = () => {
                       <Tooltip 
                         formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
                         contentStyle={{ 
-                          backgroundColor: 'hsl(var(--background))',
+                          backgroundColor: 'hsl(var(--card))',
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px',
+                          color: 'hsl(var(--card-foreground))',
                         }}
                       />
                       <Bar dataKey="revenue" fill="#2563eb" radius={[0, 4, 4, 0]}>

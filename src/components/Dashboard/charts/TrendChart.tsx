@@ -40,7 +40,7 @@ export const TrendChart = ({
   };
 
   return (
-    <Card>
+    <Card className="bg-card">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-semibold">{title}</CardTitle>
       </CardHeader>
@@ -59,20 +59,20 @@ export const TrendChart = ({
                 </linearGradient>
               </defs>
               
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               
               <XAxis 
                 dataKey="date" 
-                tick={{ fontSize: 12 }}
-                className="text-muted-foreground"
+                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                stroke="hsl(var(--foreground))"
                 tickLine={false}
                 axisLine={false}
               />
               
               <YAxis 
                 tickFormatter={formatYAxis}
-                tick={{ fontSize: 12 }}
-                className="text-muted-foreground"
+                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                stroke="hsl(var(--foreground))"
                 tickLine={false}
                 axisLine={false}
                 width={50}
