@@ -25,7 +25,6 @@ export const useBarcodeScanner = ({
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input field (except search fields)
       const target = e.target as HTMLElement;
       const isSearchInput = target.getAttribute('data-barcode-input') === 'true';
       const isOtherInput = ['INPUT', 'TEXTAREA'].includes(target.tagName) && !isSearchInput;
@@ -40,23 +39,35 @@ export const useBarcodeScanner = ({
         clearTimeout(timeoutRef.current);
       }
 
-      // Reset buffer if too much time has passed (manual typing)
-      if (timeDiff > maxTimeBetweenKeys && bufferRef.current.length > 0) {
-        bufferRef.current = '';
-      }
-
-      // Handle Enter key - trigger scan if buffer has enough characters
+      // Handle Enter key - check input value for manual typing in barcode field
       if (e.key === 'Enter') {
+        e.preventDefault();
+        
+        // For barcode input field, read value directly (supports manual typing)
+        if (isSearchInput) {
+          const inputValue = (target as HTMLInputElement).value?.trim();
+          if (inputValue && inputValue.length >= minLength) {
+            onScan(inputValue);
+          }
+          bufferRef.current = '';
+          return;
+        }
+        
+        // For scanner input (not in search field), use buffer
         if (bufferRef.current.length >= minLength) {
-          e.preventDefault();
           onScan(bufferRef.current);
         }
         bufferRef.current = '';
         return;
       }
 
-      // Only add printable characters
-      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      // Reset buffer if too much time has passed (manual typing outside search field)
+      if (timeDiff > maxTimeBetweenKeys && bufferRef.current.length > 0) {
+        bufferRef.current = '';
+      }
+
+      // Only add printable characters to buffer (for scanner detection)
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && !isSearchInput) {
         bufferRef.current += e.key;
         lastKeyTimeRef.current = now;
 
