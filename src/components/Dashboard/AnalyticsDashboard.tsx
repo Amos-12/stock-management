@@ -453,8 +453,8 @@ export const AnalyticsDashboard = () => {
         />
       </div>
 
-      {/* Main Trend Chart */}
-      <TrendChart data={trendData} title={`Tendance des ventes - ${periodLabels[period]}`} />
+      {/* Main Trend Chart - without Brush */}
+      <TrendChart data={trendData} title={`Tendance des ventes - ${periodLabels[period]}`} showBrush={false} />
 
       {/* Tabs for different views */}
       <Tabs defaultValue="comparison" className="space-y-4">
@@ -484,23 +484,23 @@ export const AnalyticsDashboard = () => {
 
         <TabsContent value="distribution" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Top Products */}
-            <Card>
-              <CardHeader className="pb-2">
+            {/* Top Products - Full height */}
+            <Card className="flex flex-col">
+              <CardHeader className="pb-2 shrink-0">
                 <CardTitle className="text-lg font-semibold">Top 10 Produits</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
+              <CardContent className="flex-1">
+                <div className="h-[450px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topProducts} layout="vertical" margin={{ left: 80 }}>
+                    <BarChart data={topProducts} layout="vertical" margin={{ left: 100, right: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                       <YAxis 
                         type="category" 
                         dataKey="name" 
-                        tick={{ fontSize: 11 }}
-                        width={75}
-                        tickFormatter={(v) => v.length > 12 ? `${v.slice(0, 12)}...` : v}
+                        tick={{ fontSize: 12 }}
+                        width={95}
+                        tickFormatter={(v) => v.length > 15 ? `${v.slice(0, 15)}...` : v}
                       />
                       <Tooltip 
                         formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
@@ -517,13 +517,13 @@ export const AnalyticsDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Category Distribution */}
-            <Card>
-              <CardHeader className="pb-2">
+            {/* Category Distribution - Full height */}
+            <Card className="flex flex-col">
+              <CardHeader className="pb-2 shrink-0">
                 <CardTitle className="text-lg font-semibold">Distribution par catégorie</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
+              <CardContent className="flex-1">
+                <div className="h-[450px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -532,8 +532,8 @@ export const AnalyticsDashboard = () => {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={100}
-                        innerRadius={60}
+                        outerRadius={140}
+                        innerRadius={80}
                         paddingAngle={2}
                         label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                         labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
