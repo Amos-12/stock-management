@@ -492,7 +492,7 @@ export const AnalyticsDashboard = () => {
               <CardContent className="flex-1">
                 <div className="h-[450px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topProducts} layout="vertical" margin={{ left: 100, right: 20 }}>
+                    <BarChart data={topProducts} layout="vertical" margin={{ left: 20, right: 30, top: 10, bottom: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                       <YAxis 
