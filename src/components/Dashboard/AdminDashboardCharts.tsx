@@ -571,6 +571,7 @@ export const AdminDashboardCharts = () => {
                     name === 'revenue' ? `${value} HTG` : value,
                     name === 'revenue' ? 'CA' : 'Ventes'
                   ]}
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--card-foreground))' }}
                 />
                 <Line 
                   type="monotone" 
@@ -597,6 +598,7 @@ export const AdminDashboardCharts = () => {
                 <YAxis stroke="hsl(var(--foreground))" tick={{ fill: 'hsl(var(--foreground))' }} />
                 <Tooltip 
                   formatter={(value: any) => [`${value} HTG`, 'Bénéfices']}
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--card-foreground))' }}
                 />
                 <Line 
                   type="monotone" 
@@ -628,7 +630,7 @@ export const AdminDashboardCharts = () => {
                   tickFormatter={(v) => v.length > 14 ? `${v.slice(0, 14)}...` : v}
                   stroke="hsl(var(--foreground))"
                 />
-                <Tooltip formatter={(value: any) => [`${formatNumber(value)} HTG`, 'Revenus']} />
+                <Tooltip formatter={(value: any) => [`${formatNumber(value)} HTG`, 'Revenus']} contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--card-foreground))' }} />
                 <Bar dataKey="revenue" fill="hsl(var(--success))" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
