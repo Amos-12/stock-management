@@ -257,13 +257,16 @@ export const AnalyticsDashboard = () => {
   }, [trendData]);
 
   const comparisonData = useMemo(() => {
-    const { from, to, prevFrom } = getDateRange(period);
+    const { from, to, prevFrom, prevTo } = getDateRange(period);
     const days = eachDayOfInterval({ start: from, end: to });
+    const prevDays = eachDayOfInterval({ start: prevFrom, end: prevTo });
     
     return days.map((day, index) => {
       const dayStart = startOfDay(day);
       const dayEnd = endOfDay(day);
-      const prevDay = new Date(prevFrom.getTime() + (index * 24 * 60 * 60 * 1000));
+      
+      // Use corresponding day from previous period array
+      const prevDay = prevDays[index] || prevDays[prevDays.length - 1] || day;
       const prevDayStart = startOfDay(prevDay);
       const prevDayEnd = endOfDay(prevDay);
       
@@ -357,7 +360,7 @@ export const AnalyticsDashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
