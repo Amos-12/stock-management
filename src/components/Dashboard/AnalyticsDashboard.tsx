@@ -37,6 +37,7 @@ import {
   Pie,
   Cell,
   Legend,
+  LabelList,
 } from 'recharts';
 
 type Period = 'today' | 'week' | 'month' | 'quarter' | 'custom';
@@ -492,15 +493,15 @@ export const AnalyticsDashboard = () => {
               <CardContent className="flex-1">
                 <div className="h-[450px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topProducts} layout="vertical" margin={{ left: 10, right: 30, top: 10, bottom: 10 }}>
+                    <BarChart data={topProducts} layout="vertical" margin={{ left: 5, right: 60, top: 5, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                      <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} height={25} />
                       <YAxis 
                         type="category" 
                         dataKey="name" 
-                        tick={{ fontSize: 11 }}
-                        width={150}
-                        tickFormatter={(v) => v.length > 22 ? `${v.slice(0, 22)}...` : v}
+                        tick={{ fontSize: 10 }}
+                        width={100}
+                        tickFormatter={(v) => v.length > 14 ? `${v.slice(0, 14)}...` : v}
                       />
                       <Tooltip 
                         formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
@@ -510,7 +511,18 @@ export const AnalyticsDashboard = () => {
                           borderRadius: '8px',
                         }}
                       />
-                      <Bar dataKey="revenue" fill="#2563eb" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="revenue" fill="#2563eb" radius={[0, 4, 4, 0]}>
+                        <LabelList 
+                          dataKey="revenue" 
+                          position="right" 
+                          formatter={(value: number) => {
+                            const total = topProducts.reduce((sum, p) => sum + p.revenue, 0);
+                            const percent = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+                            return `${percent}%`;
+                          }}
+                          style={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
+                        />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
