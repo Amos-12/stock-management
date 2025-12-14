@@ -434,9 +434,20 @@ export const generateReceipt = (
   const thanksWidth = pdf.getTextWidth(thanks);
   pdf.text(thanks, (width - thanksWidth) / 2, yPos);
   
-  // Download PDF directly to avoid popup blocker
-  const fileName = `recu_${saleData.id.substring(0, 8)}_${new Date().toISOString().split('T')[0]}.pdf`;
-  pdf.save(fileName);
+  // Open print dialog for thermal receipt
+  const pdfBlob = pdf.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  const printWindow = window.open(pdfUrl, '_blank');
+  
+  if (printWindow) {
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  } else {
+    // Fallback: download if popup blocked
+    const fileName = `recu_${saleData.id.substring(0, 8)}_${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(fileName);
+  }
 };
 
 export const generateInvoice = (
