@@ -340,7 +340,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     maxTimeBetweenKeys: 50
   });
 
-  // Keyboard shortcut Ctrl+L to toggle view mode
+  // Keyboard shortcuts: Ctrl+L toggle view, Ctrl+P go to cart
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key.toLowerCase() === 'l') {
@@ -349,11 +349,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           setViewMode(prev => prev === 'cards' ? 'list' : 'cards');
         }
       }
+      if (e.ctrlKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        if (currentStep === 'products' && cart.length > 0) {
+          setCurrentStep('cart');
+        }
+      }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep]);
+  }, [currentStep, cart.length]);
 
   useEffect(() => {
     const filtered = products.filter(product => {
@@ -1281,26 +1287,29 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
                 </Badge>
                 
-                {/* View mode toggle */}
-                <div className="flex gap-1 bg-muted p-0.5 rounded-lg">
-                  <Button
-                    size="sm"
-                    variant={viewMode === 'cards' ? 'default' : 'ghost'}
-                    onClick={() => setViewMode('cards')}
-                    className="h-7 px-2"
-                  >
-                    <Grid3X3 className="w-3.5 h-3.5 mr-1" />
-                    <span className="hidden sm:inline text-xs">Cartes</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={viewMode === 'list' ? 'default' : 'ghost'}
-                    onClick={() => setViewMode('list')}
-                    className="h-7 px-2"
-                  >
-                    <List className="w-3.5 h-3.5 mr-1" />
-                    <span className="hidden sm:inline text-xs">Liste</span>
-                  </Button>
+                {/* View mode toggle with shortcut hint */}
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1 bg-muted p-0.5 rounded-lg">
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                      onClick={() => setViewMode('cards')}
+                      className="h-7 px-2"
+                    >
+                      <Grid3X3 className="w-3.5 h-3.5 mr-1" />
+                      <span className="hidden sm:inline text-xs">Cartes</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      onClick={() => setViewMode('list')}
+                      className="h-7 px-2"
+                    >
+                      <List className="w-3.5 h-3.5 mr-1" />
+                      <span className="hidden sm:inline text-xs">Liste</span>
+                    </Button>
+                  </div>
+                  <span className="hidden lg:inline text-xs text-muted-foreground">Ctrl+L</span>
                 </div>
               </div>
             </div>
