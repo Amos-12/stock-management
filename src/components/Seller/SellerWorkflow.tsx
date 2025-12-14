@@ -1678,24 +1678,87 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                       ? roundTo2Decimals((product.stock_boite || 0) * (product.surface_par_boite || 1) - cartQuantity)
                       : availableStock - cartQuantity;
                     
-                    // Compact specs display
-                    const getCompactSpecs = () => {
-                      const specs: string[] = [];
-                      if (product.category === 'ceramique' && product.dimension) specs.push(`📐 ${product.dimension}`);
-                      if (product.category === 'fer' && product.diametre) specs.push(`⭕ ${product.diametre}`);
-                      if (product.electromenager_marque) specs.push(`🏭 ${product.electromenager_marque}`);
-                      if (product.electromenager_modele) specs.push(`📋 ${product.electromenager_modele}`);
-                      if (product.puissance) specs.push(`💪 ${product.puissance}W`);
-                      return specs.slice(0, 2).join(' • ');
+                    // Specs badges for list view
+                    const getListSpecs = () => {
+                      const specs: { emoji: string; value: string; color: string }[] = [];
+                      
+                      // Ceramic
+                      if (product.category === 'ceramique') {
+                        if (product.dimension) specs.push({ emoji: '📐', value: product.dimension, color: 'bg-blue-500/10 text-blue-600 border-blue-500/30' });
+                        if (product.surface_par_boite) specs.push({ emoji: '📦', value: `${product.surface_par_boite} m²/boîte`, color: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/30' });
+                      }
+                      
+                      // Iron
+                      if (product.category === 'fer') {
+                        if (product.diametre) specs.push({ emoji: '⭕', value: product.diametre, color: 'bg-orange-500/10 text-orange-600 border-orange-500/30' });
+                        if (product.longueur_barre_ft) specs.push({ emoji: '📏', value: `${product.longueur_barre_ft} ft`, color: 'bg-amber-500/10 text-amber-600 border-amber-500/30' });
+                      }
+                      
+                      // Energy
+                      if (product.category === 'energie') {
+                        if (product.type_energie) specs.push({ emoji: '⚡', value: product.type_energie, color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30' });
+                        if (product.puissance) specs.push({ emoji: '💪', value: `${product.puissance}W`, color: 'bg-red-500/10 text-red-600 border-red-500/30' });
+                        if (product.voltage) specs.push({ emoji: '🔌', value: `${product.voltage}V`, color: 'bg-purple-500/10 text-purple-600 border-purple-500/30' });
+                        if (product.capacite) specs.push({ emoji: '🔋', value: `${product.capacite}Ah`, color: 'bg-green-500/10 text-green-600 border-green-500/30' });
+                      }
+                      
+                      // Blocs
+                      if (product.category === 'blocs') {
+                        if (product.bloc_type) specs.push({ emoji: '🧱', value: product.bloc_type, color: 'bg-stone-500/10 text-stone-600 border-stone-500/30' });
+                        if (product.bloc_poids) specs.push({ emoji: '⚖️', value: `${product.bloc_poids} kg`, color: 'bg-gray-500/10 text-gray-600 border-gray-500/30' });
+                      }
+                      
+                      // Vêtements
+                      if (product.category === 'vetements') {
+                        if (product.vetement_taille) specs.push({ emoji: '📏', value: product.vetement_taille, color: 'bg-pink-500/10 text-pink-600 border-pink-500/30' });
+                        if (product.vetement_genre) specs.push({ emoji: '👤', value: product.vetement_genre, color: 'bg-violet-500/10 text-violet-600 border-violet-500/30' });
+                        if (product.vetement_couleur) specs.push({ emoji: '🎨', value: product.vetement_couleur, color: 'bg-rose-500/10 text-rose-600 border-rose-500/30' });
+                      }
+                      
+                      // Électroménager
+                      if (product.category === 'electromenager') {
+                        if (product.electromenager_marque) specs.push({ emoji: '🏭', value: product.electromenager_marque, color: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30' });
+                        if (product.electromenager_modele) specs.push({ emoji: '📋', value: product.electromenager_modele, color: 'bg-slate-500/10 text-slate-600 border-slate-500/30' });
+                        if (product.puissance) specs.push({ emoji: '💪', value: `${product.puissance}W`, color: 'bg-red-500/10 text-red-600 border-red-500/30' });
+                        if (product.electromenager_classe_energie) specs.push({ emoji: '⚡', value: product.electromenager_classe_energie, color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' });
+                      }
+                      
+                      // Électronique
+                      if (product.category === 'electronique') {
+                        if (product.electromenager_marque) specs.push({ emoji: '🏭', value: product.electromenager_marque, color: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30' });
+                        if (product.electromenager_modele) specs.push({ emoji: '📋', value: product.electromenager_modele, color: 'bg-slate-500/10 text-slate-600 border-slate-500/30' });
+                        if (product.capacite) specs.push({ emoji: '💾', value: `${product.capacite}`, color: 'bg-green-500/10 text-green-600 border-green-500/30' });
+                        if (product.electromenager_couleur) specs.push({ emoji: '🎨', value: product.electromenager_couleur, color: 'bg-rose-500/10 text-rose-600 border-rose-500/30' });
+                      }
+                      
+                      // Dynamic specs from specifications_techniques
+                      if (product.specifications_techniques) {
+                        Object.entries(product.specifications_techniques)
+                          .filter(([_, value]) => value !== null && value !== '' && value !== undefined)
+                          .slice(0, 4)
+                          .forEach(([key, value]) => {
+                            specs.push({ emoji: 'ℹ️', value: String(value), color: 'bg-teal-500/10 text-teal-600 border-teal-500/30' });
+                          });
+                      }
+                      
+                      return specs.slice(0, 4);
                     };
+                    
+                    const listSpecs = getListSpecs();
                     
                     return (
                       <TableRow key={product.id} className="hover:bg-muted/50">
                         <TableCell>
                           <div>
                             <span className="font-medium">{product.name}</span>
-                            {getCompactSpecs() && (
-                              <p className="text-xs text-muted-foreground mt-0.5">{getCompactSpecs()}</p>
+                            {listSpecs.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {listSpecs.map((spec, idx) => (
+                                  <Badge key={idx} variant="outline" className={`text-[10px] ${spec.color}`}>
+                                    {spec.emoji} {spec.value}
+                                  </Badge>
+                                ))}
+                              </div>
                             )}
                           </div>
                         </TableCell>
