@@ -102,30 +102,59 @@
     --popover: 222.2 84% 6%;
     --popover-foreground: 210 40% 98%;
 
+    /* Enhanced Primary - Vibrant Blue */
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
+    --primary-glow: 217.2 91.2% 59.8%;
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
 
-    --success: 142 76% 36%;
+    /* Enhanced Success - Vibrant Emerald */
+    --success: 160 84% 45%;
     --success-foreground: 0 0% 100%;
+    --success-glow: 160 84% 45%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    /* Enhanced Warning - Vibrant Amber */
+    --warning: 45 100% 55%;
+    --warning-foreground: 0 0% 0%;
+    --warning-glow: 45 100% 55%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 217.2 32.6% 17.5%;
+    /* Enhanced Accent - Vibrant Violet */
+    --accent: 262 83% 58%;
     --accent-foreground: 210 40% 98%;
+    --accent-glow: 262 83% 58%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    /* Enhanced Destructive - Vibrant Rose */
+    --destructive: 350 89% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
+    --border: 217.2 32.6% 20%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --ring: 217.2 91.2% 59.8%;
+
+    /* Seller Dashboard Accent Colors */
+    --seller-revenue: 217.2 91.2% 59.8%;
+    --seller-profit: 160 84% 45%;
+    --seller-sales: 262 83% 58%;
+    --seller-average: 45 100% 55%;
+    --seller-goal: 330 81% 60%;
+
+    /* Enhanced Gradients for Dark Mode */
+    --gradient-primary: linear-gradient(135deg, hsl(217.2 91.2% 59.8%), hsl(262 83% 58%));
+    --gradient-success: linear-gradient(135deg, hsl(160 84% 45%), hsl(142 76% 50%));
+    --gradient-accent: linear-gradient(135deg, hsl(262 83% 58%), hsl(330 81% 60%));
+    --gradient-warm: linear-gradient(135deg, hsl(45 100% 55%), hsl(25 95% 55%));
+
+    /* Glow Shadows for Dark Mode */
+    --shadow-glow-primary: 0 0 20px hsl(217.2 91.2% 59.8% / 0.4);
+    --shadow-glow-success: 0 0 20px hsl(160 84% 45% / 0.4);
+    --shadow-glow-accent: 0 0 20px hsl(262 83% 58% / 0.4);
+    --shadow-glow-warning: 0 0 20px hsl(45 100% 55% / 0.4);
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -149,8 +178,54 @@
     background: var(--gradient-hero);
   }
 
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .gradient-warm {
+    background: var(--gradient-warm);
+  }
+
   .shadow-primary {
     box-shadow: var(--shadow-primary);
+  }
+
+  /* Dark Mode Glow Effects */
+  .dark .glow-primary {
+    box-shadow: var(--shadow-glow-primary);
+  }
+
+  .dark .glow-success {
+    box-shadow: var(--shadow-glow-success);
+  }
+
+  .dark .glow-accent {
+    box-shadow: var(--shadow-glow-accent);
+  }
+
+  .dark .glow-warning {
+    box-shadow: var(--shadow-glow-warning);
+  }
+
+  /* Seller Dashboard Card Accents */
+  .dark .seller-card-revenue {
+    border-left: 3px solid hsl(var(--seller-revenue));
+    box-shadow: inset 0 0 30px hsl(var(--seller-revenue) / 0.1), var(--shadow-glow-primary);
+  }
+
+  .dark .seller-card-profit {
+    border-left: 3px solid hsl(var(--seller-profit));
+    box-shadow: inset 0 0 30px hsl(var(--seller-profit) / 0.1), var(--shadow-glow-success);
+  }
+
+  .dark .seller-card-sales {
+    border-left: 3px solid hsl(var(--seller-sales));
+    box-shadow: inset 0 0 30px hsl(var(--seller-sales) / 0.1), var(--shadow-glow-accent);
+  }
+
+  .dark .seller-card-average {
+    border-left: 3px solid hsl(var(--seller-average));
+    box-shadow: inset 0 0 30px hsl(var(--seller-average) / 0.1), var(--shadow-glow-warning);
   }
 
   .transition-smooth {

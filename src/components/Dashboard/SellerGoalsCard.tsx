@@ -27,10 +27,10 @@ export const SellerGoalsCard = ({
   const revenueAchieved = todayRevenue >= revenueGoal;
 
   return (
-    <Card className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+    <Card className="animate-fade-in-up dark:border-border/50 dark:bg-card/80" style={{ animationDelay: '100ms' }}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Target className="w-5 h-5 text-primary" />
+          <Target className="w-5 h-5 text-primary dark:text-[hsl(262,83%,58%)]" />
           Objectifs du Jour
         </CardTitle>
       </CardHeader>
@@ -41,7 +41,7 @@ export const SellerGoalsCard = ({
             <span className="text-sm font-medium text-muted-foreground">Ventes</span>
             <div className="flex items-center gap-2">
               {salesAchieved && (
-                <Trophy className="w-4 h-4 text-yellow-500 animate-pulse" />
+                <Trophy className="w-4 h-4 text-[hsl(45,100%,55%)] animate-pulse" />
               )}
               <span className="text-sm font-bold">
                 {todaySales} / {salesGoal}
@@ -50,7 +50,7 @@ export const SellerGoalsCard = ({
           </div>
           <Progress 
             value={salesProgress} 
-            className={`h-2 transition-all duration-500 ${salesAchieved ? '[&>div]:bg-yellow-500' : ''}`}
+            className={`h-2 transition-all duration-500 ${salesAchieved ? '[&>div]:bg-[hsl(45,100%,55%)]' : 'dark:[&>div]:bg-[hsl(262,83%,58%)]'}`}
           />
           <p className="text-xs text-muted-foreground">
             {salesAchieved 
@@ -66,7 +66,7 @@ export const SellerGoalsCard = ({
             <span className="text-sm font-medium text-muted-foreground">Revenu</span>
             <div className="flex items-center gap-2">
               {revenueAchieved && (
-                <Trophy className="w-4 h-4 text-yellow-500 animate-pulse" />
+                <Trophy className="w-4 h-4 text-[hsl(45,100%,55%)] animate-pulse" />
               )}
               <span className="text-sm font-bold">
                 {formatNumber(todayRevenue)} / {formatNumber(revenueGoal)} HTG
@@ -75,7 +75,7 @@ export const SellerGoalsCard = ({
           </div>
           <Progress 
             value={revenueProgress} 
-            className={`h-2 transition-all duration-500 ${revenueAchieved ? '[&>div]:bg-yellow-500' : ''}`}
+            className={`h-2 transition-all duration-500 ${revenueAchieved ? '[&>div]:bg-[hsl(45,100%,55%)]' : 'dark:[&>div]:bg-[hsl(160,84%,45%)]'}`}
           />
           <p className="text-xs text-muted-foreground">
             {revenueAchieved 
@@ -86,7 +86,7 @@ export const SellerGoalsCard = ({
         </div>
 
         {/* Motivation */}
-        <div className="pt-2 border-t">
+        <div className="pt-2 border-t dark:border-border/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <TrendingUp className="w-3 h-3" />
             <span>Objectifs basés sur votre moyenne +20%</span>

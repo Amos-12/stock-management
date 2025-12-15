@@ -308,7 +308,7 @@ export const SellerDashboardStats = () => {
           previousValue={stats.yesterdayRevenue}
           icon={DollarSign}
           sparklineData={revenueSparkline}
-          colorScheme="success"
+          colorScheme="seller-profit"
         />
         <KPICard
           title="Ventes Aujourd'hui"
@@ -317,18 +317,20 @@ export const SellerDashboardStats = () => {
           icon={Receipt}
           format="number"
           sparklineData={salesSparkline}
+          colorScheme="seller-sales"
         />
         <KPICard
           title="Panier Moyen"
           value={stats.averageSale}
           icon={ShoppingCart}
+          colorScheme="seller-average"
         />
         <KPICard
           title="Total Ventes"
           value={stats.totalSales}
           icon={TrendingUp}
           format="number"
-          colorScheme="default"
+          colorScheme="seller-revenue"
         />
       </div>
 
@@ -367,7 +369,7 @@ export const SellerDashboardStats = () => {
       {/* Top Products & Recent Sales */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Top Products with Bar Chart */}
-        <Card className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+        <Card className="animate-fade-in-up dark:border-border/50 dark:bg-card/80" style={{ animationDelay: '300ms' }}>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <Package className="w-5 h-5 text-primary" />
@@ -458,7 +460,7 @@ export const SellerDashboardStats = () => {
         </Card>
 
         {/* Recent Sales */}
-        <Card className="animate-fade-in-up" style={{ animationDelay: '350ms' }}>
+        <Card className="animate-fade-in-up dark:border-border/50 dark:bg-card/80" style={{ animationDelay: '350ms' }}>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <Receipt className="w-5 h-5 text-primary" />
@@ -493,7 +495,7 @@ export const SellerDashboardStats = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-green-500">{formatNumber(Number(sale.total_amount))} HTG</div>
+                      <div className="font-bold text-success dark:text-[hsl(160,84%,45%)]">{formatNumber(Number(sale.total_amount))} HTG</div>
                       <Badge variant="outline" className="text-xs">
                         {sale.payment_method || 'N/A'}
                       </Badge>
