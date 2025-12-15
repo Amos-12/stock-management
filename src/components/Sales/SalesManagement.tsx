@@ -152,7 +152,7 @@ export const SalesManagement = () => {
         .from('sale_items')
         .select('sale_id, subtotal, currency');
 
-      // Build a map of sale_id -> currencies
+      // Build a map of sale_id -> currencies (HT amounts from items)
       const saleItemsMap = new Map<string, { htg: number; usd: number }>();
       (allItems || []).forEach(item => {
         const existing = saleItemsMap.get(item.sale_id) || { htg: 0, usd: 0 };
@@ -164,6 +164,13 @@ export const SalesManagement = () => {
         saleItemsMap.set(item.sale_id, existing);
       });
 
+      // Get TVA rate from company settings
+      const { data: settingsData } = await supabase
+        .from('company_settings')
+        .select('tva_rate')
+        .single();
+      const tvaRate = settingsData?.tva_rate || 0;
+
       // Fetch seller names separately
       const salesWithSellers = await Promise.all(
         (salesData || []).map(async (sale) => {
@@ -173,7 +180,20 @@ export const SalesManagement = () => {
             .eq('user_id', sale.seller_id)
             .single();
           
-          const currencies = saleItemsMap.get(sale.id) || { htg: 0, usd: 0 };
+          const rawCurrencies = saleItemsMap.get(sale.id) || { htg: 0, usd: 0 };
+          const totalRaw = rawCurrencies.htg + rawCurrencies.usd;
+          
+          // Apply discount proportionally to each currency
+          const discountRatio = totalRaw > 0 ? (sale.discount_amount || 0) / totalRaw : 0;
+          const htgAfterDiscount = rawCurrencies.htg * (1 - discountRatio);
+          const usdAfterDiscount = rawCurrencies.usd * (1 - discountRatio);
+          
+          // Add TVA to get TTC amounts
+          const currencies = {
+            htg: htgAfterDiscount * (1 + tvaRate / 100),
+            usd: usdAfterDiscount * (1 + tvaRate / 100)
+          };
+          
           return {
             ...sale,
             profiles: profileData || { full_name: 'N/A' },
@@ -208,8 +228,7 @@ export const SalesManagement = () => {
       
       setRevenueStats(stats);
       
-      // Calculate TVA stats based on configured tva_rate
-      const tvaRate = companySettings?.tva_rate || 0;
+      // Calculate TVA stats based on configured tva_rate (use already fetched tvaRate)
       setTvaStats({
         totalTVA_HTG: stats.totalHTG * tvaRate / 100,
         totalTVA_USD: stats.totalUSD * tvaRate / 100,
