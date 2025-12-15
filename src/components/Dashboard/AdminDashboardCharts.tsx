@@ -39,6 +39,7 @@ import { toast } from '@/hooks/use-toast';
 import { KPICard } from './KPICard';
 import { AdminBusinessHealth } from './AdminBusinessHealth';
 import { AdminTopSellersChart } from './AdminTopSellersChart';
+import { RecentActivities } from './RecentActivities';
 import { formatNumber, calculateUnifiedTotal, calculateUnifiedProfit } from '@/lib/utils';
 import { generateAdminDashboardPdf } from '@/lib/adminDashboardPdf';
 
@@ -497,6 +498,9 @@ export const AdminDashboardCharts = () => {
           email: companyData?.email || '',
           logo_url: companyData?.logo_url,
           usd_htg_rate: usdHtgRate,
+          tva_rate: companyData?.tva_rate,
+          company_description: companyData?.company_description,
+          payment_terms: companyData?.payment_terms,
         },
         periodLabel
       );
@@ -792,8 +796,8 @@ export const AdminDashboardCharts = () => {
         </div>
       </div>
 
-      {/* Category Distribution & Business Health Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Category Distribution, Business Health & Recent Activities Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Category Distribution */}
         <Card className="admin-card-inventory animate-fade-in" style={{ animationDelay: '600ms' }}>
           <CardHeader className="pb-2">
@@ -805,17 +809,17 @@ export const AdminDashboardCharts = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col lg:flex-row items-center gap-6">
+            <div className="flex flex-col items-center gap-4">
               {/* Pie Chart */}
               <div className="relative flex-shrink-0">
-                <ResponsiveContainer width={220} height={220}>
+                <ResponsiveContainer width={180} height={180}>
                   <PieChart>
                     <Pie
                       data={categoryData}
                       cx="50%"
                       cy="50%"
-                      outerRadius={100}
-                      innerRadius={60}
+                      outerRadius={80}
+                      innerRadius={50}
                       fill="#8884d8"
                       dataKey="value"
                       paddingAngle={3}
@@ -842,29 +846,26 @@ export const AdminDashboardCharts = () => {
                 </ResponsiveContainer>
                 {/* Total in center */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                  <p className="text-2xl font-bold text-foreground">{categoryData.reduce((sum, c) => sum + c.value, 0)}</p>
+                  <p className="text-xl font-bold text-foreground">{categoryData.reduce((sum, c) => sum + c.value, 0)}</p>
                   <p className="text-xs text-muted-foreground">Produits</p>
                 </div>
               </div>
               
-              {/* Legend as list */}
-              <div className="flex-1 space-y-2 w-full">
-                {categoryData.map((category, index) => {
+              {/* Legend as compact list */}
+              <div className="w-full space-y-1.5">
+                {categoryData.slice(0, 6).map((category, index) => {
                   const total = categoryData.reduce((sum, c) => sum + c.value, 0);
-                  const percent = total > 0 ? ((category.value / total) * 100).toFixed(1) : 0;
+                  const percent = total > 0 ? ((category.value / total) * 100).toFixed(0) : 0;
                   return (
-                    <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div key={index} className="flex items-center justify-between px-2 py-1 rounded bg-muted/30">
                       <div className="flex items-center gap-2">
                         <div 
-                          className="w-3 h-3 rounded-full" 
+                          className="w-2.5 h-2.5 rounded-full" 
                           style={{ backgroundColor: category.color }}
                         />
-                        <span className="text-sm font-medium text-foreground">{category.name}</span>
+                        <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{category.name}</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-muted-foreground">{category.value}</span>
-                        <span className="text-sm font-semibold text-foreground w-12 text-right">{percent}%</span>
-                      </div>
+                      <span className="text-xs font-semibold text-foreground">{percent}%</span>
                     </div>
                   );
                 })}
@@ -884,6 +885,9 @@ export const AdminDashboardCharts = () => {
             totalProducts={totalProducts}
           />
         </div>
+
+        {/* Recent Activities */}
+        <RecentActivities />
       </div>
     </div>
   );
