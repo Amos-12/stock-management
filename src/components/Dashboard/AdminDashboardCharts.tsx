@@ -16,7 +16,8 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
+  Legend,
+  LabelList
 } from 'recharts';
 import { 
   Calendar, 
@@ -619,7 +620,7 @@ export const AdminDashboardCharts = () => {
 
         {/* Revenue/Profit Trend */}
         <div className="lg:col-span-2 animate-fade-in" style={{ animationDelay: '450ms' }}>
-          <Card className="dark:admin-card-revenue h-full">
+          <Card className="admin-card-revenue h-full">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-admin-revenue" />
@@ -681,7 +682,7 @@ export const AdminDashboardCharts = () => {
       {/* Bottom Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Products */}
-        <Card className="dark:admin-card-products animate-fade-in" style={{ animationDelay: '500ms' }}>
+        <Card className="admin-card-products animate-fade-in" style={{ animationDelay: '500ms' }}>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Package className="h-5 w-5 text-admin-products" />
@@ -712,13 +713,15 @@ export const AdminDashboardCharts = () => {
                   dataKey="revenue" 
                   fill="hsl(var(--admin-products))" 
                   radius={[0, 4, 4, 0]}
-                  label={{ 
-                    position: 'right', 
-                    formatter: (value: any, entry: any) => `${entry?.percent || 0}%`,
-                    fill: 'hsl(var(--muted-foreground))',
-                    fontSize: 10
-                  }}
-                />
+                >
+                  <LabelList 
+                    dataKey="percent"
+                    position="right"
+                    formatter={(value: number) => `${value}%`}
+                    fill="hsl(var(--muted-foreground))"
+                    fontSize={11}
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -731,7 +734,7 @@ export const AdminDashboardCharts = () => {
       </div>
 
       {/* Category Distribution */}
-      <Card className="dark:admin-card-inventory animate-fade-in" style={{ animationDelay: '600ms' }}>
+      <Card className="admin-card-inventory animate-fade-in" style={{ animationDelay: '600ms' }}>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-admin-inventory" />

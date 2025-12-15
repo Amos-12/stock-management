@@ -90,6 +90,23 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Admin Dashboard Accent Colors - Light Mode */
+    --admin-revenue: 217 80% 50%;
+    --admin-profit: 145 70% 38%;
+    --admin-sales: 262 70% 55%;
+    --admin-target: 32 85% 48%;
+    --admin-inventory: 187 75% 42%;
+    --admin-sellers: 330 75% 52%;
+    --admin-orders: 45 80% 45%;
+    --admin-products: 199 75% 45%;
+
+    /* Seller Dashboard Colors - Light Mode */
+    --seller-revenue: 217 80% 50%;
+    --seller-profit: 145 70% 38%;
+    --seller-sales: 262 70% 55%;
+    --seller-average: 45 80% 45%;
+    --seller-goal: 330 75% 52%;
   }
 
   .dark {
@@ -278,6 +295,68 @@
   .dark .admin-card-products {
     border-left: 3px solid hsl(var(--admin-products));
     box-shadow: inset 0 0 25px hsl(var(--admin-products) / 0.1), 0 4px 20px hsl(var(--admin-products) / 0.08);
+  }
+
+  /* Light Mode Admin Card Accents */
+  .admin-card-revenue {
+    border-left: 3px solid hsl(var(--admin-revenue));
+    box-shadow: 0 4px 12px hsl(var(--admin-revenue) / 0.08);
+  }
+
+  .admin-card-profit {
+    border-left: 3px solid hsl(var(--admin-profit));
+    box-shadow: 0 4px 12px hsl(var(--admin-profit) / 0.08);
+  }
+
+  .admin-card-sales {
+    border-left: 3px solid hsl(var(--admin-sales));
+    box-shadow: 0 4px 12px hsl(var(--admin-sales) / 0.08);
+  }
+
+  .admin-card-target {
+    border-left: 3px solid hsl(var(--admin-target));
+    box-shadow: 0 4px 12px hsl(var(--admin-target) / 0.08);
+  }
+
+  .admin-card-inventory {
+    border-left: 3px solid hsl(var(--admin-inventory));
+    box-shadow: 0 4px 12px hsl(var(--admin-inventory) / 0.08);
+  }
+
+  .admin-card-sellers {
+    border-left: 3px solid hsl(var(--admin-sellers));
+    box-shadow: 0 4px 12px hsl(var(--admin-sellers) / 0.08);
+  }
+
+  .admin-card-orders {
+    border-left: 3px solid hsl(var(--admin-orders));
+    box-shadow: 0 4px 12px hsl(var(--admin-orders) / 0.08);
+  }
+
+  .admin-card-products {
+    border-left: 3px solid hsl(var(--admin-products));
+    box-shadow: 0 4px 12px hsl(var(--admin-products) / 0.08);
+  }
+
+  /* Light Mode Seller Card Accents */
+  .seller-card-revenue {
+    border-left: 3px solid hsl(var(--seller-revenue));
+    box-shadow: 0 4px 12px hsl(var(--seller-revenue) / 0.08);
+  }
+
+  .seller-card-profit {
+    border-left: 3px solid hsl(var(--seller-profit));
+    box-shadow: 0 4px 12px hsl(var(--seller-profit) / 0.08);
+  }
+
+  .seller-card-sales {
+    border-left: 3px solid hsl(var(--seller-sales));
+    box-shadow: 0 4px 12px hsl(var(--seller-sales) / 0.08);
+  }
+
+  .seller-card-average {
+    border-left: 3px solid hsl(var(--seller-average));
+    box-shadow: 0 4px 12px hsl(var(--seller-average) / 0.08);
   }
 
   .transition-smooth {
