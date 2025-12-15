@@ -4,16 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Users, UserCheck, Mail, Calendar, Search, UserPlus, RefreshCcw, Settings, Trash2 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Users, UserCheck, Mail, Calendar, Search, UserPlus, RefreshCcw, Settings, Trash2, LayoutGrid, List, Shield, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/ui/table-pagination';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface User {
   id: string;
@@ -38,6 +40,30 @@ const ALL_CATEGORIES = [
   { value: 'autres', label: 'Autres' }
 ];
 
+// Helper to get initials from name
+const getInitials = (name: string) => {
+  return name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+// Helper to get avatar color based on role
+const getAvatarColor = (role: string, isActive: boolean) => {
+  if (role === 'admin') return 'bg-primary text-primary-foreground';
+  if (isActive) return 'bg-green-500 text-white';
+  return 'bg-orange-500 text-white';
+};
+
+// Helper to get card border color
+const getCardBorderColor = (role: string, isActive: boolean) => {
+  if (role === 'admin') return 'border-l-primary';
+  if (isActive) return 'border-l-green-500';
+  return 'border-l-orange-500';
+};
+
 export const UserManagementPanel = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,12 +76,16 @@ export const UserManagementPanel = () => {
     categories: string[];
   }>({ userId: '', userName: '', categories: [] });
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const isMobile = useIsMobile();
+
+  // Auto-switch to cards on mobile
+  const effectiveViewMode = isMobile ? 'cards' : viewMode;
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       
-      // Fetch user roles and statuses
       const { data: userRoles, error } = await supabase
         .from('user_roles')
         .select('user_id, role, is_active');
@@ -68,7 +98,6 @@ export const UserManagementPanel = () => {
         return;
       }
 
-      // Fetch profiles with emails in a single query
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, full_name, email, created_at')
@@ -118,14 +147,10 @@ export const UserManagementPanel = () => {
 
       if (error) throw error;
 
-      // Get user info for logging
       const currentUser = users.find(u => u.id === userId);
-      
-      // Get current user ID from auth
       const { data: { user } } = await supabase.auth.getUser();
 
       if (currentUser && user) {
-        // Log user activation/deactivation
         const actionType = !currentStatus ? 'user_approved' : 'user_deactivated';
         const description = !currentStatus
           ? `Utilisateur "${currentUser.full_name}" approuvé et activé`
@@ -238,13 +263,11 @@ export const UserManagementPanel = () => {
     try {
       const { userId, categories } = selectedUserCategories;
 
-      // Delete all existing categories for this user
       await supabase
         .from('seller_authorized_categories')
         .delete()
         .eq('user_id', userId);
 
-      // Insert new categories if any selected
       if (categories.length > 0) {
         const rows = categories.map(cat => ({
           user_id: userId,
@@ -281,7 +304,6 @@ export const UserManagementPanel = () => {
     try {
       console.log('🗑️ Tentative de suppression:', { userId, userName, userRole, isActive });
       
-      // Double vérification côté client
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       
       if (currentUser?.id === userId) {
@@ -331,7 +353,6 @@ export const UserManagementPanel = () => {
         fullError: error
       });
       
-      // Messages d'erreur plus descriptifs
       let errorMessage = "Impossible de supprimer le compte";
       
       if (error.message?.includes('Seuls les administrateurs')) {
@@ -356,7 +377,7 @@ export const UserManagementPanel = () => {
 
   const filteredUsers = users.filter(user =>
     user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const { 
@@ -388,10 +409,113 @@ export const UserManagementPanel = () => {
     );
   }
 
+  // User Card Component for card view
+  const UserCard = ({ user }: { user: User }) => (
+    <Card 
+      className={`shadow-md border-l-4 ${getCardBorderColor(user.role, user.is_active)} hover:shadow-lg transition-all duration-200 animate-in fade-in-50`}
+    >
+      <CardContent className="p-4">
+        {/* Header with avatar and name */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm ${getAvatarColor(user.role, user.is_active)}`}>
+              {getInitials(user.full_name)}
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">{user.full_name}</h3>
+              <Badge 
+                variant={user.role === 'admin' ? 'default' : 'secondary'}
+                className={`mt-1 ${user.role === 'admin' ? 'bg-primary' : ''}`}
+              >
+                {user.role === 'admin' ? (
+                  <><Shield className="w-3 h-3 mr-1" /> Admin</>
+                ) : (
+                  <><User className="w-3 h-3 mr-1" /> Vendeur</>
+                )}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="space-y-2 text-sm mb-4">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Mail className="w-4 h-4" />
+            <span className="truncate">{user.email}</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Calendar className="w-4 h-4" />
+            <span>Créé le {new Date(user.created_at).toLocaleDateString('fr-FR')}</span>
+          </div>
+          {user.role === 'seller' && (
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-orange-500'}`} />
+              <span className={user.is_active ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}>
+                {user.is_active ? 'Actif' : 'Inactif'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 pt-3 border-t">
+          {user.role === 'seller' && (
+            <>
+              <Switch
+                checked={user.is_active}
+                onCheckedChange={() => handleToggleActive(user.id, user.is_active)}
+              />
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="flex-1"
+                onClick={() => loadUserCategories(user.id, user.full_name)}
+              >
+                <Settings className="w-4 h-4 mr-1" />
+                Catégories
+              </Button>
+            </>
+          )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                size="sm" 
+                variant="destructive"
+                disabled={user.role === 'seller' && user.is_active}
+                title={user.role === 'seller' && user.is_active ? "Désactivez d'abord ce vendeur" : "Supprimer"}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Voulez-vous vraiment supprimer le compte de <strong>{user.full_name}</strong> ?
+                  <br /><br />
+                  ⚠️ Cette action est irréversible mais les données historiques seront conservées.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={() => handleDeleteUser(user.id, user.full_name, user.role, user.is_active)}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Utilisateurs</CardTitle>
@@ -415,10 +539,10 @@ export const UserManagementPanel = () => {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Vendeurs</CardTitle>
-            <Users className="h-4 w-4 text-success" />
+            <Users className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{sellerUsers}</div>
+            <div className="text-2xl font-bold text-green-500">{sellerUsers}</div>
           </CardContent>
         </Card>
       </div>
@@ -431,15 +555,38 @@ export const UserManagementPanel = () => {
               <Users className="w-5 h-5" />
               Gestion des Utilisateurs
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* View Mode Toggle - hidden on mobile */}
+              <div className="hidden sm:flex items-center gap-1 border rounded-lg p-1">
+                <Button
+                  variant={viewMode === 'table' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('table')}
+                  className="h-7 px-2"
+                >
+                  <List className="w-4 h-4 mr-1" />
+                  Tableau
+                </Button>
+                <Button
+                  variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('cards')}
+                  className="h-7 px-2"
+                >
+                  <LayoutGrid className="w-4 h-4 mr-1" />
+                  Cartes
+                </Button>
+              </div>
+              
               <Button variant="ghost" size="sm" onClick={fetchUsers} title="Rafraîchir">
                 <RefreshCcw className="w-4 h-4" />
               </Button>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="default" className="bg-primary hover:bg-primary-hover">
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Promouvoir Admin
+                  <Button variant="default" size="sm" className="bg-primary hover:bg-primary/90">
+                    <UserPlus className="w-4 h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Promouvoir Admin</span>
+                    <span className="sm:hidden">Admin</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
@@ -485,112 +632,130 @@ export const UserManagementPanel = () => {
             />
           </div>
 
-          {/* Users Table */}
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead className="hidden sm:table-cell">Email</TableHead>
-                  <TableHead>Rôle</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Actions</TableHead>
-                  <TableHead className="hidden md:table-cell">Créé le</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          {/* Card View */}
+          {effectiveViewMode === 'cards' && (
+            <ScrollArea className="h-[calc(100vh-400px)] min-h-[400px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pr-4">
                 {paginatedUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div className="font-medium">{user.full_name}</div>
-                        <div className="text-sm text-muted-foreground sm:hidden">
-                          {user.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {user.email}
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={user.role === 'admin' ? 'default' : 'secondary'}
-                        className={user.role === 'admin' ? 'bg-primary' : ''}
-                      >
-                        {user.role === 'admin' ? 'Admin' : 'Vendeur'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {user.role === 'seller' ? (
+                  <UserCard key={user.id} user={user} />
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+
+          {/* Table View */}
+          {effectiveViewMode === 'table' && (
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead className="hidden sm:table-cell">Email</TableHead>
+                    <TableHead>Rôle</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Actions</TableHead>
+                    <TableHead className="hidden md:table-cell">Créé le</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          <Switch
-                            checked={user.is_active}
-                            onCheckedChange={() => handleToggleActive(user.id, user.is_active)}
-                          />
-                          <span className="text-sm text-muted-foreground">
-                            {user.is_active ? 'Actif' : 'Inactif'}
-                          </span>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${getAvatarColor(user.role, user.is_active)}`}>
+                            {getInitials(user.full_name)}
+                          </div>
+                          <div>
+                            <div className="font-medium">{user.full_name}</div>
+                            <div className="text-sm text-muted-foreground sm:hidden">
+                              {user.email}
+                            </div>
+                          </div>
                         </div>
-                      ) : (
-                        <Badge variant="outline">Admin</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {user.role === 'seller' && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => loadUserCategories(user.id, user.full_name)}
-                          >
-                            <Settings className="w-4 h-4 mr-1" />
-                            Catégories
-                          </Button>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {user.email}
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={user.role === 'admin' ? 'default' : 'secondary'}
+                          className={user.role === 'admin' ? 'bg-primary' : ''}
+                        >
+                          {user.role === 'admin' ? 'Admin' : 'Vendeur'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {user.role === 'seller' ? (
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={user.is_active}
+                              onCheckedChange={() => handleToggleActive(user.id, user.is_active)}
+                            />
+                            <span className="text-sm text-muted-foreground">
+                              {user.is_active ? 'Actif' : 'Inactif'}
+                            </span>
+                          </div>
+                        ) : (
+                          <Badge variant="outline">Admin</Badge>
                         )}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {user.role === 'seller' && (
                             <Button 
                               size="sm" 
-                              variant="destructive"
-                              disabled={user.role === 'seller' && user.is_active}
-                              title={user.role === 'seller' && user.is_active ? "Désactivez d'abord ce vendeur" : "Supprimer le compte"}
+                              variant="outline"
+                              onClick={() => loadUserCategories(user.id, user.full_name)}
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Settings className="w-4 h-4 mr-1" />
+                              <span className="hidden lg:inline">Catégories</span>
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Voulez-vous vraiment supprimer le compte de <strong>{user.full_name}</strong> ?
-                                <br /><br />
-                                ⚠️ Cette action est irréversible mais les données historiques (ventes, transactions) seront conservées.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Annuler</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleDeleteUser(user.id, user.full_name, user.role, user.is_active)}
-                                className="bg-destructive hover:bg-destructive/90"
+                          )}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                disabled={user.role === 'seller' && user.is_active}
+                                title={user.role === 'seller' && user.is_active ? "Désactivez d'abord ce vendeur" : "Supprimer le compte"}
                               >
-                                Supprimer
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="w-4 h-4 mr-1" />
-                        {new Date(user.created_at).toLocaleDateString('fr-FR')}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Voulez-vous vraiment supprimer le compte de <strong>{user.full_name}</strong> ?
+                                  <br /><br />
+                                  ⚠️ Cette action est irréversible mais les données historiques (ventes, transactions) seront conservées.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteUser(user.id, user.full_name, user.role, user.is_active)}
+                                  className="bg-destructive hover:bg-destructive/90"
+                                >
+                                  Supprimer
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Calendar className="w-4 h-4 mr-1" />
+                          {new Date(user.created_at).toLocaleDateString('fr-FR')}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
           <TablePagination
             currentPage={currentPage}
