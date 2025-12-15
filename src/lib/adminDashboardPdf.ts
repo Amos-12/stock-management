@@ -64,207 +64,168 @@ export const generateAdminDashboardPdf = async (
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 15;
-  let yPos = margin;
+  const contentWidth = pageWidth - margin * 2;
+  let yPos = 20;
 
-  // Colors
-  const primaryColor: [number, number, number] = [59, 130, 246]; // Blue
-  const successColor: [number, number, number] = [34, 197, 94]; // Green
-  const warningColor: [number, number, number] = [234, 179, 8]; // Yellow
-  const accentColor: [number, number, number] = [139, 92, 246]; // Purple
-  const textColor: [number, number, number] = [31, 41, 55];
-  const mutedColor: [number, number, number] = [107, 114, 128];
-
-  // Helper to draw rounded rectangle
-  const drawRoundedRect = (x: number, y: number, w: number, h: number, r: number, fill?: [number, number, number], stroke?: boolean) => {
-    if (fill) {
-      pdf.setFillColor(fill[0], fill[1], fill[2]);
+  // ===== HEADER - INVENTORY STYLE =====
+  // Logo on the left
+  if (companySettings.logo_url) {
+    try {
+      pdf.addImage(companySettings.logo_url, 'PNG', margin, yPos - 5, 30, 30);
+    } catch (error) {
+      console.error('Error loading logo:', error);
     }
-    if (stroke) {
-      pdf.setDrawColor(200, 200, 200);
-    }
-    pdf.roundedRect(x, y, w, h, r, r, fill && stroke ? 'FD' : fill ? 'F' : 'S');
-  };
+  }
 
-  // ===== HEADER WITH COMPANY INFO =====
-  drawRoundedRect(0, 0, pageWidth, 55, 0, primaryColor);
-  
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(22);
+  // Company info on the right
+  pdf.setFontSize(11);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('TABLEAU DE BORD ADMINISTRATEUR', pageWidth / 2, 16, { align: 'center' });
-  
-  // Company name prominent
-  pdf.setFontSize(14);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(companySettings.company_name.toUpperCase(), pageWidth / 2, 28, { align: 'center' });
-  
-  // Company details
+  pdf.text(companySettings.company_name, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 5;
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
-  const companyLine1 = `${companySettings.address} - ${companySettings.city}`;
-  pdf.text(companyLine1, pageWidth / 2, 36, { align: 'center' });
-  
-  const companyLine2 = `Tel: ${companySettings.phone} | Email: ${companySettings.email}`;
-  pdf.text(companyLine2, pageWidth / 2, 42, { align: 'center' });
-  
-  // Generation date
-  pdf.setFontSize(8);
-  const dateStr = new Date().toLocaleDateString('fr-FR', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-  pdf.text(`Rapport généré le ${dateStr}`, pageWidth / 2, 50, { align: 'center' });
+  pdf.text(`${companySettings.address}, ${companySettings.city}`, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(`Tél: ${companySettings.phone}`, pageWidth - margin, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(companySettings.email, pageWidth - margin, yPos, { align: 'right' });
 
-  yPos = 65;
+  yPos = 55;
 
-  // ===== PERIOD & EXCHANGE RATE BADGES =====
-  const periodText = `Période: ${period}`;
-  pdf.setFontSize(10);
-  const periodWidth = pdf.getTextWidth(periodText) + 12;
-  drawRoundedRect(margin, yPos, periodWidth, 8, 2, [239, 246, 255]);
-  pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  pdf.text(periodText, margin + 6, yPos + 5.5);
-  
-  // Exchange rate and TVA
-  if (companySettings.usd_htg_rate) {
-    const rateText = `Taux: 1 USD = ${formatNumber(companySettings.usd_htg_rate, 2)} HTG`;
-    const rateWidth = pdf.getTextWidth(rateText) + 12;
-    drawRoundedRect(pageWidth - margin - rateWidth, yPos, rateWidth, 8, 2, [236, 253, 245]);
-    pdf.setTextColor(successColor[0], successColor[1], successColor[2]);
-    pdf.text(rateText, pageWidth - margin - rateWidth + 6, yPos + 5.5);
-  }
-
-  // TVA badge
-  if (companySettings.tva_rate) {
-    const tvaText = `TVA: ${companySettings.tva_rate}%`;
-    const tvaWidth = pdf.getTextWidth(tvaText) + 12;
-    drawRoundedRect(margin + periodWidth + 5, yPos, tvaWidth, 8, 2, [254, 243, 199]);
-    pdf.setTextColor(warningColor[0], warningColor[1], warningColor[2]);
-    pdf.text(tvaText, margin + periodWidth + 11, yPos + 5.5);
-  }
-
-  yPos += 18;
-
-  // ===== KPI CARDS =====
-  pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
-  pdf.setFontSize(14);
+  // Title centered
+  pdf.setFontSize(16);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Indicateurs Clés de Performance', margin, yPos);
+  pdf.text('TABLEAU DE BORD ADMINISTRATEUR', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 8;
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`Période: ${period} | Généré le: ${new Date().toLocaleString('fr-FR')}`, pageWidth / 2, yPos, { align: 'center' });
+  yPos += 12;
+
+  // ===== STATS BOXES - INVENTORY STYLE =====
+  const boxWidth = (contentWidth - 15) / 4;
+  const boxHeight = 20;
+  const boxY = yPos;
+
+  const drawStatBox = (x: number, label: string, value: string, bgColor: [number, number, number]) => {
+    pdf.setFillColor(...bgColor);
+    pdf.roundedRect(x, boxY, boxWidth, boxHeight, 2, 2, 'F');
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(value, x + boxWidth / 2, boxY + 10, { align: 'center' });
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(label, x + boxWidth / 2, boxY + 16, { align: 'center' });
+  };
+
+  drawStatBox(margin, "Revenus Aujourd'hui", `${formatNumber(stats.todayRevenue)} HTG`, [34, 197, 94]); // Green
+  drawStatBox(margin + boxWidth + 5, "Ventes Aujourd'hui", stats.todaySales.toString(), [59, 130, 246]); // Blue
+  drawStatBox(margin + (boxWidth + 5) * 2, 'Alertes Stock', stats.lowStockCount.toString(), [249, 115, 22]); // Orange
+  drawStatBox(margin + (boxWidth + 5) * 3, 'Produits Actifs', stats.totalProducts.toString(), [100, 100, 100]); // Gray
+
+  pdf.setTextColor(0, 0, 0);
+  yPos = boxY + boxHeight + 15;
+
+  // ===== ADDITIONAL KPIs =====
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Indicateurs Clés', margin, yPos);
   yPos += 8;
 
-  const kpiCardWidth = (pageWidth - margin * 2 - 12) / 4;
-  const kpiCardHeight = 28;
-  
-  const kpis = [
-    { label: "Revenus Aujourd'hui", value: stats.todayRevenue, color: primaryColor, suffix: 'HTG' },
-    { label: "Bénéfices Aujourd'hui", value: stats.todayProfit, color: successColor, suffix: 'HTG' },
-    { label: "Revenus Semaine", value: stats.weekRevenue, color: accentColor, suffix: 'HTG' },
-    { label: "Revenus Mois", value: stats.monthRevenue, color: warningColor, suffix: 'HTG' },
+  // KPI table
+  pdf.setFillColor(50, 50, 50);
+  pdf.rect(margin, yPos, contentWidth, 8, 'F');
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(255, 255, 255);
+  pdf.text('Indicateur', margin + 5, yPos + 5.5);
+  pdf.text('Valeur', margin + contentWidth - 5, yPos + 5.5, { align: 'right' });
+  pdf.setTextColor(0, 0, 0);
+  yPos += 10;
+
+  const kpiData = [
+    { label: "Bénéfices Aujourd'hui", value: `${formatNumber(stats.todayProfit)} HTG` },
+    { label: 'Revenus Semaine', value: `${formatNumber(stats.weekRevenue)} HTG` },
+    { label: 'Revenus Mois', value: `${formatNumber(stats.monthRevenue)} HTG` },
+    { label: 'Panier Moyen', value: `${formatNumber(stats.avgBasket)} HTG` },
+    { label: 'Marge Bénéficiaire', value: `${stats.profitMargin.toFixed(1)}%` },
+    { label: 'Vendeurs Actifs', value: stats.totalSellers.toString() },
   ];
 
-  kpis.forEach((kpi, index) => {
-    const x = margin + index * (kpiCardWidth + 4);
-    drawRoundedRect(x, yPos, kpiCardWidth, kpiCardHeight, 4, [250, 250, 252], true);
-    
-    // Left accent line
-    pdf.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
-    pdf.roundedRect(x, yPos, 3, kpiCardHeight, 2, 2, 'F');
-    
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
-    pdf.text(kpi.label, x + 8, yPos + 8);
-    
-    pdf.setFontSize(12);
+  if (companySettings.usd_htg_rate) {
+    kpiData.push({ label: 'Taux USD/HTG', value: `1 USD = ${formatNumber(companySettings.usd_htg_rate, 2)} HTG` });
+  }
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  kpiData.forEach((kpi, idx) => {
+    if (idx % 2 === 0) {
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(margin, yPos - 4, contentWidth, 6, 'F');
+    }
+    pdf.text(kpi.label, margin + 5, yPos);
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
-    pdf.text(`${formatNumber(kpi.value)} ${kpi.suffix}`, x + 8, yPos + 18);
+    pdf.text(kpi.value, margin + contentWidth - 5, yPos, { align: 'right' });
+    pdf.setFont('helvetica', 'normal');
+    yPos += 6;
   });
 
-  yPos += kpiCardHeight + 8;
+  yPos += 10;
 
-  // Second row of KPIs
-  const kpis2 = [
-    { label: "Ventes Aujourd'hui", value: stats.todaySales, color: [249, 115, 22] as [number, number, number], suffix: '' },
-    { label: "Panier Moyen", value: stats.avgBasket, color: [6, 182, 212] as [number, number, number], suffix: 'HTG' },
-    { label: "Produits Actifs", value: stats.totalProducts, color: [14, 165, 233] as [number, number, number], suffix: '' },
-    { label: "Alertes Stock", value: stats.lowStockCount, color: [239, 68, 68] as [number, number, number], suffix: '' },
-  ];
-
-  kpis2.forEach((kpi, index) => {
-    const x = margin + index * (kpiCardWidth + 4);
-    drawRoundedRect(x, yPos, kpiCardWidth, kpiCardHeight, 4, [250, 250, 252], true);
-    
-    pdf.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
-    pdf.roundedRect(x, yPos, 3, kpiCardHeight, 2, 2, 'F');
-    
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
-    pdf.text(kpi.label, x + 8, yPos + 8);
-    
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
-    const valueText = kpi.suffix ? `${formatNumber(kpi.value)} ${kpi.suffix}` : formatNumber(kpi.value);
-    pdf.text(valueText, x + 8, yPos + 18);
-  });
-
-  yPos += kpiCardHeight + 15;
-
-  // ===== TOP 10 PRODUCTS =====
-  pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
-  pdf.setFontSize(14);
+  // ===== TOP 10 PRODUCTS TABLE =====
+  pdf.setFontSize(12);
   pdf.setFont('helvetica', 'bold');
   pdf.text('Top 10 Produits par Revenus', margin, yPos);
   yPos += 8;
 
   const totalProductRevenue = topProducts.reduce((sum, p) => sum + p.revenue, 0);
-  const tableWidth = pageWidth - margin * 2;
-  
-  // Table header
-  drawRoundedRect(margin, yPos, tableWidth, 8, 2, [241, 245, 249]);
-  pdf.setFontSize(9);
+
+  // Table header - dark style
+  pdf.setFillColor(50, 50, 50);
+  pdf.rect(margin, yPos, contentWidth, 8, 'F');
+  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
+  pdf.setTextColor(255, 255, 255);
   pdf.text('#', margin + 5, yPos + 5.5);
   pdf.text('Produit', margin + 15, yPos + 5.5);
-  pdf.text('Revenus', margin + tableWidth - 60, yPos + 5.5);
-  pdf.text('%', margin + tableWidth - 15, yPos + 5.5);
+  pdf.text('Revenus', margin + contentWidth - 35, yPos + 5.5);
+  pdf.text('%', margin + contentWidth - 8, yPos + 5.5);
+  pdf.setTextColor(0, 0, 0);
   yPos += 10;
+
+  // Table rows
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
 
   topProducts.slice(0, 10).forEach((product, index) => {
     const percent = totalProductRevenue > 0 ? ((product.revenue / totalProductRevenue) * 100).toFixed(1) : '0';
-    const bgColor: [number, number, number] = index % 2 === 0 ? [255, 255, 255] : [250, 250, 252];
-    drawRoundedRect(margin, yPos, tableWidth, 7, 0, bgColor);
     
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
-    pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
-    pdf.text(`${index + 1}`, margin + 5, yPos + 5);
+    if (index % 2 === 0) {
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(margin, yPos - 4, contentWidth, 6, 'F');
+    }
     
-    pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
-    const productName = product.name.length > 35 ? product.name.substring(0, 35) + '...' : product.name;
-    pdf.text(productName, margin + 15, yPos + 5);
+    pdf.text(`${index + 1}`, margin + 5, yPos);
+    
+    const productName = product.name.length > 40 ? product.name.substring(0, 40) + '...' : product.name;
+    pdf.text(productName, margin + 15, yPos);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`${formatNumber(product.revenue)} HTG`, margin + tableWidth - 60, yPos + 5);
+    pdf.text(`${formatNumber(product.revenue)} HTG`, margin + contentWidth - 35, yPos);
     
-    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    pdf.text(`${percent}%`, margin + tableWidth - 15, yPos + 5);
+    pdf.setTextColor(59, 130, 246);
+    pdf.text(`${percent}%`, margin + contentWidth - 8, yPos);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'normal');
     
-    yPos += 7;
+    yPos += 6;
   });
 
   yPos += 10;
 
-  // ===== TOP 5 SELLERS =====
-  pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
-  pdf.setFontSize(14);
+  // ===== TOP 5 SELLERS TABLE =====
+  pdf.setFontSize(12);
   pdf.setFont('helvetica', 'bold');
   pdf.text('Top 5 Vendeurs', margin, yPos);
   yPos += 8;
@@ -272,62 +233,70 @@ export const generateAdminDashboardPdf = async (
   const totalSellerRevenue = topSellers.reduce((sum, s) => sum + s.revenue, 0);
 
   // Table header
-  drawRoundedRect(margin, yPos, tableWidth, 8, 2, [241, 245, 249]);
-  pdf.setFontSize(9);
+  pdf.setFillColor(50, 50, 50);
+  pdf.rect(margin, yPos, contentWidth, 8, 'F');
+  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
+  pdf.setTextColor(255, 255, 255);
   pdf.text('#', margin + 5, yPos + 5.5);
   pdf.text('Vendeur', margin + 15, yPos + 5.5);
-  pdf.text('Ventes', margin + 90, yPos + 5.5);
-  pdf.text('Revenus', margin + tableWidth - 60, yPos + 5.5);
-  pdf.text('%', margin + tableWidth - 15, yPos + 5.5);
+  pdf.text('Ventes', margin + 95, yPos + 5.5);
+  pdf.text('Revenus', margin + contentWidth - 35, yPos + 5.5);
+  pdf.text('%', margin + contentWidth - 8, yPos + 5.5);
+  pdf.setTextColor(0, 0, 0);
   yPos += 10;
+
+  // Table rows
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+
+  // Medal colors for top 3
+  const medalColors: [number, number, number][] = [
+    [234, 179, 8],   // Gold
+    [156, 163, 175], // Silver
+    [180, 83, 9],    // Bronze
+  ];
 
   topSellers.slice(0, 5).forEach((seller, index) => {
     const percent = totalSellerRevenue > 0 ? ((seller.revenue / totalSellerRevenue) * 100).toFixed(1) : '0';
-    const bgColor: [number, number, number] = index % 2 === 0 ? [255, 255, 255] : [250, 250, 252];
-    drawRoundedRect(margin, yPos, tableWidth, 7, 0, bgColor);
     
-    // Rank with medal colors for top 3
-    const rankColors: [number, number, number][] = [
-      [234, 179, 8], // Gold
-      [156, 163, 175], // Silver
-      [180, 83, 9], // Bronze
-    ];
-    if (index < 3) {
-      pdf.setTextColor(rankColors[index][0], rankColors[index][1], rankColors[index][2]);
-    } else {
-      pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
+    if (index % 2 === 0) {
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(margin, yPos - 4, contentWidth, 6, 'F');
     }
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    pdf.text(`${index + 1}`, margin + 5, yPos + 5);
     
-    pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
+    // Rank with medal color
+    if (index < 3) {
+      pdf.setTextColor(medalColors[index][0], medalColors[index][1], medalColors[index][2]);
+      pdf.setFont('helvetica', 'bold');
+    }
+    pdf.text(`${index + 1}`, margin + 5, yPos);
+    pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(seller.name, margin + 15, yPos + 5);
     
-    pdf.text(`${seller.sales}`, margin + 90, yPos + 5);
+    pdf.text(seller.name, margin + 15, yPos);
+    pdf.text(`${seller.sales}`, margin + 95, yPos);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`${formatNumber(seller.revenue)} HTG`, margin + tableWidth - 60, yPos + 5);
+    pdf.text(`${formatNumber(seller.revenue)} HTG`, margin + contentWidth - 35, yPos);
     
-    pdf.setTextColor([236, 72, 153][0], [236, 72, 153][1], [236, 72, 153][2]);
-    pdf.text(`${percent}%`, margin + tableWidth - 15, yPos + 5);
+    pdf.setTextColor(236, 72, 153);
+    pdf.text(`${percent}%`, margin + contentWidth - 8, yPos);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'normal');
     
-    yPos += 7;
+    yPos += 6;
   });
 
   yPos += 10;
 
   // ===== CATEGORY DISTRIBUTION =====
-  if (yPos > pageHeight - 70) {
+  if (yPos > pageHeight - 60) {
     pdf.addPage();
-    yPos = margin;
+    yPos = 20;
   }
 
-  pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
-  pdf.setFontSize(14);
+  pdf.setFontSize(12);
   pdf.setFont('helvetica', 'bold');
   pdf.text('Répartition par Catégorie', margin, yPos);
   yPos += 8;
@@ -340,17 +309,18 @@ export const generateAdminDashboardPdf = async (
 
   categoryData.forEach((cat, index) => {
     const percent = totalCategoryValue > 0 ? ((cat.value / totalCategoryValue) * 100) : 0;
-    const barWidth = (percent / 100) * (tableWidth - 80);
+    const barWidth = (percent / 100) * (contentWidth - 80);
     const color = categoryColors[index % categoryColors.length];
     
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
-    const catName = cat.name.length > 20 ? cat.name.substring(0, 20) + '...' : cat.name;
+    const catName = cat.name.length > 18 ? cat.name.substring(0, 18) + '...' : cat.name;
     pdf.text(catName, margin, yPos + 4);
     
     // Progress bar background
-    drawRoundedRect(margin + 50, yPos, tableWidth - 80, 6, 2, [241, 245, 249]);
+    pdf.setFillColor(241, 245, 249);
+    pdf.roundedRect(margin + 50, yPos, contentWidth - 80, 6, 2, 2, 'F');
+    
     // Progress bar fill
     if (barWidth > 2) {
       pdf.setFillColor(color[0], color[1], color[2]);
@@ -358,65 +328,21 @@ export const generateAdminDashboardPdf = async (
     }
     
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`${cat.value} (${percent.toFixed(0)}%)`, margin + tableWidth - 25, yPos + 4);
+    pdf.text(`${cat.value} (${percent.toFixed(0)}%)`, margin + contentWidth - 25, yPos + 4);
     
     yPos += 9;
   });
 
-  // ===== SUMMARY BOX =====
-  yPos += 5;
-  drawRoundedRect(margin, yPos, tableWidth, 30, 4, [241, 245, 249], true);
-  
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
-  pdf.text('Résumé des Performances', margin + 8, yPos + 8);
-  
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
-  
-  const summaryItems = [
-    `Marge bénéficiaire: ${stats.profitMargin.toFixed(1)}%`,
-    `Produits en alerte: ${stats.lowStockCount}`,
-    `Total produits: ${formatNumber(stats.totalProducts)}`,
-  ];
-  
-  summaryItems.forEach((item, index) => {
-    pdf.text(item, margin + 8 + (index * 62), yPos + 18);
-  });
-
-  // Vendeurs actifs
-  pdf.text(`Vendeurs actifs: ${stats.totalSellers}`, margin + 8, yPos + 26);
-
-  // ===== FOOTER WITH COMPANY INFO =====
-  const footerY = pageHeight - 18;
-  
-  // Footer background
-  drawRoundedRect(0, footerY - 8, pageWidth, 26, 0, [241, 245, 249]);
-  
-  pdf.setDrawColor(200, 200, 200);
-  pdf.line(margin, footerY - 6, pageWidth - margin, footerY - 6);
-  
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
-  pdf.text(companySettings.company_name, margin, footerY);
-  
+  // ===== FOOTER - INVENTORY STYLE =====
   pdf.setFontSize(8);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
-  pdf.text(`${companySettings.address}, ${companySettings.city}`, margin, footerY + 5);
-  pdf.text(`${companySettings.phone} | ${companySettings.email}`, margin, footerY + 10);
-  
-  // Page number
-  pdf.text(`Page 1/1`, pageWidth - margin, footerY + 5, { align: 'right' });
-  
-  // Description or terms if available
-  if (companySettings.company_description) {
-    pdf.setFontSize(7);
-    pdf.text(companySettings.company_description.substring(0, 80), pageWidth / 2, footerY + 10, { align: 'center' });
-  }
+  pdf.setFont('helvetica', 'italic');
+  pdf.setTextColor(100, 100, 100);
+  pdf.text(
+    `Généré par ${companySettings.company_name} - ${new Date().toLocaleDateString('fr-FR')}`,
+    pageWidth / 2,
+    pageHeight - 10,
+    { align: 'center' }
+  );
 
   // Save the PDF
   const fileName = `dashboard-admin-${new Date().toISOString().split('T')[0]}.pdf`;
