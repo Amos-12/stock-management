@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
       const purchasePriceAtSale = currentProduct.purchase_price || 0
       const profitAmount = (item.unit_price - purchasePriceAtSale) * item.quantity
 
-      // Insert sale item with profit data and currency
+      // Insert sale item with profit data, currency and unit
       const { error: itemError } = await supabaseClient
         .from('sale_items')
         .insert([{
@@ -199,6 +199,7 @@ Deno.serve(async (req) => {
           product_id: item.product_id,
           product_name: item.product_name,
           quantity: item.quantity,
+          unit: item.unit,
           unit_price: item.unit_price,
           subtotal: item.subtotal,
           purchase_price_at_sale: purchasePriceAtSale,
