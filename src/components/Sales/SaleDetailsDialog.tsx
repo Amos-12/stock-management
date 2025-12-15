@@ -23,6 +23,12 @@ interface SaleItem {
   subtotal: number;
   unit?: string;
   currency?: string;
+  products?: {
+    category: string;
+    diametre?: string;
+    bars_per_ton?: number;
+    surface_par_boite?: number;
+  };
 }
 
 export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDialogProps) => {
@@ -72,10 +78,13 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
 
       setSellerName(profile?.full_name || 'N/A');
 
-      // Fetch sale items with currency
+      // Fetch sale items with product details for proper unit formatting
       const { data: items, error: itemsError } = await supabase
         .from('sale_items')
-        .select('*')
+        .select(`
+          *,
+          products:product_id (category, diametre, bars_per_ton, surface_par_boite)
+        `)
         .eq('sale_id', saleId);
 
       if (itemsError) throw itemsError;
@@ -131,13 +140,18 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
     const cartItems = saleData.items.map((item: SaleItem) => ({
       id: item.product_id,
       name: item.product_name,
-      category: 'general',
+      category: item.products?.category || 'general',
       unit: item.unit || 'unité',
       cartQuantity: item.quantity,
       price: item.unit_price,
       actualPrice: item.subtotal,
       displayUnit: item.unit,
-      currency: item.currency || 'HTG'
+      currency: item.currency || 'HTG',
+      // Données fer
+      diametre: item.products?.diametre,
+      bars_per_ton: item.products?.bars_per_ton,
+      // Données céramique
+      surface_par_boite: item.products?.surface_par_boite
     }));
 
     generateReceipt(saleData, companySettings, cartItems, sellerName);
@@ -149,13 +163,18 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
     const cartItems = saleData.items.map((item: SaleItem) => ({
       id: item.product_id,
       name: item.product_name,
-      category: 'general',
+      category: item.products?.category || 'general',
       unit: item.unit || 'unité',
       cartQuantity: item.quantity,
       price: item.unit_price,
       actualPrice: item.subtotal,
       displayUnit: item.unit,
-      currency: item.currency || 'HTG'
+      currency: item.currency || 'HTG',
+      // Données fer
+      diametre: item.products?.diametre,
+      bars_per_ton: item.products?.bars_per_ton,
+      // Données céramique
+      surface_par_boite: item.products?.surface_par_boite
     }));
 
     generateInvoice(saleData, companySettings, cartItems, sellerName);
