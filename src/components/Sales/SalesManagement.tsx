@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { SaleDetailsDialog } from './SaleDetailsDialog';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/ui/table-pagination';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -55,6 +56,17 @@ interface TvaStats {
 
 const formatNumber = (amount: number): string => {
   return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+};
+
+const formatCompactNumber = (amount: number, isMobile: boolean): string => {
+  if (!isMobile) return formatNumber(amount);
+  
+  if (amount >= 1000000) {
+    return (amount / 1000000).toFixed(1) + 'M';
+  } else if (amount >= 1000) {
+    return (amount / 1000).toFixed(1) + 'K';
+  }
+  return amount.toFixed(0);
 };
 
 export const SalesManagement = () => {
@@ -294,78 +306,86 @@ export const SalesManagement = () => {
     );
   }
 
+  const isMobile = useIsMobile();
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Stats Cards */}
-      <div className="flex flex-wrap gap-3">
-        <Card className="shadow-sm flex-1 min-w-[160px]">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+        <Card className="shadow-sm">
+          <CardContent className="p-2 sm:p-3 md:p-4">
+            <div className="flex items-center justify-between gap-1 sm:gap-2">
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Total ventes</p>
-                <p className="text-lg font-bold">{sales.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Total ventes</p>
+                <p className="text-sm sm:text-base md:text-lg font-bold">{sales.length}</p>
               </div>
-              <ShoppingCart className="w-5 h-5 text-muted-foreground opacity-50 shrink-0" />
+              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm flex-1 min-w-[160px]">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-2">
+        <Card className="shadow-sm">
+          <CardContent className="p-2 sm:p-3 md:p-4">
+            <div className="flex items-center justify-between gap-1 sm:gap-2">
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Revenu total</p>
-                <p className="text-lg font-bold">{formatNumber(revenueStats.totalHTG)} HTG</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Revenu total</p>
+                <p className="text-sm sm:text-base md:text-lg font-bold truncate">
+                  {formatCompactNumber(revenueStats.totalHTG, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
+                </p>
                 {revenueStats.totalUSD > 0 && (
-                  <p className="text-xs text-muted-foreground">+ ${formatNumber(revenueStats.totalUSD)}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">+ ${formatCompactNumber(revenueStats.totalUSD, isMobile)}</p>
                 )}
               </div>
-              <TrendingUp className="w-5 h-5 text-muted-foreground opacity-50 shrink-0" />
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0 hidden sm:block" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm flex-1 min-w-[160px]">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-2">
+        <Card className="shadow-sm">
+          <CardContent className="p-2 sm:p-3 md:p-4">
+            <div className="flex items-center justify-between gap-1 sm:gap-2">
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Aujourd'hui</p>
-                <p className="text-lg font-bold">{formatNumber(revenueStats.todayHTG)} HTG</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Aujourd'hui</p>
+                <p className="text-sm sm:text-base md:text-lg font-bold truncate">
+                  {formatCompactNumber(revenueStats.todayHTG, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
+                </p>
                 {revenueStats.todayUSD > 0 && (
-                  <p className="text-xs text-muted-foreground">+ ${formatNumber(revenueStats.todayUSD)}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">+ ${formatCompactNumber(revenueStats.todayUSD, isMobile)}</p>
                 )}
               </div>
-              <Calendar className="w-5 h-5 text-muted-foreground opacity-50 shrink-0" />
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0 hidden sm:block" />
             </div>
           </CardContent>
         </Card>
 
         {companySettings?.tva_rate > 0 && (
-          <Card className="shadow-sm flex-1 min-w-[160px]">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between gap-2">
+          <Card className="shadow-sm">
+            <CardContent className="p-2 sm:p-3 md:p-4">
+              <div className="flex items-center justify-between gap-1 sm:gap-2">
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">TVA ({companySettings.tva_rate}%)</p>
-                  <p className="text-lg font-bold">{formatNumber(tvaStats.totalTVA_HTG)} HTG</p>
-                  <p className="text-xs text-muted-foreground">
-                    Auj: {formatNumber(tvaStats.todayTVA_HTG)} HTG
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">TVA ({companySettings.tva_rate}%)</p>
+                  <p className="text-sm sm:text-base md:text-lg font-bold truncate">
+                    {formatCompactNumber(tvaStats.totalTVA_HTG, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">
+                    Auj: {formatCompactNumber(tvaStats.todayTVA_HTG, isMobile)} HTG
                   </p>
                 </div>
-                <Receipt className="w-5 h-5 text-muted-foreground opacity-50 shrink-0" />
+                <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0 hidden sm:block" />
               </div>
             </CardContent>
           </Card>
         )}
 
         {(revenueStats.totalUSD > 0 || revenueStats.todayUSD > 0) && companySettings && (
-          <Card className="shadow-sm flex-1 min-w-[160px]">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between gap-2">
+          <Card className="shadow-sm">
+            <CardContent className="p-2 sm:p-3 md:p-4">
+              <div className="flex items-center justify-between gap-1 sm:gap-2">
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Taux change</p>
-                  <p className="text-lg font-bold">1 $ = {companySettings.usd_htg_rate || 132}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Taux</p>
+                  <p className="text-sm sm:text-base md:text-lg font-bold">1$ = {companySettings.usd_htg_rate || 132}</p>
                 </div>
-                <Badge variant="outline" className="text-xs shrink-0">HTG</Badge>
+                <Badge variant="outline" className="text-[10px] sm:text-xs shrink-0">HTG</Badge>
               </div>
             </CardContent>
           </Card>
