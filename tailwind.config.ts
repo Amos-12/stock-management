@@ -70,6 +70,13 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        seller: {
+          revenue: "hsl(var(--seller-revenue, 217.2 91.2% 59.8%))",
+          profit: "hsl(var(--seller-profit, 160 84% 45%))",
+          sales: "hsl(var(--seller-sales, 262 83% 58%))",
+          average: "hsl(var(--seller-average, 45 100% 55%))",
+          goal: "hsl(var(--seller-goal, 330 81% 60%))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

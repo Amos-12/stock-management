@@ -11,7 +11,7 @@ interface KPICardProps {
   currency?: string;
   sparklineData?: { value: number }[];
   format?: 'currency' | 'number' | 'percent';
-  colorScheme?: 'default' | 'success' | 'warning' | 'danger';
+  colorScheme?: 'default' | 'success' | 'warning' | 'danger' | 'accent' | 'seller-revenue' | 'seller-profit' | 'seller-sales' | 'seller-average';
 }
 
 export const KPICard = ({
@@ -46,24 +46,65 @@ export const KPICard = ({
   const getColorClasses = () => {
     switch (colorScheme) {
       case 'success':
-        return 'text-green-500 bg-green-500/10';
+      case 'seller-profit':
+        return 'text-success bg-success/10 dark:text-[hsl(160,84%,45%)] dark:bg-[hsl(160,84%,45%)]/20';
       case 'warning':
-        return 'text-yellow-500 bg-yellow-500/10';
+      case 'seller-average':
+        return 'text-warning bg-warning/10 dark:text-[hsl(45,100%,55%)] dark:bg-[hsl(45,100%,55%)]/20';
       case 'danger':
-        return 'text-red-500 bg-red-500/10';
+        return 'text-destructive bg-destructive/10 dark:text-[hsl(350,89%,60%)] dark:bg-[hsl(350,89%,60%)]/20';
+      case 'accent':
+      case 'seller-sales':
+        return 'text-accent dark:text-[hsl(262,83%,58%)] bg-accent/10 dark:bg-[hsl(262,83%,58%)]/20';
+      case 'seller-revenue':
+        return 'text-primary bg-primary/10 dark:text-[hsl(217.2,91.2%,59.8%)] dark:bg-[hsl(217.2,91.2%,59.8%)]/20';
       default:
         return 'text-primary bg-primary/10';
     }
   };
 
-  const sparklineColor = colorScheme === 'danger' 
-    ? 'hsl(var(--destructive))' 
-    : colorScheme === 'success' 
-      ? 'hsl(142, 76%, 36%)' 
-      : 'hsl(var(--primary))';
+  const getCardAccentClass = () => {
+    switch (colorScheme) {
+      case 'seller-revenue':
+        return 'seller-card-revenue';
+      case 'seller-profit':
+      case 'success':
+        return 'seller-card-profit';
+      case 'seller-sales':
+      case 'accent':
+        return 'seller-card-sales';
+      case 'seller-average':
+      case 'warning':
+        return 'seller-card-average';
+      default:
+        return '';
+    }
+  };
+
+  const getSparklineColor = () => {
+    switch (colorScheme) {
+      case 'seller-profit':
+      case 'success':
+        return 'hsl(160, 84%, 45%)';
+      case 'seller-average':
+      case 'warning':
+        return 'hsl(45, 100%, 55%)';
+      case 'seller-sales':
+      case 'accent':
+        return 'hsl(262, 83%, 58%)';
+      case 'seller-revenue':
+        return 'hsl(217.2, 91.2%, 59.8%)';
+      case 'danger':
+        return 'hsl(350, 89%, 60%)';
+      default:
+        return 'hsl(var(--primary))';
+    }
+  };
+
+  const sparklineColor = getSparklineColor();
 
   return (
-    <Card className="relative overflow-hidden bg-card transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
+    <Card className={`relative overflow-hidden bg-card transition-all duration-300 hover:shadow-lg hover:scale-[1.02] dark:border-border/50 ${getCardAccentClass()}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
@@ -79,16 +120,16 @@ export const KPICard = ({
                 {isNeutral ? (
                   <Minus className="w-3 h-3 text-muted-foreground" />
                 ) : isPositive ? (
-                  <TrendingUp className="w-3 h-3 text-green-500" />
+                  <TrendingUp className="w-3 h-3 text-success dark:text-[hsl(160,84%,45%)]" />
                 ) : (
-                  <TrendingDown className="w-3 h-3 text-red-500" />
+                  <TrendingDown className="w-3 h-3 text-destructive dark:text-[hsl(350,89%,60%)]" />
                 )}
                 <span className={`text-xs font-medium ${
                   isNeutral 
                     ? 'text-muted-foreground' 
                     : isPositive 
-                      ? 'text-green-500' 
-                      : 'text-red-500'
+                      ? 'text-success dark:text-[hsl(160,84%,45%)]' 
+                      : 'text-destructive dark:text-[hsl(350,89%,60%)]'
                 }`}>
                   {isPositive ? '+' : ''}{trend.toFixed(1)}%
                 </span>
@@ -110,7 +151,7 @@ export const KPICard = ({
               <AreaChart data={sparklineData}>
                 <defs>
                   <linearGradient id={`gradient-${title}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={sparklineColor} stopOpacity={0.3} />
+                    <stop offset="0%" stopColor={sparklineColor} stopOpacity={0.4} />
                     <stop offset="100%" stopColor={sparklineColor} stopOpacity={0} />
                   </linearGradient>
                 </defs>
@@ -118,7 +159,7 @@ export const KPICard = ({
                   type="monotone"
                   dataKey="value"
                   stroke={sparklineColor}
-                  strokeWidth={1.5}
+                  strokeWidth={2}
                   fill={`url(#gradient-${title})`}
                 />
               </AreaChart>

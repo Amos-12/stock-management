@@ -20,10 +20,10 @@ export const SellerPerformanceComparison = ({ comparisons }: SellerPerformanceCo
   };
 
   return (
-    <Card className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+    <Card className="animate-fade-in-up dark:border-border/50 dark:bg-card/80" style={{ animationDelay: '200ms' }}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <BarChart3 className="w-5 h-5 text-primary" />
+          <BarChart3 className="w-5 h-5 text-primary dark:text-[hsl(217.2,91.2%,59.8%)]" />
           Comparaison de Performance
         </CardTitle>
       </CardHeader>
@@ -36,7 +36,7 @@ export const SellerPerformanceComparison = ({ comparisons }: SellerPerformanceCo
           return (
             <div 
               key={item.label} 
-              className="flex items-center justify-between p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors"
+              className="flex items-center justify-between p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors dark:bg-muted/30 dark:hover:bg-muted/50"
               style={{ animationDelay: `${(index + 1) * 100}ms` }}
             >
               <div className="space-y-1">
@@ -50,16 +50,16 @@ export const SellerPerformanceComparison = ({ comparisons }: SellerPerformanceCo
                   {isNeutral ? (
                     <Minus className="w-4 h-4 text-muted-foreground" />
                   ) : isPositive ? (
-                    <TrendingUp className="w-4 h-4 text-green-500" />
+                    <TrendingUp className="w-4 h-4 text-success dark:text-[hsl(160,84%,45%)]" />
                   ) : (
-                    <TrendingDown className="w-4 h-4 text-red-500" />
+                    <TrendingDown className="w-4 h-4 text-destructive dark:text-[hsl(350,89%,60%)]" />
                   )}
                   <span className={`text-sm font-bold ${
                     isNeutral 
                       ? 'text-muted-foreground' 
                       : isPositive 
-                        ? 'text-green-500' 
-                        : 'text-red-500'
+                        ? 'text-success dark:text-[hsl(160,84%,45%)]' 
+                        : 'text-destructive dark:text-[hsl(350,89%,60%)]'
                   }`}>
                     {isPositive ? '+' : ''}{change.toFixed(1)}%
                   </span>
