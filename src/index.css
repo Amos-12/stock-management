@@ -92,21 +92,22 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
 
     /* Admin Dashboard Accent Colors - Light Mode */
-    --admin-revenue: 217 80% 50%;
-    --admin-profit: 145 70% 38%;
-    --admin-sales: 262 70% 55%;
-    --admin-target: 32 85% 48%;
-    --admin-inventory: 187 75% 42%;
-    --admin-sellers: 330 75% 52%;
-    --admin-orders: 45 80% 45%;
-    --admin-products: 199 75% 45%;
+    --admin-revenue: 217 85% 50%;
+    --admin-profit: 142 70% 40%;
+    --admin-sales: 262 65% 55%;
+    --admin-target: 30 90% 50%;
+    --admin-inventory: 187 80% 45%;
+    --admin-sellers: 330 70% 50%;
+    --admin-orders: 45 85% 45%;
+    --admin-products: 199 80% 45%;
 
-    /* Seller Dashboard Colors - Light Mode */
-    --seller-revenue: 217 80% 50%;
-    --seller-profit: 145 70% 38%;
-    --seller-sales: 262 70% 55%;
-    --seller-average: 45 80% 45%;
-    --seller-goal: 330 75% 52%;
+    /* Seller Dashboard Colors - Light Mode (vibrantes) */
+    --seller-revenue: 217 90% 50%;
+    --seller-profit: 145 80% 35%;
+    --seller-sales: 270 75% 55%;
+    --seller-average: 38 95% 50%;
+    --seller-goal: 340 85% 55%;
+    --seller-trend: 199 85% 45%;
   }
 
   .dark {
@@ -376,6 +377,88 @@
   .animate-slide-in-right {
     animation-fill-mode: both;
   }
+}
+/* Admin Dashboard Card Accents - Light Mode */
+.admin-card-revenue {
+  border-left: 3px solid hsl(var(--admin-revenue));
+  box-shadow: inset 0 0 15px hsl(var(--admin-revenue) / 0.08);
+}
+
+.admin-card-profit {
+  border-left: 3px solid hsl(var(--admin-profit));
+  box-shadow: inset 0 0 15px hsl(var(--admin-profit) / 0.08);
+}
+
+.admin-card-sales {
+  border-left: 3px solid hsl(var(--admin-sales));
+  box-shadow: inset 0 0 15px hsl(var(--admin-sales) / 0.08);
+}
+
+.admin-card-products {
+  border-left: 3px solid hsl(var(--admin-products));
+  box-shadow: inset 0 0 15px hsl(var(--admin-products) / 0.08);
+}
+
+.admin-card-inventory {
+  border-left: 3px solid hsl(var(--admin-inventory));
+  box-shadow: inset 0 0 15px hsl(var(--admin-inventory) / 0.08);
+}
+
+.admin-card-sellers {
+  border-left: 3px solid hsl(var(--admin-sellers));
+  box-shadow: inset 0 0 15px hsl(var(--admin-sellers) / 0.08);
+}
+
+/* Seller Dashboard Card Accents */
+.seller-card-revenue {
+  border-left: 3px solid hsl(var(--seller-revenue));
+  box-shadow: inset 0 0 20px hsl(var(--seller-revenue) / 0.06), 0 4px 12px hsl(var(--seller-revenue) / 0.08);
+}
+
+.seller-card-profit {
+  border-left: 3px solid hsl(var(--seller-profit));
+  box-shadow: inset 0 0 20px hsl(var(--seller-profit) / 0.06), 0 4px 12px hsl(var(--seller-profit) / 0.08);
+}
+
+.seller-card-sales {
+  border-left: 3px solid hsl(var(--seller-sales));
+  box-shadow: inset 0 0 20px hsl(var(--seller-sales) / 0.06), 0 4px 12px hsl(var(--seller-sales) / 0.08);
+}
+
+.seller-card-goal {
+  border-left: 3px solid hsl(var(--seller-goal));
+  box-shadow: inset 0 0 20px hsl(var(--seller-goal) / 0.06), 0 4px 12px hsl(var(--seller-goal) / 0.08);
+}
+
+.seller-card-trend {
+  border-left: 3px solid hsl(var(--seller-trend));
+  box-shadow: inset 0 0 20px hsl(var(--seller-trend) / 0.06), 0 4px 12px hsl(var(--seller-trend) / 0.08);
+}
+
+/* Dark mode overrides for seller cards */
+.dark .seller-card-revenue {
+  border-left-color: hsl(217 91% 60%);
+  box-shadow: inset 0 0 30px hsl(217 91% 60% / 0.1), 0 0 20px hsl(217 91% 60% / 0.15);
+}
+
+.dark .seller-card-profit {
+  border-left-color: hsl(160 84% 45%);
+  box-shadow: inset 0 0 30px hsl(160 84% 45% / 0.1), 0 0 20px hsl(160 84% 45% / 0.15);
+}
+
+.dark .seller-card-sales {
+  border-left-color: hsl(262 83% 58%);
+  box-shadow: inset 0 0 30px hsl(262 83% 58% / 0.1), 0 0 20px hsl(262 83% 58% / 0.15);
+}
+
+.dark .seller-card-goal {
+  border-left-color: hsl(340 85% 60%);
+  box-shadow: inset 0 0 30px hsl(340 85% 60% / 0.1), 0 0 20px hsl(340 85% 60% / 0.15);
+}
+
+.dark .seller-card-trend {
+  border-left-color: hsl(199 89% 48%);
+  box-shadow: inset 0 0 30px hsl(199 89% 48% / 0.1), 0 0 20px hsl(199 89% 48% / 0.15);
 }
 
 @layer base {

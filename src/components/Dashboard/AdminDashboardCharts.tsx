@@ -737,39 +737,60 @@ export const AdminDashboardCharts = () => {
       <Card className="admin-card-inventory animate-fade-in" style={{ animationDelay: '600ms' }}>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-admin-inventory" />
+            <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/20">
+              <BarChart3 className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+            </div>
             Répartition par Catégorie
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <PieChart>
               <Pie
                 data={categoryData}
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
-                innerRadius={60}
+                outerRadius={120}
+                innerRadius={70}
                 fill="#8884d8"
                 dataKey="value"
-                label={(entry) => `${entry.name}: ${entry.value}`}
-                labelLine={{ stroke: 'hsl(var(--muted-foreground))' }}
+                paddingAngle={2}
+                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
               >
                 {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.color}
+                    stroke="hsl(var(--background))"
+                    strokeWidth={2}
+                  />
                 ))}
               </Pie>
               <Tooltip 
+                formatter={(value: any, name: string) => [`${value} produits`, name]}
                 contentStyle={{ 
                   backgroundColor: 'hsl(var(--card))', 
                   border: '1px solid hsl(var(--border))', 
-                  borderRadius: '8px',
-                  color: 'hsl(var(--card-foreground))' 
+                  borderRadius: '12px',
+                  color: 'hsl(var(--card-foreground))',
+                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)'
                 }} 
               />
-              <Legend />
+              <Legend 
+                verticalAlign="bottom"
+                height={36}
+                formatter={(value) => <span className="text-sm text-foreground">{value}</span>}
+              />
             </PieChart>
           </ResponsiveContainer>
+          {/* Total in center overlay */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ marginTop: '-20px' }}>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-foreground">{categoryData.reduce((sum, c) => sum + c.value, 0)}</p>
+              <p className="text-xs text-muted-foreground">Produits</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
