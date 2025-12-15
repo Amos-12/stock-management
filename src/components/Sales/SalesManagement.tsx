@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2, Receipt, DollarSign, LayoutGrid, List } from 'lucide-react';
+import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2, Receipt, DollarSign, LayoutGrid, List, Download, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { SaleDetailsDialog } from './SaleDetailsDialog';
@@ -13,6 +13,8 @@ import { SaleCard } from './SaleCard';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useIsMobile } from '@/hooks/use-mobile';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -361,6 +363,113 @@ export const SalesManagement = () => {
     });
   };
 
+  // Dynamic stats based on filtered sales
+  const filteredStats = useMemo(() => {
+    let htg = 0;
+    let usd = 0;
+    let tvaHtg = 0;
+    let tvaUsd = 0;
+    const tvaRate = companySettings?.tva_rate || 0;
+    
+    filteredSales.forEach(sale => {
+      htg += sale.currencies?.htg || 0;
+      usd += sale.currencies?.usd || 0;
+    });
+    
+    // TVA is already included in currencies (TTC), so calculate HT first then TVA
+    const htgHT = htg / (1 + tvaRate / 100);
+    const usdHT = usd / (1 + tvaRate / 100);
+    tvaHtg = htg - htgHT;
+    tvaUsd = usd - usdHT;
+    
+    return {
+      count: filteredSales.length,
+      htg,
+      usd,
+      tvaHtg,
+      tvaUsd
+    };
+  }, [filteredSales, companySettings]);
+
+  // Export functions
+  const exportToExcel = () => {
+    const data = filteredSales.map(sale => ({
+      'Date': formatDate(sale.created_at),
+      'Client': sale.customer_name || 'Non renseigné',
+      'Vendeur': sale.profiles?.full_name || 'N/A',
+      'Montant HTG': sale.currencies?.htg?.toFixed(2) || '0.00',
+      'Montant USD': sale.currencies?.usd?.toFixed(2) || '0.00',
+      'Paiement': sale.payment_method
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Ventes');
+    XLSX.writeFile(wb, `ventes_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast({ title: "Export Excel", description: `${filteredSales.length} ventes exportées` });
+  };
+
+  const exportToPDF = () => {
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    
+    // Header
+    pdf.setFontSize(18);
+    pdf.text('Rapport des Ventes', pageWidth / 2, 20, { align: 'center' });
+    
+    pdf.setFontSize(10);
+    pdf.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, 28, { align: 'center' });
+    
+    // Stats summary
+    pdf.setFontSize(12);
+    pdf.text(`Total: ${filteredStats.count} ventes`, 20, 45);
+    pdf.text(`Revenus HTG: ${formatNumber(filteredStats.htg)} HTG`, 20, 53);
+    if (filteredStats.usd > 0) {
+      pdf.text(`Revenus USD: $${formatNumber(filteredStats.usd)}`, 20, 61);
+    }
+    
+    // Table header
+    let yPos = 75;
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Date', 20, yPos);
+    pdf.text('Client', 55, yPos);
+    pdf.text('Vendeur', 100, yPos);
+    pdf.text('Montant', 145, yPos);
+    pdf.text('Paiement', 175, yPos);
+    
+    pdf.setFont('helvetica', 'normal');
+    yPos += 8;
+    
+    // Table rows
+    filteredSales.slice(0, 40).forEach((sale) => {
+      if (yPos > 270) {
+        pdf.addPage();
+        yPos = 20;
+      }
+      
+      pdf.text(formatDate(sale.created_at).substring(0, 16), 20, yPos);
+      pdf.text((sale.customer_name || 'N/A').substring(0, 20), 55, yPos);
+      pdf.text((sale.profiles?.full_name || 'N/A').substring(0, 18), 100, yPos);
+      
+      const amount = sale.currencies?.htg 
+        ? `${formatNumber(sale.currencies.htg).substring(0, 12)} HTG`
+        : `$${formatNumber(sale.currencies?.usd || 0).substring(0, 10)}`;
+      pdf.text(amount, 145, yPos);
+      pdf.text(sale.payment_method.substring(0, 10), 175, yPos);
+      
+      yPos += 6;
+    });
+    
+    if (filteredSales.length > 40) {
+      pdf.text(`... et ${filteredSales.length - 40} autres ventes`, 20, yPos + 5);
+    }
+    
+    pdf.save(`ventes_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast({ title: "Export PDF", description: `Rapport généré avec ${filteredSales.length} ventes` });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -373,14 +482,14 @@ export const SalesManagement = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+      {/* Stats Cards - Dynamic based on filters */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <Card className="shadow-sm">
           <CardContent className="p-2 sm:p-3 md:p-4">
             <div className="flex items-center justify-between gap-1 sm:gap-2">
               <div className="min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Total ventes</p>
-                <p className="text-sm sm:text-base md:text-lg font-bold">{sales.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Ventes filtrées</p>
+                <p className="text-sm sm:text-base md:text-lg font-bold">{filteredStats.count}</p>
               </div>
               <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0" />
             </div>
@@ -391,13 +500,10 @@ export const SalesManagement = () => {
           <CardContent className="p-2 sm:p-3 md:p-4">
             <div className="flex items-center justify-between gap-1 sm:gap-2">
               <div className="min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Revenu total</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Revenu HTG</p>
                 <p className="text-sm sm:text-base md:text-lg font-bold truncate">
-                  {formatCompactNumber(revenueStats.totalHTG, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
+                  {formatCompactNumber(filteredStats.htg, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
                 </p>
-                {revenueStats.totalUSD > 0 && (
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">+ ${formatCompactNumber(revenueStats.totalUSD, isMobile)}</p>
-                )}
               </div>
               <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0 hidden sm:block" />
             </div>
@@ -408,15 +514,12 @@ export const SalesManagement = () => {
           <CardContent className="p-2 sm:p-3 md:p-4">
             <div className="flex items-center justify-between gap-1 sm:gap-2">
               <div className="min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Aujourd'hui</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Revenu USD</p>
                 <p className="text-sm sm:text-base md:text-lg font-bold truncate">
-                  {formatCompactNumber(revenueStats.todayHTG, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
+                  ${formatCompactNumber(filteredStats.usd, isMobile)}
                 </p>
-                {revenueStats.todayUSD > 0 && (
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">+ ${formatCompactNumber(revenueStats.todayUSD, isMobile)}</p>
-                )}
               </div>
-              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0 hidden sm:block" />
+              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0 hidden sm:block" />
             </div>
           </CardContent>
         </Card>
@@ -428,27 +531,10 @@ export const SalesManagement = () => {
                 <div className="min-w-0">
                   <p className="text-[10px] sm:text-xs text-muted-foreground">TVA ({companySettings.tva_rate}%)</p>
                   <p className="text-sm sm:text-base md:text-lg font-bold truncate">
-                    {formatCompactNumber(tvaStats.totalTVA_HTG, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
-                  </p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">
-                    Auj: {formatCompactNumber(tvaStats.todayTVA_HTG, isMobile)} HTG
+                    {formatCompactNumber(filteredStats.tvaHtg, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
                   </p>
                 </div>
                 <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0 hidden sm:block" />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {(revenueStats.totalUSD > 0 || revenueStats.todayUSD > 0) && companySettings && (
-          <Card className="shadow-sm">
-            <CardContent className="p-2 sm:p-3 md:p-4">
-              <div className="flex items-center justify-between gap-1 sm:gap-2">
-                <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Taux</p>
-                  <p className="text-sm sm:text-base md:text-lg font-bold">1$ = {companySettings.usd_htg_rate || 132}</p>
-                </div>
-                <Badge variant="outline" className="text-[10px] sm:text-xs shrink-0">HTG</Badge>
               </div>
             </CardContent>
           </Card>
@@ -458,10 +544,22 @@ export const SalesManagement = () => {
       {/* Sales Table */}
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5" />
-            Historique des Ventes
-          </CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5" />
+              Historique des Ventes
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={exportToExcel} className="h-8">
+                <Download className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Excel</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportToPDF} className="h-8">
+                <FileText className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">PDF</span>
+              </Button>
+            </div>
+          </div>
           <div className="flex flex-col gap-3 mt-4">
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <div className="relative flex-1">
