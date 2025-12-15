@@ -576,9 +576,9 @@ export const AdminDashboardCharts = () => {
         </div>
       </div>
 
-      {/* KPI Cards - Row 1: Métriques principales */}
+      {/* KPI Cards - Row 1: Métriques prioritaires avec ombre style graphique */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="animate-fade-in" style={{ animationDelay: '0ms' }}>
+        <div className="animate-fade-in priority-card" style={{ animationDelay: '0ms' }}>
           <KPICard
             title="Revenus Aujourd'hui"
             value={todayRevenue}
@@ -590,7 +590,7 @@ export const AdminDashboardCharts = () => {
             colorScheme="admin-revenue"
           />
         </div>
-        <div className="animate-fade-in" style={{ animationDelay: '50ms' }}>
+        <div className="animate-fade-in priority-card" style={{ animationDelay: '50ms' }}>
           <KPICard
             title="Bénéfices Aujourd'hui"
             value={todayProfit}
@@ -602,31 +602,7 @@ export const AdminDashboardCharts = () => {
             colorScheme="admin-profit"
           />
         </div>
-        <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
-          <KPICard
-            title="Ventes Aujourd'hui"
-            value={todaySales}
-            icon={ShoppingCart}
-            format="number"
-            sparklineData={salesSparkline.map(v => ({ value: v }))}
-            colorScheme="admin-sales"
-          />
-        </div>
-        <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
-          <KPICard
-            title="Panier Moyen"
-            value={avgBasket}
-            icon={BarChart3}
-            format="currency"
-            currency="HTG"
-            colorScheme="admin-orders"
-          />
-        </div>
-      </div>
-
-      {/* KPI Cards - Row 2: Métriques secondaires */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+        <div className="animate-fade-in priority-card" style={{ animationDelay: '100ms' }}>
           <KPICard
             title="Revenus Semaine"
             value={weekRevenue}
@@ -634,10 +610,11 @@ export const AdminDashboardCharts = () => {
             icon={Wallet}
             format="currency"
             currency="HTG"
+            sparklineData={salesSparkline.map(v => ({ value: v }))}
             colorScheme="admin-target"
           />
         </div>
-        <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
+        <div className="animate-fade-in priority-card" style={{ animationDelay: '150ms' }}>
           <KPICard
             title="Bénéfices Mois"
             value={monthProfit}
@@ -645,7 +622,33 @@ export const AdminDashboardCharts = () => {
             icon={TrendingUp}
             format="currency"
             currency="HTG"
+            sparklineData={profitSparkline.map(v => ({ value: v }))}
             colorScheme="admin-profit"
+          />
+        </div>
+      </div>
+
+      {/* KPI Cards - Row 2: Métriques secondaires (petites) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <KPICard
+            title="Ventes Aujourd'hui"
+            value={todaySales}
+            icon={ShoppingCart}
+            format="number"
+            colorScheme="admin-sales"
+            size="sm"
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
+          <KPICard
+            title="Panier Moyen"
+            value={avgBasket}
+            icon={BarChart3}
+            format="currency"
+            currency="HTG"
+            colorScheme="admin-orders"
+            size="sm"
           />
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
@@ -657,6 +660,7 @@ export const AdminDashboardCharts = () => {
             format="currency"
             currency="HTG"
             colorScheme="admin-inventory"
+            size="sm"
           />
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '350ms' }}>
@@ -666,6 +670,7 @@ export const AdminDashboardCharts = () => {
             icon={Package}
             format="number"
             colorScheme="admin-products"
+            size="sm"
           />
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '400ms' }}>
@@ -675,6 +680,7 @@ export const AdminDashboardCharts = () => {
             icon={Users}
             format="number"
             colorScheme="admin-sellers"
+            size="sm"
           />
         </div>
       </div>
