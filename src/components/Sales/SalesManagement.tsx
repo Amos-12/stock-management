@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2, Receipt, DollarSign } from 'lucide-react';
+import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2, Receipt, DollarSign, LayoutGrid, List } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { SaleDetailsDialog } from './SaleDetailsDialog';
+import { SaleCard } from './SaleCard';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -81,7 +82,15 @@ export const SalesManagement = () => {
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const isMobile = useIsMobile();
+
+  // Auto-switch to cards on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setViewMode('cards');
+    }
+  }, [isMobile]);
 
   const { 
     paginatedItems: paginatedSales, 
@@ -428,122 +437,174 @@ export const SalesManagement = () => {
                 className="pl-9"
               />
             </div>
-            <Select value={currencyFilter} onValueChange={(value: 'all' | 'HTG' | 'USD' | 'mixed') => setCurrencyFilter(value)}>
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Devise" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toutes devises</SelectItem>
-                <SelectItem value="HTG">HTG uniquement</SelectItem>
-                <SelectItem value="USD">USD uniquement</SelectItem>
-                <SelectItem value="mixed">Mixte (HTG + USD)</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={currencyFilter} onValueChange={(value: 'all' | 'HTG' | 'USD' | 'mixed') => setCurrencyFilter(value)}>
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="Devise" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes</SelectItem>
+                  <SelectItem value="HTG">HTG</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="mixed">Mixte</SelectItem>
+                </SelectContent>
+              </Select>
+              {/* View toggle - desktop only */}
+              {!isMobile && (
+                <div className="flex border rounded-md overflow-hidden">
+                  <Button
+                    variant={viewMode === 'table' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="rounded-none h-10 px-3"
+                    onClick={() => setViewMode('table')}
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="rounded-none h-10 px-3"
+                    onClick={() => setViewMode('cards')}
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Vendeur</TableHead>
-                  <TableHead>Montant</TableHead>
-                  <TableHead>Paiement</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedSales.length === 0 ? (
+          {/* Card view for mobile or when selected */}
+          {viewMode === 'cards' ? (
+            <div className="space-y-2">
+              {paginatedSales.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ShoppingCart className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                  <p>Aucune vente trouvée</p>
+                </div>
+              ) : (
+                paginatedSales.map((sale) => (
+                  <SaleCard
+                    key={sale.id}
+                    sale={sale}
+                    isAdmin={isAdmin}
+                    onView={(id) => {
+                      setSelectedSaleId(id);
+                      setDialogOpen(true);
+                    }}
+                    onDelete={handleDeleteSale}
+                  />
+                ))
+              )}
+            </div>
+          ) : (
+            /* Table view for desktop */
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      Aucune vente trouvée
-                    </TableCell>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead className="hidden md:table-cell">Vendeur</TableHead>
+                    <TableHead>Montant</TableHead>
+                    <TableHead className="hidden sm:table-cell">Paiement</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ) : (
-                  paginatedSales.map((sale) => (
-                    <TableRow key={sale.id}>
-                      <TableCell className="font-medium">
-                        {formatDate(sale.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        {sale.customer_name || <span className="text-muted-foreground italic">Non renseigné</span>}
-                      </TableCell>
-                      <TableCell>
-                        {sale.profiles?.full_name || <span className="text-muted-foreground italic">N/A</span>}
-                      </TableCell>
-                      <TableCell className="font-bold">
-                        <div className="flex flex-col">
-                          {sale.currencies?.htg ? (
-                            <span>{formatNumber(sale.currencies.htg)} HTG</span>
-                          ) : null}
-                          {sale.currencies?.usd ? (
-                            <span className="text-muted-foreground text-sm">${formatNumber(sale.currencies.usd)}</span>
-                          ) : null}
-                          {!sale.currencies?.htg && !sale.currencies?.usd && (
-                            <span>{formatNumber(sale.total_amount)} HTG</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {sale.payment_method}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedSaleId(sale.id);
-                              setDialogOpen(true);
-                            }}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          
-                          {isAdmin && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button 
-                                  size="sm" 
-                                  variant="destructive"
-                                  title="Supprimer cette vente"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Êtes-vous sûr de vouloir supprimer cette vente ?
-                                    Cette action est irréversible et supprimera également tous les articles de vente associés.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                  <AlertDialogAction 
-                                    onClick={() => handleDeleteSale(sale.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Supprimer
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {paginatedSales.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        Aucune vente trouvée
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : (
+                    paginatedSales.map((sale) => (
+                      <TableRow key={sale.id}>
+                        <TableCell className="font-medium text-xs sm:text-sm">
+                          {formatDate(sale.created_at)}
+                        </TableCell>
+                        <TableCell className="text-xs sm:text-sm">
+                          {sale.customer_name || <span className="text-muted-foreground italic">Non renseigné</span>}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-xs sm:text-sm">
+                          {sale.profiles?.full_name || <span className="text-muted-foreground italic">N/A</span>}
+                        </TableCell>
+                        <TableCell className="font-bold text-xs sm:text-sm">
+                          <div className="flex flex-col">
+                            {sale.currencies?.htg ? (
+                              <span>{formatNumber(sale.currencies.htg)} HTG</span>
+                            ) : null}
+                            {sale.currencies?.usd ? (
+                              <span className="text-muted-foreground text-xs">${formatNumber(sale.currencies.usd)}</span>
+                            ) : null}
+                            {!sale.currencies?.htg && !sale.currencies?.usd && (
+                              <span>{formatNumber(sale.total_amount)} HTG</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge variant="outline" className="capitalize text-xs">
+                            {sale.payment_method}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1 sm:gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+                              onClick={() => {
+                                setSelectedSaleId(sale.id);
+                                setDialogOpen(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                              <span className="hidden sm:inline ml-1">Voir</span>
+                            </Button>
+                            
+                            {isAdmin && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    size="sm" 
+                                    variant="destructive"
+                                    className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+                                    title="Supprimer cette vente"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="w-[90vw] max-w-md">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Êtes-vous sûr de vouloir supprimer cette vente ?
+                                      Cette action est irréversible.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => handleDeleteSale(sale.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Supprimer
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
           <TablePagination
             currentPage={currentPage}
             totalPages={totalPages}
