@@ -900,7 +900,10 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     try {
       const subtotal = getSubtotal();
       const discountAmount = getDiscountAmount();
-      const totalAmount = getFinalTotal();
+      const afterDiscount = getFinalTotal();  // Sous-total après remise (HT)
+      const tvaRate = companySettings?.tva_rate || 0;
+      const tvaAmount = afterDiscount * (tvaRate / 100);
+      const totalAmount = afterDiscount + tvaAmount;  // Total TTC incluant la TVA
 
       // === VALIDATION EN TEMPS RÉEL DU STOCK ===
       // Récupérer les données fraîches de la base pour tous les produits du panier
