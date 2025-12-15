@@ -196,15 +196,15 @@ export const KPICard = ({
               <AreaChart data={sparklineData}>
                 <defs>
                   <linearGradient id={`gradient-${title.replace(/\s/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={sparklineColor} stopOpacity={0.5} />
-                    <stop offset="100%" stopColor={sparklineColor} stopOpacity={0.05} />
+                    <stop offset="0%" stopColor={sparklineColor} stopOpacity={0.6} />
+                    <stop offset="100%" stopColor={sparklineColor} stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
                 <Area
                   type="monotone"
                   dataKey="value"
                   stroke={sparklineColor}
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                   fill={`url(#gradient-${title.replace(/\s/g, '-')})`}
                 />
               </AreaChart>
