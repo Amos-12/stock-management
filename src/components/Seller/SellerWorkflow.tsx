@@ -117,6 +117,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const { categories: dynamicCategories } = useCategories();
   const { sousCategories: dynamicSousCategories } = useSousCategories();
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('products');
+  const [transitionDirection, setTransitionDirection] = useState<'forward' | 'backward'>('forward');
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -140,6 +141,25 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
   const [cartPulse, setCartPulse] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+
+  // Step transition helpers
+  const getStepOrder = (step: WorkflowStep): number => {
+    const order: Record<WorkflowStep, number> = { products: 0, cart: 1, checkout: 2, success: 3 };
+    return order[step];
+  };
+
+  const handleStepChange = useCallback((newStep: WorkflowStep) => {
+    const currentOrder = getStepOrder(currentStep);
+    const newOrder = getStepOrder(newStep);
+    setTransitionDirection(newOrder > currentOrder ? 'forward' : 'backward');
+    setCurrentStep(newStep);
+  }, [currentStep]);
+
+  const getStepAnimationClass = () => {
+    return transitionDirection === 'forward' 
+      ? 'animate-slide-in-right' 
+      : 'animate-slide-in-left';
+  };
 
   // Dynamic categories for filtering
   const availableDynamicCategories = useMemo(() => {
@@ -391,7 +411,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       if (e.ctrlKey && e.key.toLowerCase() === 'p') {
         e.preventDefault();
         if (currentStep === 'products' && cart.length > 0) {
-          setCurrentStep('cart');
+          handleStepChange('cart');
         }
       }
       if (e.key === 'Escape') {
@@ -400,9 +420,9 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           setShowShortcutsHelp(false);
         } else if (!isInput) {
           if (currentStep === 'cart') {
-            setCurrentStep('products');
+            handleStepChange('products');
           } else if (currentStep === 'checkout') {
-            setCurrentStep('cart');
+            handleStepChange('cart');
           }
         }
       }
@@ -1008,7 +1028,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         description: `Vente de ${formatAmount(totalAmount)} enregistrée avec succès`,
       });
 
-      setCurrentStep('success');
+      handleStepChange('success');
       triggerConfetti();
       playSuccess();
       setCompletedSale({
@@ -1093,7 +1113,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   };
 
   const resetWorkflow = () => {
-    setCurrentStep('products');
+    handleStepChange('products');
     setCart([]);
     setCustomerName('');
     setCustomerAddress('');
@@ -1237,17 +1257,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               return (
                 <div key={step.id} className="flex items-center">
                   <div
-                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-smooth ${
+                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-500 ease-out ${
                       isActive
-                        ? 'border-primary bg-primary text-primary-foreground'
+                        ? 'border-primary bg-primary text-primary-foreground scale-110'
                         : isCompleted
                         ? 'border-success bg-success text-success-foreground'
                         : 'border-muted-foreground text-muted-foreground'
                     }`}
                   >
-                    <StepIcon className="w-4 h-4" />
+                    <StepIcon className={`w-4 h-4 transition-transform duration-300 ${isActive ? 'scale-110' : ''}`} />
                   </div>
-                  <span className={`hidden sm:block ml-2 text-xs font-medium ${isActive ? 'text-primary' : isCompleted ? 'text-success' : 'text-muted-foreground'}`}>
+                  <span className={`hidden sm:block ml-2 text-xs font-medium transition-all duration-300 ${isActive ? 'text-primary scale-105' : isCompleted ? 'text-success' : 'text-muted-foreground'}`}>
                     {step.label}
                   </span>
                   {index < steps.length - 1 && (
@@ -1262,7 +1282,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
 
       {/* Step Content */}
       {currentStep === 'products' && (
-        <Card className="shadow-lg flex flex-col h-[calc(100vh-120px)] min-h-[600px]">
+        <Card className={`shadow-lg flex flex-col h-[calc(100vh-120px)] min-h-[600px] ${getStepAnimationClass()}`}>
           <CardHeader className="pb-2 space-y-2 shrink-0">
             <CardTitle className="flex items-center gap-2 text-base">
               <Package className="w-4 h-4" />
@@ -1822,10 +1842,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       )}
 
       {currentStep === 'cart' && (
-        <CartSection
-          cart={cart}
-          onContinueShopping={() => setCurrentStep('products')}
-          onCheckout={() => setCurrentStep('checkout')}
+        <div className={getStepAnimationClass()}>
+          <CartSection
+            cart={cart}
+            onContinueShopping={() => handleStepChange('products')}
+            onCheckout={() => handleStepChange('checkout')}
           onRemoveItem={removeFromCart}
           onUpdateQuantity={updateQuantity}
           onDirectQuantityChange={handleDirectQuantityChange}
@@ -1837,14 +1858,15 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           barresToTonnage={barresToTonnage}
           companySettings={companySettings}
         />
+        </div>
       )}
 
       {currentStep === 'checkout' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-200px)] min-h-[500px]">
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-200px)] min-h-[500px] ${getStepAnimationClass()}`}>
           {/* Left Column - Client Info & Payment */}
           <div className="space-y-4">
             {/* Client Info Card */}
-            <Card className="border-2">
+            <Card className="border-2 animate-fade-in-up" style={{ animationDelay: '0ms' }}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -1878,7 +1900,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             </Card>
 
             {/* Payment Method Card */}
-            <Card className="border-2">
+            <Card className="border-2 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -1969,7 +1991,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           </div>
 
           {/* Center Column - Order Summary */}
-          <Card className="border-2 flex flex-col lg:col-span-1">
+          <Card className="border-2 flex flex-col lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
             <CardHeader className="pb-2 border-b shrink-0">
               <CardTitle className="text-base flex items-center justify-between">
                 <span className="flex items-center gap-2">
@@ -2006,7 +2028,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           {/* Right Column - Totals & Actions */}
           <div className="flex flex-col gap-4">
             {/* Totals Card */}
-            <Card className="border-2 flex-1">
+            <Card className="border-2 flex-1 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Total</CardTitle>
               </CardHeader>
@@ -2086,7 +2108,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             {/* Action Buttons - Sticky */}
             <div className="flex gap-2">
               <Button
-                onClick={() => setCurrentStep('cart')}
+                onClick={() => handleStepChange('cart')}
                 variant="outline"
                 className="flex-1"
               >
@@ -2111,7 +2133,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       )}
 
       {currentStep === 'success' && (
-        <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-500">
+        <div className={`max-w-2xl mx-auto ${getStepAnimationClass()}`}>
           <Card className="shadow-2xl border-2 border-success/20 overflow-hidden">
             {/* Header avec animation */}
             <div className="bg-gradient-to-br from-success/10 via-success/5 to-transparent p-8 text-center relative">
@@ -2467,7 +2489,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             
             {/* Bouton circulaire principal */}
             <Button
-              onClick={() => setCurrentStep('cart')}
+              onClick={() => handleStepChange('cart')}
               size="lg"
               className={`h-16 w-16 rounded-full shadow-2xl hover:scale-110 transition-transform duration-200 bg-primary hover:bg-primary/90 relative group p-0 ${cartPulse ? 'animate-[pulse_0.6s_ease-in-out]' : ''}`}
             >
