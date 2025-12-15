@@ -2,7 +2,7 @@ import { useState, useRef, TouchEvent } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2, User, Calendar, CreditCard, ChevronRight } from 'lucide-react';
+import { Eye, Trash2, User, Calendar, CreditCard, ChevronRight, ChevronLeft } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +35,7 @@ interface SaleCardProps {
   isAdmin: boolean;
   onView: (saleId: string) => void;
   onDelete: (saleId: string) => void;
+  showSwipeHint?: boolean;
 }
 
 const formatNumber = (amount: number): string => {
@@ -60,7 +61,7 @@ const formatCompactNumber = (amount: number): string => {
   return formatNumber(amount);
 };
 
-export const SaleCard = ({ sale, isAdmin, onView, onDelete }: SaleCardProps) => {
+export const SaleCard = ({ sale, isAdmin, onView, onDelete, showSwipeHint = false }: SaleCardProps) => {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const startX = useRef(0);
@@ -131,6 +132,13 @@ export const SaleCard = ({ sale, isAdmin, onView, onDelete }: SaleCardProps) => 
           onTouchEnd={handleTouchEnd}
         >
           <CardContent className="p-3">
+            {/* Swipe hint for first card */}
+            {showSwipeHint && isAdmin && swipeOffset === 0 && (
+              <div className="absolute top-1/2 right-2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-muted-foreground animate-pulse">
+                <ChevronLeft className="w-3 h-3" />
+                <span>Glisser</span>
+              </div>
+            )}
             <div className="flex items-start justify-between gap-2">
               {/* Left section - Main info */}
               <div className="flex-1 min-w-0 space-y-1.5">

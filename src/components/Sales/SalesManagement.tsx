@@ -75,6 +75,7 @@ export const SalesManagement = () => {
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currencyFilter, setCurrencyFilter] = useState<'all' | 'HTG' | 'USD' | 'mixed'>('all');
+  const [periodFilter, setPeriodFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [loading, setLoading] = useState(true);
   const [revenueStats, setRevenueStats] = useState<RevenueStats>({ totalHTG: 0, totalUSD: 0, todayHTG: 0, todayUSD: 0 });
   const [tvaStats, setTvaStats] = useState<TvaStats>({ totalTVA_HTG: 0, totalTVA_USD: 0, todayTVA_HTG: 0, todayTVA_USD: 0 });
@@ -91,6 +92,35 @@ export const SalesManagement = () => {
       setViewMode('cards');
     }
   }, [isMobile]);
+
+  // Helper function to filter by period
+  const filterByPeriod = (saleDate: Date, filter: 'all' | 'today' | 'week' | 'month'): boolean => {
+    if (filter === 'all') return true;
+    
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const saleDay = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate());
+    
+    if (filter === 'today') {
+      return saleDay.getTime() === today.getTime();
+    }
+    
+    if (filter === 'week') {
+      // Start of week (Monday)
+      const dayOfWeek = now.getDay();
+      const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - diffToMonday);
+      return saleDay >= startOfWeek;
+    }
+    
+    if (filter === 'month') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      return saleDay >= startOfMonth;
+    }
+    
+    return true;
+  };
 
   const { 
     paginatedItems: paginatedSales, 
@@ -142,9 +172,14 @@ export const SalesManagement = () => {
       });
     }
 
+    // Apply period filter
+    if (periodFilter !== 'all') {
+      filtered = filtered.filter(sale => filterByPeriod(new Date(sale.created_at), periodFilter));
+    }
+
     setFilteredSales(filtered);
     resetPage();
-  }, [searchTerm, currencyFilter, sales]);
+  }, [searchTerm, currencyFilter, periodFilter, sales]);
 
   const fetchSales = async () => {
     try {
@@ -427,50 +462,68 @@ export const SalesManagement = () => {
             <ShoppingCart className="w-5 h-5" />
             Historique des Ventes
           </CardTitle>
-          <div className="flex flex-col sm:flex-row gap-3 mt-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher par client ou vendeur..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Select value={currencyFilter} onValueChange={(value: 'all' | 'HTG' | 'USD' | 'mixed') => setCurrencyFilter(value)}>
-                <SelectTrigger className="w-full sm:w-[140px]">
-                  <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
-                  <SelectValue placeholder="Devise" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes</SelectItem>
-                  <SelectItem value="HTG">HTG</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="mixed">Mixte</SelectItem>
-                </SelectContent>
-              </Select>
-              {/* View toggle - desktop only */}
-              {!isMobile && (
-                <div className="flex border rounded-md overflow-hidden">
-                  <Button
-                    variant={viewMode === 'table' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="rounded-none h-10 px-3"
-                    onClick={() => setViewMode('table')}
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'cards' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="rounded-none h-10 px-3"
-                    onClick={() => setViewMode('cards')}
-                  >
-                    <LayoutGrid className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
+          <div className="flex flex-col gap-3 mt-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher par client ou vendeur..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {/* Period filter */}
+                <Select value={periodFilter} onValueChange={(value: 'all' | 'today' | 'week' | 'month') => setPeriodFilter(value)}>
+                  <SelectTrigger className="w-[120px] sm:w-[130px]">
+                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Période" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tout</SelectItem>
+                    <SelectItem value="today">Aujourd'hui</SelectItem>
+                    <SelectItem value="week">Cette semaine</SelectItem>
+                    <SelectItem value="month">Ce mois</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {/* Currency filter */}
+                <Select value={currencyFilter} onValueChange={(value: 'all' | 'HTG' | 'USD' | 'mixed') => setCurrencyFilter(value)}>
+                  <SelectTrigger className="w-[100px] sm:w-[120px]">
+                    <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Devise" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes</SelectItem>
+                    <SelectItem value="HTG">HTG</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="mixed">Mixte</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {/* View toggle - desktop only */}
+                {!isMobile && (
+                  <div className="flex border rounded-md overflow-hidden">
+                    <Button
+                      variant={viewMode === 'table' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="rounded-none h-10 px-3"
+                      onClick={() => setViewMode('table')}
+                    >
+                      <List className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="rounded-none h-10 px-3"
+                      onClick={() => setViewMode('cards')}
+                    >
+                      <LayoutGrid className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -484,11 +537,12 @@ export const SalesManagement = () => {
                   <p>Aucune vente trouvée</p>
                 </div>
               ) : (
-                paginatedSales.map((sale) => (
+                paginatedSales.map((sale, index) => (
                   <SaleCard
                     key={sale.id}
                     sale={sale}
                     isAdmin={isAdmin}
+                    showSwipeHint={index === 0}
                     onView={(id) => {
                       setSelectedSaleId(id);
                       setDialogOpen(true);
