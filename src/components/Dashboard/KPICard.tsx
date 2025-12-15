@@ -148,7 +148,7 @@ export const KPICard = ({
   const sparklineColor = getSparklineColor();
 
   return (
-    <Card className={`relative overflow-hidden bg-card transition-all duration-300 hover:shadow-lg hover:scale-[1.02] dark:border-border/50 ${getCardAccentClass()}`}>
+    <Card className={`relative overflow-hidden bg-card transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 dark:border-border/50 dark:hover:shadow-primary/5 ${getCardAccentClass()}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
