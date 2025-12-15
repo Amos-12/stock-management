@@ -377,9 +377,33 @@ export const generateReceipt = (
     pdf.text(formatAmount(unifiedSubtotal, displayCurrency, true), width - margin, yPos, { align: 'right' });
     yPos += 5;
   } else {
+    // Single currency - convert if item currency doesn't match display currency
+    let singleCurrencySubtotal = saleData.subtotal;
+    
+    // If only USD items and display is HTG, convert
+    if (totalUSD > 0 && totalHTG === 0 && displayCurrency === 'HTG') {
+      singleCurrencySubtotal = totalUSD * rate;
+    }
+    // If only HTG items and display is USD, convert
+    else if (totalHTG > 0 && totalUSD === 0 && displayCurrency === 'USD') {
+      singleCurrencySubtotal = totalHTG / rate;
+    }
+    
     pdf.text('Sous-total HT:', margin, yPos);
-    pdf.text(formatAmount(saleData.subtotal, displayCurrency, true), width - margin, yPos, { align: 'right' });
+    pdf.text(formatAmount(singleCurrencySubtotal, displayCurrency, true), width - margin, yPos, { align: 'right' });
     yPos += 5;
+  }
+  
+  // Calculate baseSubtotal with proper conversion
+  let baseSubtotal: number;
+  if (hasMultipleCurrencies) {
+    baseSubtotal = unifiedSubtotal;
+  } else if (totalUSD > 0 && totalHTG === 0 && displayCurrency === 'HTG') {
+    baseSubtotal = totalUSD * rate;
+  } else if (totalHTG > 0 && totalUSD === 0 && displayCurrency === 'USD') {
+    baseSubtotal = totalHTG / rate;
+  } else {
+    baseSubtotal = saleData.subtotal;
   }
   
   // Discount amount (use stored value directly)
@@ -394,8 +418,7 @@ export const generateReceipt = (
     yPos += 5;
   }
   
-  // Calculate after discount and TVA (same logic as invoice)
-  const baseSubtotal = hasMultipleCurrencies ? unifiedSubtotal : saleData.subtotal;
+  // Calculate after discount and TVA
   const afterDiscount = baseSubtotal - discountAmount;
   const tvaAmount = afterDiscount * (companySettings.tva_rate / 100);
   
