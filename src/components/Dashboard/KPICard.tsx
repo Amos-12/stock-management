@@ -109,37 +109,8 @@ export const KPICard = ({
   };
 
   const getCardAccentClass = () => {
-    switch (colorScheme) {
-      case 'seller-revenue':
-        return 'seller-card-revenue';
-      case 'seller-profit':
-      case 'success':
-        return 'seller-card-profit';
-      case 'seller-sales':
-      case 'accent':
-        return 'seller-card-sales';
-      case 'seller-average':
-      case 'warning':
-        return 'seller-card-goal';
-      case 'admin-revenue':
-        return 'admin-card-revenue';
-      case 'admin-profit':
-        return 'admin-card-profit';
-      case 'admin-sales':
-        return 'admin-card-sales';
-      case 'admin-target':
-        return 'admin-card-revenue';
-      case 'admin-inventory':
-        return 'admin-card-inventory';
-      case 'admin-sellers':
-        return 'admin-card-sellers';
-      case 'admin-orders':
-        return 'admin-card-revenue';
-      case 'admin-products':
-        return 'admin-card-products';
-      default:
-        return '';
-    }
+    // Removed colored border classes - now returns empty string
+    return '';
   };
 
   const getSparklineColor = () => {
