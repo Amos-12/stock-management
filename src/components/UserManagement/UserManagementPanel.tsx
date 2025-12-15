@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, UserCheck, Mail, Calendar, Search, UserPlus, RefreshCcw, Settings, Trash2, LayoutGrid, List, Shield, User } from 'lucide-react';
+import { Users, UserCheck, UserX, Mail, Calendar, Search, UserPlus, RefreshCcw, Settings, Trash2, LayoutGrid, List, Shield, User, Crown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { usePagination } from '@/hooks/usePagination';
@@ -57,12 +57,6 @@ const getAvatarColor = (role: string, isActive: boolean) => {
   return 'bg-orange-500 text-white';
 };
 
-// Helper to get card border color
-const getCardBorderColor = (role: string, isActive: boolean) => {
-  if (role === 'admin') return 'border-l-primary';
-  if (isActive) return 'border-l-green-500';
-  return 'border-l-orange-500';
-};
 
 export const UserManagementPanel = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -394,7 +388,8 @@ export const UserManagementPanel = () => {
 
   const totalUsers = users.length;
   const adminUsers = users.filter(u => u.role === 'admin').length;
-  const sellerUsers = users.filter(u => u.role === 'seller').length;
+  const activeUsers = users.filter(u => u.role === 'seller' && u.is_active).length;
+  const inactiveUsers = users.filter(u => u.role === 'seller' && !u.is_active).length;
 
   if (loading) {
     return (
@@ -412,7 +407,7 @@ export const UserManagementPanel = () => {
   // User Card Component for card view
   const UserCard = ({ user }: { user: User }) => (
     <Card 
-      className={`shadow-md border-l-4 ${getCardBorderColor(user.role, user.is_active)} hover:shadow-lg transition-all duration-200 animate-in fade-in-50`}
+      className="shadow-md hover:shadow-lg transition-all duration-200 animate-in fade-in-50"
     >
       <CardContent className="p-4">
         {/* Header with avatar and name */}
@@ -514,35 +509,45 @@ export const UserManagementPanel = () => {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Utilisateurs</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalUsers}</div>
+      {/* Stats Cards - 2x2 on mobile, 4 columns on desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="shadow-md">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="text-xl sm:text-2xl font-bold">{totalUsers}</div>
+            <p className="text-xs text-muted-foreground">Total Utilisateurs</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Administrateurs</CardTitle>
-            <UserCheck className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{adminUsers}</div>
+        <Card className="shadow-md">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Shield className="h-4 w-4 text-primary" />
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-primary">{adminUsers}</div>
+            <p className="text-xs text-muted-foreground">Administrateurs</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Vendeurs</CardTitle>
-            <Users className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">{sellerUsers}</div>
+        <Card className="shadow-md">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-2">
+              <UserCheck className="h-4 w-4 text-green-500" />
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-green-500">{activeUsers}</div>
+            <p className="text-xs text-muted-foreground">Vendeurs Actifs</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-md">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-2">
+              <UserX className="h-4 w-4 text-orange-500" />
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-orange-500">{inactiveUsers}</div>
+            <p className="text-xs text-muted-foreground">Vendeurs Inactifs</p>
           </CardContent>
         </Card>
       </div>
@@ -591,27 +596,39 @@ export const UserManagementPanel = () => {
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Promouvoir un utilisateur</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Crown className="w-5 h-5 text-primary" />
+                      Promouvoir un utilisateur
+                    </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Entrez l'email d'un utilisateur existant pour lui accorder les privilèges administrateur.
+                    </p>
                     <div className="space-y-2">
-                      <label htmlFor="email" className="text-sm font-medium">
-                        Email de l'utilisateur
-                      </label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="user@example.com"
-                        value={emailToPromote}
-                        onChange={(e) => setEmailToPromote(e.target.value)}
-                      />
+                      <Label htmlFor="email">Email de l'utilisateur</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="user@example.com"
+                          value={emailToPromote}
+                          onChange={(e) => setEmailToPromote(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        L'utilisateur doit déjà avoir un compte dans le système.
+                      </p>
                     </div>
                     <Button 
                       onClick={handlePromoteToAdmin}
-                      disabled={isPromoting}
+                      disabled={isPromoting || !emailToPromote.trim()}
                       className="w-full"
                     >
-                      {isPromoting ? 'Promotion...' : 'Promouvoir Admin'}
+                      <Crown className="w-4 h-4 mr-2" />
+                      {isPromoting ? 'Promotion en cours...' : 'Promouvoir Administrateur'}
                     </Button>
                   </div>
                 </DialogContent>
