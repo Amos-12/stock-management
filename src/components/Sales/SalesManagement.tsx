@@ -81,6 +81,7 @@ export const SalesManagement = () => {
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const isMobile = useIsMobile();
 
   const { 
     paginatedItems: paginatedSales, 
@@ -306,7 +307,6 @@ export const SalesManagement = () => {
     );
   }
 
-  const isMobile = useIsMobile();
 
   return (
     <div className="space-y-4 sm:space-y-6">
