@@ -160,6 +160,16 @@
   .transition-bounce {
     transition: var(--transition-bounce);
   }
+
+  /* Animation fill mode for cascade animations */
+  .animate-fade-in-up {
+    animation-fill-mode: both;
+  }
+  
+  .animate-slide-in-left,
+  .animate-slide-in-right {
+    animation-fill-mode: both;
+  }
 }
 
 @layer base {
