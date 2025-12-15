@@ -679,10 +679,10 @@ export const AdminDashboardCharts = () => {
         </div>
       </div>
 
-      {/* Main Charts Grid */}
+      {/* Main Charts Grid - Revenue Chart + Recent Activities */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue/Profit Trend - Full Width */}
-        <div className="lg:col-span-3 animate-fade-in" style={{ animationDelay: '400ms' }}>
+        {/* Revenue/Profit Trend - 2/3 width */}
+        <div className="lg:col-span-2 animate-fade-in" style={{ animationDelay: '400ms' }}>
           <Card className="admin-card-revenue h-full">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -691,7 +691,7 @@ export const AdminDashboardCharts = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
+              <ResponsiveContainer width="100%" height={320}>
                 <AreaChart data={revenueData}>
                   <defs>
                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
@@ -739,6 +739,11 @@ export const AdminDashboardCharts = () => {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Recent Activities - 1/3 width */}
+        <div className="animate-fade-in" style={{ animationDelay: '450ms' }}>
+          <RecentActivities />
         </div>
       </div>
 
@@ -796,8 +801,8 @@ export const AdminDashboardCharts = () => {
         </div>
       </div>
 
-      {/* Category Distribution, Business Health & Recent Activities Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Category Distribution & Business Health Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Category Distribution */}
         <Card className="admin-card-inventory animate-fade-in" style={{ animationDelay: '600ms' }}>
           <CardHeader className="pb-2">
@@ -885,9 +890,6 @@ export const AdminDashboardCharts = () => {
             totalProducts={totalProducts}
           />
         </div>
-
-        {/* Recent Activities */}
-        <RecentActivities />
       </div>
     </div>
   );
