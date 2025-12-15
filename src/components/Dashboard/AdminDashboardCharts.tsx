@@ -99,6 +99,7 @@ export const AdminDashboardCharts = () => {
   const [yesterdayProfit, setYesterdayProfit] = useState(0);
   const [prevWeekRevenue, setPrevWeekRevenue] = useState(0);
   const [prevMonthRevenue, setPrevMonthRevenue] = useState(0);
+  const [prevMonthProfit, setPrevMonthProfit] = useState(0);
   const [usdHtgRate, setUsdHtgRate] = useState(132);
 
   // Sparkline data
@@ -133,8 +134,6 @@ export const AdminDashboardCharts = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60000); // Auto-refresh every 60s
-    return () => clearInterval(interval);
   }, [fetchData]);
 
   const fetchCompanySettings = async () => {
@@ -287,6 +286,7 @@ export const AdminDashboardCharts = () => {
         .lt('sales.created_at', monthAgo.toISOString());
       
       setPrevMonthRevenue(calculateUnifiedTotal(prevMonthItems || [], rate).unified);
+      setPrevMonthProfit(calculateUnifiedProfit(prevMonthItems || [], rate));
 
       // Products count
       const { count: productsCount } = await supabase
@@ -625,7 +625,7 @@ export const AdminDashboardCharts = () => {
       </div>
 
       {/* KPI Cards - Row 2: Métriques secondaires */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
           <KPICard
             title="Revenus Semaine"
@@ -639,6 +639,17 @@ export const AdminDashboardCharts = () => {
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
           <KPICard
+            title="Bénéfices Mois"
+            value={monthProfit}
+            previousValue={prevMonthProfit}
+            icon={TrendingUp}
+            format="currency"
+            currency="HTG"
+            colorScheme="admin-profit"
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
+          <KPICard
             title="Revenus Mois"
             value={monthRevenue}
             previousValue={prevMonthRevenue}
@@ -648,7 +659,7 @@ export const AdminDashboardCharts = () => {
             colorScheme="admin-inventory"
           />
         </div>
-        <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
+        <div className="animate-fade-in" style={{ animationDelay: '350ms' }}>
           <KPICard
             title="Produits Actifs"
             value={totalProducts}
@@ -657,7 +668,7 @@ export const AdminDashboardCharts = () => {
             colorScheme="admin-products"
           />
         </div>
-        <div className="animate-fade-in" style={{ animationDelay: '350ms' }}>
+        <div className="animate-fade-in" style={{ animationDelay: '400ms' }}>
           <KPICard
             title="Vendeurs Actifs"
             value={totalSellers}
