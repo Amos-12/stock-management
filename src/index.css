@@ -142,12 +142,23 @@
     --seller-sales: 262 83% 58%;
     --seller-average: 45 100% 55%;
     --seller-goal: 330 81% 60%;
+    
+    /* Admin Dashboard Accent Colors - Royal & Professional */
+    --admin-revenue: 217 91% 60%;
+    --admin-profit: 160 84% 39%;
+    --admin-sales: 262 83% 58%;
+    --admin-target: 32 95% 44%;
+    --admin-inventory: 187 92% 50%;
+    --admin-sellers: 330 81% 60%;
+    --admin-orders: 45 93% 47%;
+    --admin-products: 199 89% 48%;
 
     /* Enhanced Gradients for Dark Mode */
     --gradient-primary: linear-gradient(135deg, hsl(217.2 91.2% 59.8%), hsl(262 83% 58%));
     --gradient-success: linear-gradient(135deg, hsl(160 84% 45%), hsl(142 76% 50%));
     --gradient-accent: linear-gradient(135deg, hsl(262 83% 58%), hsl(330 81% 60%));
     --gradient-warm: linear-gradient(135deg, hsl(45 100% 55%), hsl(25 95% 55%));
+    --gradient-admin: linear-gradient(135deg, hsl(217 91% 60%), hsl(262 83% 58%));
 
     /* Glow Shadows for Dark Mode */
     --shadow-glow-primary: 0 0 20px hsl(217.2 91.2% 59.8% / 0.4);
@@ -226,6 +237,47 @@
   .dark .seller-card-average {
     border-left: 3px solid hsl(var(--seller-average));
     box-shadow: inset 0 0 30px hsl(var(--seller-average) / 0.1), var(--shadow-glow-warning);
+  }
+
+  /* Admin Dashboard Card Accents */
+  .dark .admin-card-revenue {
+    border-left: 3px solid hsl(var(--admin-revenue));
+    box-shadow: inset 0 0 25px hsl(var(--admin-revenue) / 0.1), 0 4px 20px hsl(var(--admin-revenue) / 0.08);
+  }
+
+  .dark .admin-card-profit {
+    border-left: 3px solid hsl(var(--admin-profit));
+    box-shadow: inset 0 0 25px hsl(var(--admin-profit) / 0.1), 0 4px 20px hsl(var(--admin-profit) / 0.08);
+  }
+
+  .dark .admin-card-sales {
+    border-left: 3px solid hsl(var(--admin-sales));
+    box-shadow: inset 0 0 25px hsl(var(--admin-sales) / 0.1), 0 4px 20px hsl(var(--admin-sales) / 0.08);
+  }
+
+  .dark .admin-card-target {
+    border-left: 3px solid hsl(var(--admin-target));
+    box-shadow: inset 0 0 25px hsl(var(--admin-target) / 0.1), 0 4px 20px hsl(var(--admin-target) / 0.08);
+  }
+
+  .dark .admin-card-inventory {
+    border-left: 3px solid hsl(var(--admin-inventory));
+    box-shadow: inset 0 0 25px hsl(var(--admin-inventory) / 0.1), 0 4px 20px hsl(var(--admin-inventory) / 0.08);
+  }
+
+  .dark .admin-card-sellers {
+    border-left: 3px solid hsl(var(--admin-sellers));
+    box-shadow: inset 0 0 25px hsl(var(--admin-sellers) / 0.1), 0 4px 20px hsl(var(--admin-sellers) / 0.08);
+  }
+
+  .dark .admin-card-orders {
+    border-left: 3px solid hsl(var(--admin-orders));
+    box-shadow: inset 0 0 25px hsl(var(--admin-orders) / 0.1), 0 4px 20px hsl(var(--admin-orders) / 0.08);
+  }
+
+  .dark .admin-card-products {
+    border-left: 3px solid hsl(var(--admin-products));
+    box-shadow: inset 0 0 25px hsl(var(--admin-products) / 0.1), 0 4px 20px hsl(var(--admin-products) / 0.08);
   }
 
   .transition-smooth {

@@ -77,6 +77,16 @@ export default {
           average: "hsl(var(--seller-average, 45 100% 55%))",
           goal: "hsl(var(--seller-goal, 330 81% 60%))",
         },
+        admin: {
+          revenue: "hsl(var(--admin-revenue, 217 91% 60%))",
+          profit: "hsl(var(--admin-profit, 160 84% 39%))",
+          sales: "hsl(var(--admin-sales, 262 83% 58%))",
+          target: "hsl(var(--admin-target, 32 95% 44%))",
+          inventory: "hsl(var(--admin-inventory, 187 92% 50%))",
+          sellers: "hsl(var(--admin-sellers, 330 81% 60%))",
+          orders: "hsl(var(--admin-orders, 45 93% 47%))",
+          products: "hsl(var(--admin-products, 199 89% 48%))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
