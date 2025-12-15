@@ -15,7 +15,7 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { useIsMobile } from '@/hooks/use-mobile';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -428,23 +428,6 @@ export const SalesManagement = () => {
     };
   }, [filteredSales, companySettings]);
 
-  // Chart data for sales evolution
-  const chartData = useMemo(() => {
-    const dateMap = new Map<string, { date: string; revenue: number; sales: number }>();
-    const usdRate = companySettings?.usd_htg_rate || 132;
-    
-    filteredSales.forEach(sale => {
-      const dateKey = new Date(sale.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-      const existing = dateMap.get(dateKey) || { date: dateKey, revenue: 0, sales: 0 };
-      const htg = sale.currencies?.htg || 0;
-      const usd = sale.currencies?.usd || 0;
-      existing.revenue += htg + (usd * usdRate);
-      existing.sales += 1;
-      dateMap.set(dateKey, existing);
-    });
-    
-    return Array.from(dateMap.values()).reverse().slice(-14);
-  }, [filteredSales, companySettings]);
 
   // Export functions
   const exportToExcel = () => {
@@ -614,7 +597,9 @@ export const SalesManagement = () => {
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Ventes filtrées</p>
                 <p className="text-sm sm:text-base md:text-lg font-bold">{filteredStats.count}</p>
               </div>
-              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500/15 flex items-center justify-center shrink-0">
+                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -628,7 +613,9 @@ export const SalesManagement = () => {
                   {formatCompactNumber(filteredStats.htg, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
                 </p>
               </div>
-              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0 hidden sm:block" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -642,7 +629,9 @@ export const SalesManagement = () => {
                   ${formatCompactNumber(filteredStats.usd, isMobile)}
                 </p>
               </div>
-              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0 hidden sm:block" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -657,66 +646,14 @@ export const SalesManagement = () => {
                     {formatCompactNumber(filteredStats.tvaHtg, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
                   </p>
                 </div>
-                <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-50 shrink-0 hidden sm:block" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-violet-500/15 flex items-center justify-center shrink-0">
+                  <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
+                </div>
               </div>
             </CardContent>
           </Card>
         )}
       </div>
-
-      {/* Sales Evolution Chart */}
-      {chartData.length > 1 && (
-        <Card className="shadow-lg">
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              Évolution des ventes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className="h-[180px] sm:h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                    stroke="hsl(var(--border))"
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                    stroke="hsl(var(--border))"
-                    tickFormatter={(val) => val >= 1000 ? `${(val/1000).toFixed(0)}K` : val}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--card-foreground))'
-                    }}
-                    formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
-                    labelFormatter={(label) => `Date: ${label}`}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="hsl(var(--primary))" 
-                    fill="url(#revenueGradient)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Sales Table */}
       <Card className="shadow-lg">
