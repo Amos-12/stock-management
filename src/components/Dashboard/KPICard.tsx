@@ -43,35 +43,68 @@ export const KPICard = ({
     }
   };
 
-  const getColorClasses = () => {
+  // Get gradient icon background for light mode, solid for dark
+  const getIconGradientClasses = () => {
     switch (colorScheme) {
       case 'success':
       case 'seller-profit':
       case 'admin-profit':
-        return 'text-success bg-success/10 dark:text-[hsl(160,84%,45%)] dark:bg-[hsl(160,84%,45%)]/20';
+        return 'bg-gradient-to-br from-emerald-400/20 to-teal-500/20 dark:bg-emerald-500/20';
       case 'warning':
       case 'seller-average':
       case 'admin-orders':
-        return 'text-warning bg-warning/10 dark:text-[hsl(45,100%,55%)] dark:bg-[hsl(45,100%,55%)]/20';
+        return 'bg-gradient-to-br from-amber-400/20 to-orange-500/20 dark:bg-amber-500/20';
       case 'danger':
-        return 'text-destructive bg-destructive/10 dark:text-[hsl(350,89%,60%)] dark:bg-[hsl(350,89%,60%)]/20';
+        return 'bg-gradient-to-br from-red-400/20 to-rose-500/20 dark:bg-red-500/20';
       case 'accent':
       case 'seller-sales':
       case 'admin-sales':
-        return 'text-accent dark:text-[hsl(262,83%,58%)] bg-accent/10 dark:bg-[hsl(262,83%,58%)]/20';
+        return 'bg-gradient-to-br from-violet-400/20 to-purple-500/20 dark:bg-violet-500/20';
       case 'seller-revenue':
       case 'admin-revenue':
-        return 'text-primary bg-primary/10 dark:text-[hsl(217,91%,60%)] dark:bg-[hsl(217,91%,60%)]/20';
+        return 'bg-gradient-to-br from-blue-400/20 to-indigo-500/20 dark:bg-blue-500/20';
       case 'admin-target':
-        return 'text-orange-500 bg-orange-500/10 dark:text-[hsl(32,95%,44%)] dark:bg-[hsl(32,95%,44%)]/20';
+        return 'bg-gradient-to-br from-orange-400/20 to-amber-500/20 dark:bg-orange-500/20';
       case 'admin-inventory':
-        return 'text-cyan-500 bg-cyan-500/10 dark:text-[hsl(187,92%,50%)] dark:bg-[hsl(187,92%,50%)]/20';
+        return 'bg-gradient-to-br from-cyan-400/20 to-teal-500/20 dark:bg-cyan-500/20';
       case 'admin-sellers':
-        return 'text-pink-500 bg-pink-500/10 dark:text-[hsl(330,81%,60%)] dark:bg-[hsl(330,81%,60%)]/20';
+        return 'bg-gradient-to-br from-pink-400/20 to-rose-500/20 dark:bg-pink-500/20';
       case 'admin-products':
-        return 'text-sky-500 bg-sky-500/10 dark:text-[hsl(199,89%,48%)] dark:bg-[hsl(199,89%,48%)]/20';
+        return 'bg-gradient-to-br from-sky-400/20 to-blue-500/20 dark:bg-sky-500/20';
       default:
-        return 'text-primary bg-primary/10';
+        return 'bg-gradient-to-br from-blue-400/20 to-indigo-500/20 dark:bg-primary/20';
+    }
+  };
+
+  const getIconColorClasses = () => {
+    switch (colorScheme) {
+      case 'success':
+      case 'seller-profit':
+      case 'admin-profit':
+        return 'text-emerald-600 dark:text-emerald-400';
+      case 'warning':
+      case 'seller-average':
+      case 'admin-orders':
+        return 'text-amber-600 dark:text-amber-400';
+      case 'danger':
+        return 'text-red-600 dark:text-red-400';
+      case 'accent':
+      case 'seller-sales':
+      case 'admin-sales':
+        return 'text-violet-600 dark:text-violet-400';
+      case 'seller-revenue':
+      case 'admin-revenue':
+        return 'text-blue-600 dark:text-blue-400';
+      case 'admin-target':
+        return 'text-orange-600 dark:text-orange-400';
+      case 'admin-inventory':
+        return 'text-cyan-600 dark:text-cyan-400';
+      case 'admin-sellers':
+        return 'text-pink-600 dark:text-pink-400';
+      case 'admin-products':
+        return 'text-sky-600 dark:text-sky-400';
+      default:
+        return 'text-blue-600 dark:text-primary';
     }
   };
 
@@ -87,7 +120,7 @@ export const KPICard = ({
         return 'seller-card-sales';
       case 'seller-average':
       case 'warning':
-        return 'seller-card-average';
+        return 'seller-card-goal';
       case 'admin-revenue':
         return 'admin-card-revenue';
       case 'admin-profit':
@@ -95,13 +128,13 @@ export const KPICard = ({
       case 'admin-sales':
         return 'admin-card-sales';
       case 'admin-target':
-        return 'admin-card-target';
+        return 'admin-card-revenue';
       case 'admin-inventory':
         return 'admin-card-inventory';
       case 'admin-sellers':
         return 'admin-card-sellers';
       case 'admin-orders':
-        return 'admin-card-orders';
+        return 'admin-card-revenue';
       case 'admin-products':
         return 'admin-card-products';
       default:
@@ -160,16 +193,16 @@ export const KPICard = ({
                 {isNeutral ? (
                   <Minus className="w-3 h-3 text-muted-foreground" />
                 ) : isPositive ? (
-                  <TrendingUp className="w-3 h-3 text-success dark:text-[hsl(160,84%,45%)]" />
+                  <TrendingUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 ) : (
-                  <TrendingDown className="w-3 h-3 text-destructive dark:text-[hsl(350,89%,60%)]" />
+                  <TrendingDown className="w-3 h-3 text-red-600 dark:text-red-400" />
                 )}
                 <span className={`text-xs font-medium ${
                   isNeutral 
                     ? 'text-muted-foreground' 
                     : isPositive 
-                      ? 'text-success dark:text-[hsl(160,84%,45%)]' 
-                      : 'text-destructive dark:text-[hsl(350,89%,60%)]'
+                      ? 'text-emerald-600 dark:text-emerald-400' 
+                      : 'text-red-600 dark:text-red-400'
                 }`}>
                   {isPositive ? '+' : ''}{trend.toFixed(1)}%
                 </span>
@@ -180,8 +213,9 @@ export const KPICard = ({
             )}
           </div>
           
-          <div className={`p-2 rounded-lg ${getColorClasses()}`}>
-            <Icon className="w-5 h-5" />
+          {/* Gradient icon container for light mode */}
+          <div className={`p-2.5 rounded-xl ${getIconGradientClasses()} shadow-sm`}>
+            <Icon className={`w-5 h-5 ${getIconColorClasses()}`} />
           </div>
         </div>
 
@@ -190,9 +224,9 @@ export const KPICard = ({
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
                 <defs>
-                  <linearGradient id={`gradient-${title}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={sparklineColor} stopOpacity={0.4} />
-                    <stop offset="100%" stopColor={sparklineColor} stopOpacity={0} />
+                  <linearGradient id={`gradient-${title.replace(/\s/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={sparklineColor} stopOpacity={0.5} />
+                    <stop offset="100%" stopColor={sparklineColor} stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 <Area
@@ -200,7 +234,7 @@ export const KPICard = ({
                   dataKey="value"
                   stroke={sparklineColor}
                   strokeWidth={2}
-                  fill={`url(#gradient-${title})`}
+                  fill={`url(#gradient-${title.replace(/\s/g, '-')})`}
                 />
               </AreaChart>
             </ResponsiveContainer>
