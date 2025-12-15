@@ -12,6 +12,7 @@ interface KPICardProps {
   sparklineData?: { value: number }[];
   format?: 'currency' | 'number' | 'percent';
   colorScheme?: 'default' | 'success' | 'warning' | 'danger' | 'accent' | 'seller-revenue' | 'seller-profit' | 'seller-sales' | 'seller-average' | 'admin-revenue' | 'admin-profit' | 'admin-sales' | 'admin-target' | 'admin-inventory' | 'admin-sellers' | 'admin-orders' | 'admin-products';
+  size?: 'default' | 'sm';
 }
 
 export const KPICard = ({
@@ -23,6 +24,7 @@ export const KPICard = ({
   sparklineData,
   format = 'currency',
   colorScheme = 'default',
+  size = 'default',
 }: KPICardProps) => {
   const trend = previousValue && previousValue > 0 
     ? ((value - previousValue) / previousValue) * 100 
@@ -147,19 +149,21 @@ export const KPICard = ({
 
   const sparklineColor = getSparklineColor();
 
+  const isSmall = size === 'sm';
+
   return (
     <Card className={`relative overflow-hidden bg-card transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 dark:border-border/50 dark:hover:shadow-primary/5 ${getCardAccentClass()}`}>
-      <CardContent className="p-4">
+      <CardContent className={isSmall ? "p-3" : "p-4"}>
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-muted-foreground truncate">
+            <p className={`font-medium text-muted-foreground truncate ${isSmall ? 'text-xs' : 'text-sm'}`}>
               {title}
             </p>
-            <p className="text-xl font-bold text-foreground mt-1 truncate">
+            <p className={`font-bold text-foreground mt-1 truncate ${isSmall ? 'text-base' : 'text-xl'}`}>
               {formatValue()}
             </p>
             
-            {previousValue !== undefined && (
+            {previousValue !== undefined && !isSmall && (
               <div className="flex items-center gap-1 mt-2">
                 {isNeutral ? (
                   <Minus className="w-3 h-3 text-muted-foreground" />
@@ -185,12 +189,12 @@ export const KPICard = ({
           </div>
           
           {/* Gradient icon container for light mode */}
-          <div className={`p-2.5 rounded-xl ${getIconGradientClasses()} shadow-sm`}>
-            <Icon className={`w-5 h-5 ${getIconColorClasses()}`} />
+          <div className={`rounded-xl ${getIconGradientClasses()} shadow-sm ${isSmall ? 'p-1.5' : 'p-2.5'}`}>
+            <Icon className={`${isSmall ? 'w-4 h-4' : 'w-5 h-5'} ${getIconColorClasses()}`} />
           </div>
         </div>
 
-        {sparklineData && sparklineData.length > 0 && (
+        {sparklineData && sparklineData.length > 0 && !isSmall && (
           <div className="mt-3 h-12 -mx-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
