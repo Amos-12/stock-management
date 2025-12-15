@@ -576,7 +576,7 @@ export const AdminDashboardCharts = () => {
         </div>
       </div>
 
-      {/* KPI Cards - Row 1 */}
+      {/* KPI Cards - Row 1: Métriques principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="animate-fade-in" style={{ animationDelay: '0ms' }}>
           <KPICard
@@ -604,45 +604,45 @@ export const AdminDashboardCharts = () => {
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
           <KPICard
+            title="Ventes Aujourd'hui"
+            value={todaySales}
+            icon={ShoppingCart}
+            format="number"
+            sparklineData={salesSparkline.map(v => ({ value: v }))}
+            colorScheme="admin-sales"
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
+          <KPICard
+            title="Panier Moyen"
+            value={avgBasket}
+            icon={BarChart3}
+            format="currency"
+            currency="HTG"
+            colorScheme="admin-orders"
+          />
+        </div>
+      </div>
+
+      {/* KPI Cards - Row 2: Métriques secondaires */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <KPICard
             title="Revenus Semaine"
             value={weekRevenue}
             previousValue={prevWeekRevenue}
             icon={Wallet}
             format="currency"
             currency="HTG"
-            colorScheme="admin-sales"
+            colorScheme="admin-target"
           />
         </div>
-        <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
+        <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
           <KPICard
             title="Revenus Mois"
             value={monthRevenue}
             previousValue={prevMonthRevenue}
             icon={Target}
-            format="currency"
-            currency="HTG"
-            colorScheme="admin-target"
-          />
-        </div>
-      </div>
-
-      {/* KPI Cards - Row 2 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
-          <KPICard
-            title="Ventes Aujourd'hui"
-            value={todaySales}
-            icon={ShoppingCart}
-            format="number"
-            sparklineData={salesSparkline.map(v => ({ value: v }))}
-            colorScheme="admin-orders"
-          />
-        </div>
-        <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
-          <KPICard
-            title="Panier Moyen"
-            value={avgBasket}
-            icon={BarChart3}
             format="currency"
             currency="HTG"
             colorScheme="admin-inventory"
@@ -807,7 +807,7 @@ export const AdminDashboardCharts = () => {
             Répartition par Catégorie
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
           <ResponsiveContainer width="100%" height={350}>
             <PieChart>
               <Pie
@@ -848,8 +848,8 @@ export const AdminDashboardCharts = () => {
               />
             </PieChart>
           </ResponsiveContainer>
-          {/* Total in center overlay */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ marginTop: '-20px' }}>
+          {/* Total in center overlay - properly positioned inside relative container */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" style={{ marginTop: '-18px' }}>
             <div className="text-center">
               <p className="text-2xl font-bold text-foreground">{categoryData.reduce((sum, c) => sum + c.value, 0)}</p>
               <p className="text-xs text-muted-foreground">Produits</p>
