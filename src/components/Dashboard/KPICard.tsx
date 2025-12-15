@@ -148,7 +148,10 @@ export const KPICard = ({
   };
 
   const sparklineColor = getSparklineColor();
-
+  
+  // Créer un ID unique sans caractères spéciaux pour le gradient SVG
+  const gradientId = `gradient-${title.replace(/[^a-zA-Z0-9]/g, '')}`;
+  
   const isSmall = size === 'sm';
 
   return (
@@ -199,7 +202,7 @@ export const KPICard = ({
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
                 <defs>
-                  <linearGradient id={`gradient-${title.replace(/\s/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={sparklineColor} stopOpacity={0.6} />
                     <stop offset="100%" stopColor={sparklineColor} stopOpacity={0.1} />
                   </linearGradient>
@@ -209,7 +212,7 @@ export const KPICard = ({
                   dataKey="value"
                   stroke={sparklineColor}
                   strokeWidth={2.5}
-                  fill={`url(#gradient-${title.replace(/\s/g, '-')})`}
+                  fill={`url(#${gradientId})`}
                 />
               </AreaChart>
             </ResponsiveContainer>
