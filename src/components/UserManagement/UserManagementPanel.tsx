@@ -10,7 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, UserCheck, UserX, Mail, Calendar, Search, UserPlus, RefreshCcw, Settings, Trash2, LayoutGrid, List, Shield, User, Crown } from 'lucide-react';
+import { Users, UserCheck, UserX, Mail, Calendar, Search, UserPlus, RefreshCcw, Settings, Trash2, LayoutGrid, List, Shield, User, Crown, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { usePagination } from '@/hooks/usePagination';
@@ -398,6 +399,36 @@ export const UserManagementPanel = () => {
   const activeUsers = users.filter(u => u.role === 'seller' && u.is_active).length;
   const inactiveUsers = users.filter(u => u.role === 'seller' && !u.is_active).length;
 
+  const exportToExcel = () => {
+    const exportData = filteredUsers.map(user => ({
+      'Nom Complet': user.full_name,
+      'Email': user.email || 'N/A',
+      'Rôle': user.role === 'admin' ? 'Administrateur' : 'Vendeur',
+      'Statut': user.is_active ? 'Actif' : 'Inactif',
+      'Date de création': new Date(user.created_at).toLocaleDateString('fr-FR')
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Utilisateurs');
+    
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 25 }, // Nom
+      { wch: 30 }, // Email
+      { wch: 15 }, // Rôle
+      { wch: 10 }, // Statut
+      { wch: 15 }, // Date
+    ];
+
+    XLSX.writeFile(wb, `utilisateurs_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast({
+      title: "Export réussi",
+      description: `${exportData.length} utilisateurs exportés`
+    });
+  };
+
   if (loading) {
     return (
       <Card className="shadow-lg">
@@ -553,19 +584,18 @@ export const UserManagementPanel = () => {
             <div className="flex items-center justify-between mb-2">
               <Users className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-3">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
                 <span className="text-lg font-bold text-green-600 dark:text-green-400">{activeUsers}</span>
-                <span className="text-xs text-muted-foreground">Actifs</span>
               </div>
-              <div className="flex items-center gap-2">
+              <span className="text-muted-foreground font-light">|</span>
+              <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-orange-500" />
                 <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{inactiveUsers}</span>
-                <span className="text-xs text-muted-foreground">Inactifs</span>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Statut Vendeurs</p>
+            <p className="text-xs text-muted-foreground mt-1 text-center">Actifs | Inactifs</p>
           </CardContent>
         </Card>
       </div>
@@ -603,6 +633,10 @@ export const UserManagementPanel = () => {
               
               <Button variant="ghost" size="sm" onClick={fetchUsers} title="Rafraîchir">
                 <RefreshCcw className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportToExcel} title="Exporter Excel">
+                <Download className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Export</span>
               </Button>
               <Dialog>
                 <DialogTrigger asChild>
