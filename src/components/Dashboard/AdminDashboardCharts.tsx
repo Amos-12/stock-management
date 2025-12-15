@@ -629,7 +629,7 @@ export const AdminDashboardCharts = () => {
       </div>
 
       {/* KPI Cards - Row 2: Métriques secondaires (petites) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
           <KPICard
             title="Ventes Aujourd'hui"
@@ -670,16 +670,6 @@ export const AdminDashboardCharts = () => {
             icon={Package}
             format="number"
             colorScheme="admin-products"
-            size="sm"
-          />
-        </div>
-        <div className="animate-fade-in" style={{ animationDelay: '400ms' }}>
-          <KPICard
-            title="Vendeurs Actifs"
-            value={totalSellers}
-            icon={Users}
-            format="number"
-            colorScheme="admin-sellers"
             size="sm"
           />
         </div>
@@ -812,68 +802,86 @@ export const AdminDashboardCharts = () => {
         <div className="animate-fade-in" style={{ animationDelay: '550ms' }}>
           <AdminTopSellersChart sellers={topSellers} />
         </div>
-      </div>
 
-      {/* Category Distribution */}
-      <Card className="admin-card-inventory animate-fade-in" style={{ animationDelay: '600ms' }}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/20">
-              <BarChart3 className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+        {/* Category Distribution - Improved */}
+        <Card className="admin-card-inventory animate-fade-in" style={{ animationDelay: '600ms' }}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/20">
+                <BarChart3 className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              </div>
+              Distribution par Catégorie
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col lg:flex-row items-center gap-6">
+              {/* Pie Chart */}
+              <div className="relative flex-shrink-0">
+                <ResponsiveContainer width={220} height={220}>
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      innerRadius={60}
+                      fill="#8884d8"
+                      dataKey="value"
+                      paddingAngle={3}
+                    >
+                      {categoryData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.color}
+                          stroke="hsl(var(--background))"
+                          strokeWidth={2}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: any, name: string) => [`${value} produits`, name]}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))', 
+                        borderRadius: '8px',
+                        color: 'hsl(var(--card-foreground))'
+                      }} 
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Total in center */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                  <p className="text-2xl font-bold text-foreground">{categoryData.reduce((sum, c) => sum + c.value, 0)}</p>
+                  <p className="text-xs text-muted-foreground">Produits</p>
+                </div>
+              </div>
+              
+              {/* Legend as list */}
+              <div className="flex-1 space-y-2 w-full">
+                {categoryData.map((category, index) => {
+                  const total = categoryData.reduce((sum, c) => sum + c.value, 0);
+                  const percent = total > 0 ? ((category.value / total) * 100).toFixed(1) : 0;
+                  return (
+                    <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <span className="text-sm font-medium text-foreground">{category.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-muted-foreground">{category.value}</span>
+                        <span className="text-sm font-semibold text-foreground w-12 text-right">{percent}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            Répartition par Catégorie
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="relative">
-          <ResponsiveContainer width="100%" height={350}>
-            <PieChart>
-              <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                outerRadius={120}
-                innerRadius={70}
-                fill="#8884d8"
-                dataKey="value"
-                paddingAngle={2}
-                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.color}
-                    stroke="hsl(var(--background))"
-                    strokeWidth={2}
-                  />
-                ))}
-              </Pie>
-              <Tooltip 
-                formatter={(value: any, name: string) => [`${value} produits`, name]}
-                contentStyle={{ 
-                  backgroundColor: 'hsl(var(--card))', 
-                  border: '1px solid hsl(var(--border))', 
-                  borderRadius: '12px',
-                  color: 'hsl(var(--card-foreground))',
-                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)'
-                }} 
-              />
-              <Legend 
-                verticalAlign="bottom"
-                height={36}
-                formatter={(value) => <span className="text-sm text-foreground">{value}</span>}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          {/* Total in center overlay - properly positioned inside relative container */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" style={{ marginTop: '-18px' }}>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-foreground">{categoryData.reduce((sum, c) => sum + c.value, 0)}</p>
-              <p className="text-xs text-muted-foreground">Produits</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
