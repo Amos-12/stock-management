@@ -62,6 +62,8 @@ export const UserManagementPanel = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'seller'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [emailToPromote, setEmailToPromote] = useState('');
   const [isPromoting, setIsPromoting] = useState(false);
   const [selectedUserCategories, setSelectedUserCategories] = useState<{
@@ -369,10 +371,14 @@ export const UserManagementPanel = () => {
     }
   };
 
-  const filteredUsers = users.filter(user =>
-    user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' ? user.is_active : !user.is_active);
+    return matchesSearch && matchesRole && matchesStatus;
+  });
 
   const { 
     paginatedItems: paginatedUsers, 
@@ -388,6 +394,7 @@ export const UserManagementPanel = () => {
 
   const totalUsers = users.length;
   const adminUsers = users.filter(u => u.role === 'admin').length;
+  const sellerUsers = users.filter(u => u.role === 'seller').length;
   const activeUsers = users.filter(u => u.role === 'seller' && u.is_active).length;
   const inactiveUsers = users.filter(u => u.role === 'seller' && !u.is_active).length;
 
@@ -534,20 +541,31 @@ export const UserManagementPanel = () => {
         <Card className="shadow-md">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between mb-2">
-              <UserCheck className="h-4 w-4 text-green-500" />
+              <User className="h-4 w-4 text-blue-500" />
             </div>
-            <div className="text-xl sm:text-2xl font-bold text-green-500">{activeUsers}</div>
-            <p className="text-xs text-muted-foreground">Vendeurs Actifs</p>
+            <div className="text-xl sm:text-2xl font-bold text-blue-500">{sellerUsers}</div>
+            <p className="text-xs text-muted-foreground">Vendeurs</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-md">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between mb-2">
-              <UserX className="h-4 w-4 text-orange-500" />
+              <Users className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className="text-xl sm:text-2xl font-bold text-orange-500">{inactiveUsers}</div>
-            <p className="text-xs text-muted-foreground">Vendeurs Inactifs</p>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="text-lg font-bold text-green-600 dark:text-green-400">{activeUsers}</span>
+                <span className="text-xs text-muted-foreground">Actifs</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-orange-500" />
+                <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{inactiveUsers}</span>
+                <span className="text-xs text-muted-foreground">Inactifs</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Statut Vendeurs</p>
           </CardContent>
         </Card>
       </div>
@@ -647,6 +665,73 @@ export const UserManagementPanel = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground mr-1">Rôle:</span>
+              <div className="flex items-center gap-1 border rounded-lg p-0.5">
+                <Button
+                  variant={roleFilter === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRoleFilter('all')}
+                  className="h-7 px-2 text-xs"
+                >
+                  Tous
+                </Button>
+                <Button
+                  variant={roleFilter === 'admin' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRoleFilter('admin')}
+                  className="h-7 px-2 text-xs"
+                >
+                  <Shield className="w-3 h-3 mr-1" />
+                  Admin ({adminUsers})
+                </Button>
+                <Button
+                  variant={roleFilter === 'seller' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRoleFilter('seller')}
+                  className="h-7 px-2 text-xs"
+                >
+                  <User className="w-3 h-3 mr-1" />
+                  Vendeur ({sellerUsers})
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground mr-1">Statut:</span>
+              <div className="flex items-center gap-1 border rounded-lg p-0.5">
+                <Button
+                  variant={statusFilter === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setStatusFilter('all')}
+                  className="h-7 px-2 text-xs"
+                >
+                  Tous
+                </Button>
+                <Button
+                  variant={statusFilter === 'active' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setStatusFilter('active')}
+                  className="h-7 px-2 text-xs"
+                >
+                  <UserCheck className="w-3 h-3 mr-1" />
+                  Actif ({activeUsers})
+                </Button>
+                <Button
+                  variant={statusFilter === 'inactive' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setStatusFilter('inactive')}
+                  className="h-7 px-2 text-xs"
+                >
+                  <UserX className="w-3 h-3 mr-1" />
+                  Inactif ({inactiveUsers})
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Card View */}
