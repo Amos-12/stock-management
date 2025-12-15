@@ -211,7 +211,7 @@ export const KPICard = ({
                   type="monotone"
                   dataKey="value"
                   stroke={sparklineColor}
-                  strokeWidth={2.5}
+                  strokeWidth={1.5}
                   fill={`url(#${gradientId})`}
                 />
               </AreaChart>
