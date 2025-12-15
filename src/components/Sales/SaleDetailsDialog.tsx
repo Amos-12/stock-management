@@ -197,53 +197,53 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] sm:w-auto max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>Détails de la vente</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">Détails de la vente</DialogTitle>
         </DialogHeader>
 
         {loading ? (
           <div className="py-8 text-center">Chargement...</div>
         ) : saleData ? (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Sale Info */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <span className="text-sm font-medium text-muted-foreground">Date:</span>
-                <p className="text-sm">
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Date:</span>
+                <p className="text-xs sm:text-sm">
                   {new Date(saleData.created_at).toLocaleString('fr-FR')}
                 </p>
               </div>
               <div>
-                <span className="text-sm font-medium text-muted-foreground">Vendeur:</span>
-                <p className="text-sm">{sellerName}</p>
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Vendeur:</span>
+                <p className="text-xs sm:text-sm">{sellerName}</p>
               </div>
               {saleData.customer_name && (
                 <div>
-                  <span className="text-sm font-medium text-muted-foreground">Client:</span>
-                  <p className="text-sm">{saleData.customer_name}</p>
+                  <span className="text-xs sm:text-sm font-medium text-muted-foreground">Client:</span>
+                  <p className="text-xs sm:text-sm">{saleData.customer_name}</p>
                 </div>
               )}
               {saleData.customer_address && (
                 <div>
-                  <span className="text-sm font-medium text-muted-foreground">Adresse:</span>
-                  <p className="text-sm">{saleData.customer_address}</p>
+                  <span className="text-xs sm:text-sm font-medium text-muted-foreground">Adresse:</span>
+                  <p className="text-xs sm:text-sm">{saleData.customer_address}</p>
                 </div>
               )}
             </div>
 
             {/* Items Table */}
             <div>
-              <h3 className="font-semibold mb-2">Articles</h3>
-              <div className="border rounded-lg">
+              <h3 className="font-semibold mb-2 text-sm sm:text-base">Articles</h3>
+              <div className="border rounded-lg overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Produit</TableHead>
-                      <TableHead className="text-center">Devise</TableHead>
-                      <TableHead className="text-right">Quantité</TableHead>
-                      <TableHead className="text-right">Prix unitaire</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Produit</TableHead>
+                      <TableHead className="text-center text-xs sm:text-sm hidden sm:table-cell">Devise</TableHead>
+                      <TableHead className="text-right text-xs sm:text-sm">Qté</TableHead>
+                      <TableHead className="text-right text-xs sm:text-sm hidden sm:table-cell">P.U.</TableHead>
+                      <TableHead className="text-right text-xs sm:text-sm">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -251,8 +251,22 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
                       const currency = item.currency || 'HTG';
                       return (
                         <TableRow key={item.id}>
-                          <TableCell>{item.product_name}</TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-xs sm:text-sm max-w-[120px] sm:max-w-none truncate">
+                            {item.product_name}
+                            {/* Mobile: show currency badge inline */}
+                            <span className="sm:hidden ml-1">
+                              <Badge 
+                                variant="outline" 
+                                className={`text-[10px] px-1 py-0 ${currency === 'USD' 
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                                  : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                }`}
+                              >
+                                {currency === 'USD' ? '$' : 'G'}
+                              </Badge>
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center hidden sm:table-cell">
                             <Badge 
                               variant="outline" 
                               className={currency === 'USD' 
@@ -263,13 +277,13 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
                               {currency === 'USD' ? '$ USD' : 'G HTG'}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">
                             {item.quantity} {item.unit || ''}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right text-xs sm:text-sm hidden sm:table-cell">
                             {formatCurrencyAmount(item.unit_price, currency)}
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="text-right font-medium text-xs sm:text-sm whitespace-nowrap">
                             {formatCurrencyAmount(item.subtotal, currency)}
                           </TableCell>
                         </TableRow>
@@ -281,21 +295,21 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
             </div>
 
             {/* Totals */}
-            <div className="space-y-2 border-t pt-4">
+            <div className="space-y-1 sm:space-y-2 border-t pt-3 sm:pt-4 text-xs sm:text-sm">
               {/* Currency-specific subtotals */}
               {currencySubtotals.hasMultipleCurrencies ? (
                 <>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between">
                     <span>Sous-total USD:</span>
                     <span className="text-green-600 dark:text-green-400">${formatNumber(currencySubtotals.usd)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between">
                     <span>Sous-total HTG:</span>
                     <span className="text-blue-600 dark:text-blue-400">{formatNumber(currencySubtotals.htg)} HTG</span>
                   </div>
                   {companySettings && (
-                    <div className="flex justify-between text-xs text-muted-foreground border-t pt-2">
-                      <span>Taux de change:</span>
+                    <div className="flex justify-between text-[10px] sm:text-xs text-muted-foreground border-t pt-2">
+                      <span>Taux:</span>
                       <span>1 USD = {companySettings.usd_htg_rate || 132} HTG</span>
                     </div>
                   )}
@@ -326,11 +340,11 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
               {/* TVA if configured */}
               {getUnifiedTotals().tvaRate > 0 && (
                 <>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between">
                     <span>Sous-total HT:</span>
                     <span>{formatCurrencyAmount(getUnifiedTotals().subtotal, getUnifiedTotals().currency)}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>TVA ({getUnifiedTotals().tvaRate}%):</span>
                     <span>{formatCurrencyAmount(getUnifiedTotals().tva, getUnifiedTotals().currency)}</span>
                   </div>
@@ -338,28 +352,28 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
               )}
               
               {/* Unified total */}
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>{getUnifiedTotals().tvaRate > 0 ? 'Total TTC:' : 'Total à payer:'}</span>
+              <div className="flex justify-between text-sm sm:text-lg font-bold border-t pt-2">
+                <span>{getUnifiedTotals().tvaRate > 0 ? 'Total TTC:' : 'Total:'}</span>
                 <span className="text-primary">
                   {formatCurrencyAmount(getUnifiedTotals().total, getUnifiedTotals().currency)}
                 </span>
               </div>
               
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Méthode de paiement:</span>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Paiement:</span>
                 <span className="capitalize">{saleData.payment_method}</span>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-2 justify-end border-t pt-4">
-              <Button variant="outline" onClick={handlePrintReceipt}>
-                <ReceiptIcon className="w-4 h-4 mr-2" />
-                Imprimer Reçu
+            <div className="flex flex-col sm:flex-row gap-2 justify-end border-t pt-3 sm:pt-4">
+              <Button variant="outline" onClick={handlePrintReceipt} className="text-xs sm:text-sm">
+                <ReceiptIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                Reçu
               </Button>
-              <Button onClick={handlePrintInvoice}>
-                <Printer className="w-4 h-4 mr-2" />
-                Imprimer Facture
+              <Button onClick={handlePrintInvoice} className="text-xs sm:text-sm">
+                <Printer className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                Facture
               </Button>
             </div>
           </div>
