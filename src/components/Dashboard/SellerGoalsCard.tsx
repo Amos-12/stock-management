@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Trophy, Target, TrendingUp } from 'lucide-react';
+import { Trophy, Target, TrendingUp, Flame } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 
 interface SellerGoalsCardProps {
@@ -27,10 +26,12 @@ export const SellerGoalsCard = ({
   const revenueAchieved = todayRevenue >= revenueGoal;
 
   return (
-    <Card className="animate-fade-in-up dark:border-border/50 dark:bg-card/80" style={{ animationDelay: '100ms' }}>
+    <Card className="seller-card-goal animate-fade-in-up" style={{ animationDelay: '100ms' }}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Target className="w-5 h-5 text-primary dark:text-[hsl(262,83%,58%)]" />
+          <div className="p-2 rounded-lg bg-gradient-to-br from-rose-500/20 to-pink-500/20">
+            <Target className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+          </div>
           Objectifs du Jour
         </CardTitle>
       </CardHeader>
@@ -41,17 +42,27 @@ export const SellerGoalsCard = ({
             <span className="text-sm font-medium text-muted-foreground">Ventes</span>
             <div className="flex items-center gap-2">
               {salesAchieved && (
-                <Trophy className="w-4 h-4 text-[hsl(45,100%,55%)] animate-pulse" />
+                <Trophy className="w-4 h-4 text-amber-500 animate-pulse drop-shadow-md" />
               )}
               <span className="text-sm font-bold">
                 {todaySales} / {salesGoal}
               </span>
             </div>
           </div>
-          <Progress 
-            value={salesProgress} 
-            className={`h-2 transition-all duration-500 ${salesAchieved ? '[&>div]:bg-[hsl(45,100%,55%)]' : 'dark:[&>div]:bg-[hsl(262,83%,58%)]'}`}
-          />
+          {/* Custom progress bar with gradient */}
+          <div className="relative h-3 bg-muted/50 dark:bg-muted/30 rounded-full overflow-hidden">
+            <div 
+              className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out ${
+                salesAchieved 
+                  ? 'bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500' 
+                  : 'bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500'
+              }`}
+              style={{ width: `${salesProgress}%` }}
+            />
+            {salesProgress > 50 && (
+              <Flame className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 text-white/80" />
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">
             {salesAchieved 
               ? '🎉 Objectif atteint !' 
@@ -66,17 +77,27 @@ export const SellerGoalsCard = ({
             <span className="text-sm font-medium text-muted-foreground">Revenu</span>
             <div className="flex items-center gap-2">
               {revenueAchieved && (
-                <Trophy className="w-4 h-4 text-[hsl(45,100%,55%)] animate-pulse" />
+                <Trophy className="w-4 h-4 text-amber-500 animate-pulse drop-shadow-md" />
               )}
               <span className="text-sm font-bold">
                 {formatNumber(todayRevenue)} / {formatNumber(revenueGoal)} HTG
               </span>
             </div>
           </div>
-          <Progress 
-            value={revenueProgress} 
-            className={`h-2 transition-all duration-500 ${revenueAchieved ? '[&>div]:bg-[hsl(45,100%,55%)]' : 'dark:[&>div]:bg-[hsl(160,84%,45%)]'}`}
-          />
+          {/* Custom progress bar with gradient */}
+          <div className="relative h-3 bg-muted/50 dark:bg-muted/30 rounded-full overflow-hidden">
+            <div 
+              className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out ${
+                revenueAchieved 
+                  ? 'bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500' 
+                  : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500'
+              }`}
+              style={{ width: `${revenueProgress}%` }}
+            />
+            {revenueProgress > 50 && (
+              <Flame className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 text-white/80" />
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">
             {revenueAchieved 
               ? '🎉 Objectif atteint !' 
@@ -86,7 +107,7 @@ export const SellerGoalsCard = ({
         </div>
 
         {/* Motivation */}
-        <div className="pt-2 border-t dark:border-border/50">
+        <div className="pt-2 border-t border-border/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <TrendingUp className="w-3 h-3" />
             <span>Objectifs basés sur votre moyenne +20%</span>

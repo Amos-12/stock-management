@@ -24,17 +24,19 @@ interface SellerTrendChartProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-card border border-border rounded-lg shadow-lg p-3 dark:bg-card/95 dark:border-border/50 dark:shadow-xl">
-        <p className="text-sm font-medium text-foreground mb-2">{label}</p>
-        <div className="space-y-1">
-          <p className="text-xs">
-            <span className="text-[hsl(262,83%,58%)]">●</span> Revenu:{' '}
-            <span className="font-semibold">{formatNumber(payload[0]?.value)} HTG</span>
-          </p>
-          <p className="text-xs">
-            <span className="text-[hsl(160,84%,45%)]">●</span> Ventes:{' '}
-            <span className="font-semibold">{payload[1]?.value}</span>
-          </p>
+      <div className="bg-card border border-border rounded-xl shadow-xl p-3">
+        <p className="text-sm font-semibold text-foreground mb-2">{label}</p>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500" />
+            <span className="text-xs text-muted-foreground">Revenu:</span>
+            <span className="text-xs font-bold text-foreground">{formatNumber(payload[0]?.value)} HTG</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" />
+            <span className="text-xs text-muted-foreground">Ventes:</span>
+            <span className="text-xs font-bold text-foreground">{payload[1]?.value}</span>
+          </div>
         </div>
       </div>
     );
@@ -43,13 +45,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export const SellerTrendChart = ({ data }: SellerTrendChartProps) => {
-  const maxRevenue = Math.max(...data.map(d => d.revenue), 1);
-
   return (
-    <Card className="animate-fade-in-up dark:border-border/50 dark:bg-card/80" style={{ animationDelay: '50ms' }}>
+    <Card className="seller-card-trend animate-fade-in-up" style={{ animationDelay: '50ms' }}>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <TrendingUp className="w-5 h-5 text-primary dark:text-[hsl(217.2,91.2%,59.8%)]" />
+          <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
+            <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          </div>
           Tendance des 7 derniers jours
         </CardTitle>
       </CardHeader>
@@ -58,13 +60,13 @@ export const SellerTrendChart = ({ data }: SellerTrendChartProps) => {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
-                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(262, 83%, 58%)" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="hsl(262, 83%, 58%)" stopOpacity={0} />
+                <linearGradient id="sellerRevenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.05} />
                 </linearGradient>
-                <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(160, 84%, 45%)" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="hsl(160, 84%, 45%)" stopOpacity={0} />
+                <linearGradient id="sellerSalesGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(160, 84%, 45%)" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="hsl(160, 84%, 45%)" stopOpacity={0.05} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
@@ -96,9 +98,9 @@ export const SellerTrendChart = ({ data }: SellerTrendChartProps) => {
                 yAxisId="revenue"
                 type="monotone"
                 dataKey="revenue"
-                stroke="hsl(262, 83%, 58%)"
-                strokeWidth={2}
-                fill="url(#revenueGradient)"
+                stroke="hsl(217, 91%, 60%)"
+                strokeWidth={2.5}
+                fill="url(#sellerRevenueGradient)"
                 animationDuration={1000}
               />
               <Area
@@ -106,8 +108,8 @@ export const SellerTrendChart = ({ data }: SellerTrendChartProps) => {
                 type="monotone"
                 dataKey="sales"
                 stroke="hsl(160, 84%, 45%)"
-                strokeWidth={2}
-                fill="url(#salesGradient)"
+                strokeWidth={2.5}
+                fill="url(#sellerSalesGradient)"
                 animationDuration={1200}
               />
             </AreaChart>
@@ -115,11 +117,11 @@ export const SellerTrendChart = ({ data }: SellerTrendChartProps) => {
         </div>
         <div className="flex items-center justify-center gap-6 mt-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[hsl(262,83%,58%)]" />
+            <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-sm" />
             <span>Revenu (HTG)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[hsl(160,84%,45%)]" />
+            <div className="w-3 h-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 shadow-sm" />
             <span>Ventes</span>
           </div>
         </div>

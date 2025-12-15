@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Minus, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, BarChart3, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 
 interface ComparisonData {
@@ -20,14 +20,16 @@ export const SellerPerformanceComparison = ({ comparisons }: SellerPerformanceCo
   };
 
   return (
-    <Card className="animate-fade-in-up dark:border-border/50 dark:bg-card/80" style={{ animationDelay: '200ms' }}>
+    <Card className="seller-card-sales animate-fade-in-up" style={{ animationDelay: '200ms' }}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <BarChart3 className="w-5 h-5 text-primary dark:text-[hsl(217.2,91.2%,59.8%)]" />
+          <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20">
+            <BarChart3 className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+          </div>
           Comparaison de Performance
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {comparisons.map((item, index) => {
           const change = getChangePercent(item.current, item.previous);
           const isPositive = change > 0;
@@ -36,33 +38,31 @@ export const SellerPerformanceComparison = ({ comparisons }: SellerPerformanceCo
           return (
             <div 
               key={item.label} 
-              className="flex items-center justify-between p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors dark:bg-muted/30 dark:hover:bg-muted/50"
+              className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-muted/40 to-muted/20 hover:from-muted/60 hover:to-muted/40 dark:from-muted/20 dark:to-muted/5 dark:hover:from-muted/30 dark:hover:to-muted/15 transition-all duration-300 hover:shadow-sm"
               style={{ animationDelay: `${(index + 1) * 100}ms` }}
             >
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">{item.label}</p>
-                <p className="font-semibold">
+                <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
+                <p className="font-bold text-lg">
                   {formatNumber(item.current)}{item.suffix || ' HTG'}
                 </p>
               </div>
               <div className="text-right space-y-1">
-                <div className="flex items-center gap-1 justify-end">
+                <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                  isNeutral 
+                    ? 'bg-muted text-muted-foreground' 
+                    : isPositive 
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' 
+                      : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'
+                }`}>
                   {isNeutral ? (
-                    <Minus className="w-4 h-4 text-muted-foreground" />
+                    <Minus className="w-3 h-3" />
                   ) : isPositive ? (
-                    <TrendingUp className="w-4 h-4 text-success dark:text-[hsl(160,84%,45%)]" />
+                    <ArrowUpRight className="w-3 h-3" />
                   ) : (
-                    <TrendingDown className="w-4 h-4 text-destructive dark:text-[hsl(350,89%,60%)]" />
+                    <ArrowDownRight className="w-3 h-3" />
                   )}
-                  <span className={`text-sm font-bold ${
-                    isNeutral 
-                      ? 'text-muted-foreground' 
-                      : isPositive 
-                        ? 'text-success dark:text-[hsl(160,84%,45%)]' 
-                        : 'text-destructive dark:text-[hsl(350,89%,60%)]'
-                  }`}>
-                    {isPositive ? '+' : ''}{change.toFixed(1)}%
-                  </span>
+                  {isPositive ? '+' : ''}{change.toFixed(1)}%
                 </div>
                 <p className="text-xs text-muted-foreground">
                   vs {formatNumber(item.previous)}{item.suffix || ' HTG'}
