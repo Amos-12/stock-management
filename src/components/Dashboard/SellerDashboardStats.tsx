@@ -1,18 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { StatsCard } from '@/components/Dashboard/StatsCard';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { KPICard } from '@/components/Dashboard/KPICard';
+import { SellerGoalsCard } from '@/components/Dashboard/SellerGoalsCard';
+import { SellerPerformanceComparison } from '@/components/Dashboard/SellerPerformanceComparison';
+import { SellerTrendChart } from '@/components/Dashboard/SellerTrendChart';
 import { 
   TrendingUp,
   Receipt,
   Package,
   DollarSign,
   ShoppingCart,
-  Calendar
+  RefreshCw,
+  Clock,
+  Zap
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Badge } from '@/components/ui/badge';
-import { formatNumber, calculateUnifiedTotal, calculateUnifiedProfit } from '@/lib/utils';
+import { formatNumber, calculateUnifiedTotal } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
+
+interface TrendDataPoint {
+  date: string;
+  revenue: number;
+  sales: number;
+}
 
 export const SellerDashboardStats = () => {
   const { user } = useAuth();
@@ -26,19 +40,18 @@ export const SellerDashboardStats = () => {
     monthSales: 0,
     monthRevenue: 0,
     averageSale: 0,
+    yesterdaySales: 0,
+    yesterdayRevenue: 0,
+    lastWeekRevenue: 0,
+    lastMonthRevenue: 0,
     topProducts: [] as { product_name: string; quantity: number; revenue: number }[]
   });
+  const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
   const [usdHtgRate, setUsdHtgRate] = useState(132);
-
-  useEffect(() => {
-    if (user) {
-      fetchCompanySettings();
-      fetchStats();
-      fetchRecentSales();
-    }
-  }, [user]);
 
   const fetchCompanySettings = async () => {
     const { data } = await supabase
@@ -48,13 +61,15 @@ export const SellerDashboardStats = () => {
     if (data?.usd_htg_rate) {
       setUsdHtgRate(data.usd_htg_rate);
     }
+    return data?.usd_htg_rate || 132;
   };
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!user) return;
 
     try {
-      // Get all sales for this seller
+      const rate = await fetchCompanySettings();
+
       const { data: allSales, error: allError } = await supabase
         .from('sales')
         .select('id, total_amount, created_at')
@@ -62,14 +77,6 @@ export const SellerDashboardStats = () => {
 
       if (allError) throw allError;
 
-      // Fetch company settings for rate
-      const { data: settings } = await supabase
-        .from('company_settings')
-        .select('usd_htg_rate')
-        .single();
-      const rate = settings?.usd_htg_rate || 132;
-
-      // Fetch ALL sale_items with currency for all sales
       const saleIds = allSales?.map(s => s.id) || [];
       let allSaleItems: any[] = [];
       if (saleIds.length > 0) {
@@ -84,18 +91,37 @@ export const SellerDashboardStats = () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const weekAgo = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const weekAgo = new Date(today);
       weekAgo.setDate(weekAgo.getDate() - 7);
-      weekAgo.setHours(0, 0, 0, 0);
 
-      const monthAgo = new Date();
+      const twoWeeksAgo = new Date(today);
+      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+      const monthAgo = new Date(today);
       monthAgo.setDate(monthAgo.getDate() - 30);
-      monthAgo.setHours(0, 0, 0, 0);
+
+      const twoMonthsAgo = new Date(today);
+      twoMonthsAgo.setDate(twoMonthsAgo.getDate() - 60);
 
       // Filter sales by period
       const todaySales = allSales?.filter(s => new Date(s.created_at) >= today) || [];
+      const yesterdaySales = allSales?.filter(s => {
+        const d = new Date(s.created_at);
+        return d >= yesterday && d < today;
+      }) || [];
       const weekSales = allSales?.filter(s => new Date(s.created_at) >= weekAgo) || [];
+      const lastWeekSales = allSales?.filter(s => {
+        const d = new Date(s.created_at);
+        return d >= twoWeeksAgo && d < weekAgo;
+      }) || [];
       const monthSales = allSales?.filter(s => new Date(s.created_at) >= monthAgo) || [];
+      const lastMonthSales = allSales?.filter(s => {
+        const d = new Date(s.created_at);
+        return d >= twoMonthsAgo && d < monthAgo;
+      }) || [];
 
       // Calculate revenue with proper currency conversion
       const calculateRevenue = (salesList: any[]) => {
@@ -107,8 +133,34 @@ export const SellerDashboardStats = () => {
 
       const totalRevenue = calculateRevenue(allSales || []);
       const todayRevenue = calculateRevenue(todaySales);
+      const yesterdayRevenue = calculateRevenue(yesterdaySales);
       const weekRevenue = calculateRevenue(weekSales);
+      const lastWeekRevenue = calculateRevenue(lastWeekSales);
       const monthRevenue = calculateRevenue(monthSales);
+      const lastMonthRevenue = calculateRevenue(lastMonthSales);
+
+      // Calculate trend data for last 7 days
+      const trendDataCalc: TrendDataPoint[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
+        
+        const daySales = allSales?.filter(s => {
+          const d = new Date(s.created_at);
+          return d >= date && d < nextDate;
+        }) || [];
+        
+        const dayRevenue = calculateRevenue(daySales);
+        
+        trendDataCalc.push({
+          date: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
+          revenue: dayRevenue,
+          sales: daySales.length
+        });
+      }
+      setTrendData(trendDataCalc);
 
       // Top products with unified currency
       const productStats = allSaleItems.reduce((acc: any, item: any) => {
@@ -116,7 +168,6 @@ export const SellerDashboardStats = () => {
           acc[item.product_name] = { product_name: item.product_name, quantity: 0, revenue: 0 };
         }
         acc[item.product_name].quantity += Number(item.quantity);
-        // Convert USD to HTG for unified total
         const itemRevenue = item.currency === 'USD' 
           ? item.subtotal * rate 
           : item.subtotal;
@@ -129,6 +180,8 @@ export const SellerDashboardStats = () => {
         .slice(0, 5);
 
       const averageSale = allSales?.length ? totalRevenue / allSales.length : 0;
+      const averageDailySales = monthSales.length / 30;
+      const averageDailyRevenue = monthRevenue / 30;
 
       setStats({
         totalSales: allSales?.length || 0,
@@ -140,16 +193,23 @@ export const SellerDashboardStats = () => {
         monthSales: monthSales.length,
         monthRevenue,
         averageSale,
+        yesterdaySales: yesterdaySales.length,
+        yesterdayRevenue,
+        lastWeekRevenue,
+        lastMonthRevenue,
         topProducts: topProducts as any
       });
+
+      setLastUpdate(new Date());
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [user]);
 
-  const fetchRecentSales = async () => {
+  const fetchRecentSales = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -165,7 +225,50 @@ export const SellerDashboardStats = () => {
     } catch (error) {
       console.error('Error fetching recent sales:', error);
     }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchStats();
+      fetchRecentSales();
+    }
+  }, [user, fetchStats, fetchRecentSales]);
+
+  // Auto-refresh every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (user) {
+        fetchStats();
+        fetchRecentSales();
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [user, fetchStats, fetchRecentSales]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchStats();
+    fetchRecentSales();
   };
+
+  // Sparkline data for KPIs
+  const revenueSparkline = trendData.map(d => ({ value: d.revenue }));
+  const salesSparkline = trendData.map(d => ({ value: d.sales }));
+
+  // Average calculations
+  const averageDailySales = stats.monthSales / 30;
+  const averageDailyRevenue = stats.monthRevenue / 30;
+
+  // Top products for bar chart
+  const topProductsChartData = stats.topProducts.map((p, i) => ({
+    name: p.product_name.length > 15 ? p.product_name.substring(0, 15) + '...' : p.product_name,
+    fullName: p.product_name,
+    revenue: p.revenue,
+    quantity: p.quantity,
+    rank: i + 1
+  }));
+
+  const totalProductRevenue = stats.topProducts.reduce((sum, p) => sum + p.revenue, 0);
 
   if (loading) {
     return (
@@ -178,119 +281,187 @@ export const SellerDashboardStats = () => {
 
   return (
     <div className="space-y-6">
-      {/* Stats Grid - matching Admin style */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard
-          title="Ventes Aujourd'hui"
-          value={stats.todaySales.toString()}
-          icon={Receipt}
-          variant="success"
-          change={{
-            value: stats.weekSales > 0 ? Number(((stats.todaySales / stats.weekSales) * 100).toFixed(2)) : 0,
-            isPositive: stats.todaySales > 0,
-            label: "cette semaine"
-          }}
-        />
-        <StatsCard
+      {/* Header with refresh */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            <Clock className="w-3 h-3 mr-1" />
+            MàJ: {lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          </Badge>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Actualiser
+        </Button>
+      </div>
+
+      {/* KPI Cards with Sparklines */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard
           title="Revenu Aujourd'hui"
-          value={`${formatNumber(stats.todayRevenue)} HTG`}
+          value={stats.todayRevenue}
+          previousValue={stats.yesterdayRevenue}
           icon={DollarSign}
-          variant="default"
-          change={{
-            value: stats.weekRevenue > 0 ? Number(((stats.todayRevenue / stats.weekRevenue) * 100).toFixed(2)) : 0,
-            isPositive: stats.todayRevenue > 0,
-            label: "cette semaine"
-          }}
+          sparklineData={revenueSparkline}
+          colorScheme="success"
         />
-        <StatsCard
-          title="Total Ventes"
-          value={stats.totalSales.toString()}
-          icon={TrendingUp}
-          variant="default"
+        <KPICard
+          title="Ventes Aujourd'hui"
+          value={stats.todaySales}
+          previousValue={stats.yesterdaySales}
+          icon={Receipt}
+          format="number"
+          sparklineData={salesSparkline}
         />
-        <StatsCard
-          title="Revenu Total"
-          value={`${formatNumber(stats.totalRevenue)} HTG`}
-          icon={DollarSign}
-          variant="success"
-        />
-      </div>
-
-      {/* Additional Stats - Enhanced with icons and variants */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatsCard
-          title="Ventes cette Semaine"
-          value={`${formatNumber(stats.weekRevenue)} HTG`}
-          icon={Calendar}
-          variant="default"
-          change={{
-            value: stats.weekSales,
-            isPositive: stats.weekSales > 0,
-            label: `${stats.weekSales} vente${stats.weekSales > 1 ? 's' : ''}`
-          }}
-        />
-        
-        <StatsCard
-          title="Ventes ce Mois"
-          value={`${formatNumber(stats.monthRevenue)} HTG`}
-          icon={Calendar}
-          variant="success"
-          change={{
-            value: stats.monthSales,
-            isPositive: stats.monthSales > 0,
-            label: `${stats.monthSales} vente${stats.monthSales > 1 ? 's' : ''}`
-          }}
-        />
-        
-        <StatsCard
-          title="Moyenne par Vente"
-          value={`${formatNumber(stats.averageSale)} HTG`}
+        <KPICard
+          title="Panier Moyen"
+          value={stats.averageSale}
           icon={ShoppingCart}
-          variant="default"
+        />
+        <KPICard
+          title="Total Ventes"
+          value={stats.totalSales}
+          icon={TrendingUp}
+          format="number"
+          colorScheme="default"
         />
       </div>
 
-      {/* Top Products & Recent Sales - Side by Side */}
+      {/* Trend Chart */}
+      <SellerTrendChart data={trendData} />
+
+      {/* Goals & Comparison Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top Products */}
-        {stats.topProducts.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Top 5 Produits
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {stats.topProducts.map((product, index) => (
-                  <div key={product.product_name} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="w-8 h-8 flex items-center justify-center">
-                        {index + 1}
-                      </Badge>
-                      <div>
-                        <div className="font-medium">{product.product_name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {product.quantity} unités vendues
+        <SellerGoalsCard
+          todaySales={stats.todaySales}
+          todayRevenue={stats.todayRevenue}
+          averageDailySales={averageDailySales}
+          averageDailyRevenue={averageDailyRevenue}
+        />
+        <SellerPerformanceComparison
+          comparisons={[
+            { 
+              label: "Aujourd'hui vs Hier", 
+              current: stats.todayRevenue, 
+              previous: stats.yesterdayRevenue 
+            },
+            { 
+              label: "Cette Semaine vs Semaine Dernière", 
+              current: stats.weekRevenue, 
+              previous: stats.lastWeekRevenue 
+            },
+            { 
+              label: "Ce Mois vs Mois Dernier", 
+              current: stats.monthRevenue, 
+              previous: stats.lastMonthRevenue 
+            }
+          ]}
+        />
+      </div>
+
+      {/* Top Products & Recent Sales */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Top Products with Bar Chart */}
+        <Card className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Package className="w-5 h-5 text-primary" />
+              Top 5 Produits
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.topProducts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Aucune vente enregistrée</p>
+              </div>
+            ) : (
+              <>
+                <div className="h-[180px] mb-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topProductsChartData} layout="vertical" margin={{ left: 0, right: 50 }}>
+                      <XAxis type="number" hide />
+                      <YAxis 
+                        type="category" 
+                        dataKey="name" 
+                        width={100}
+                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-card border border-border rounded-lg shadow-lg p-3">
+                                <p className="text-sm font-medium">{data.fullName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatNumber(data.revenue)} HTG • {data.quantity} unités
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar 
+                        dataKey="revenue" 
+                        radius={[0, 4, 4, 0]}
+                        animationDuration={1000}
+                      >
+                        {topProductsChartData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={index === 0 ? 'hsl(var(--primary))' : `hsl(var(--primary) / ${1 - index * 0.15})`}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-2">
+                  {stats.topProducts.map((product, index) => {
+                    const percent = totalProductRevenue > 0 
+                      ? (product.revenue / totalProductRevenue * 100).toFixed(1) 
+                      : 0;
+                    return (
+                      <div 
+                        key={product.product_name} 
+                        className="flex items-center justify-between text-sm p-2 rounded-lg hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={index === 0 ? 'default' : 'outline'} 
+                            className="w-6 h-6 flex items-center justify-center text-xs"
+                          >
+                            {index + 1}
+                          </Badge>
+                          <span className="truncate max-w-[150px]">{product.product_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground text-xs">{percent}%</span>
+                          <span className="font-medium">{formatNumber(product.revenue)} HTG</span>
                         </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-primary">{formatNumber(product.revenue)} HTG</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Recent Sales */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Receipt className="w-5 h-5" />
+        <Card className="animate-fade-in-up" style={{ animationDelay: '350ms' }}>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Receipt className="w-5 h-5 text-primary" />
               Ventes Récentes
             </CardTitle>
           </CardHeader>
@@ -302,19 +473,30 @@ export const SellerDashboardStats = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {recentSales.map((sale) => (
-                  <div key={sale.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-smooth">
+                {recentSales.map((sale, index) => (
+                  <div 
+                    key={sale.id} 
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-all hover:scale-[1.01]"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
                     <div>
-                      <div className="font-medium">
-                        {sale.customer_name || 'Client non renseigné'}
+                      <div className="font-medium text-sm">
+                        {sale.customer_name || 'Client anonyme'}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(sale.created_at).toLocaleString('fr-FR')}
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(sale.created_at).toLocaleString('fr-FR', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-success">{formatNumber(Number(sale.total_amount))} HTG</div>
-                      <div className="text-xs text-muted-foreground">{sale.payment_method}</div>
+                      <div className="font-bold text-green-500">{formatNumber(Number(sale.total_amount))} HTG</div>
+                      <Badge variant="outline" className="text-xs">
+                        {sale.payment_method || 'N/A'}
+                      </Badge>
                     </div>
                   </div>
                 ))}
@@ -323,41 +505,6 @@ export const SellerDashboardStats = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Analytics Zone */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            Analyse des Performances
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Croissance Hebdomadaire</p>
-              <p className="text-2xl font-bold text-primary">
-                {stats.weekSales > 0 ? '+' : ''}{stats.weekSales}
-              </p>
-              <p className="text-xs text-muted-foreground">ventes cette semaine</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Revenu Mensuel</p>
-              <p className="text-lg font-bold text-primary">
-                {formatNumber(stats.monthRevenue)} HTG
-              </p>
-              <p className="text-xs text-muted-foreground">{stats.monthSales} ventes ce mois</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Performance Journalière</p>
-              <p className="text-2xl font-bold text-primary">
-                {((stats.todayRevenue / (stats.averageSale || 1)) * 100).toFixed(0)}%
-              </p>
-              <p className="text-xs text-muted-foreground">par rapport à la moyenne</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
