@@ -30,7 +30,9 @@ import {
   RefreshCw,
   Clock,
   Wallet,
-  BarChart3
+  BarChart3,
+  Download,
+  FileText
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -38,6 +40,7 @@ import { KPICard } from './KPICard';
 import { AdminBusinessHealth } from './AdminBusinessHealth';
 import { AdminTopSellersChart } from './AdminTopSellersChart';
 import { formatNumber, calculateUnifiedTotal, calculateUnifiedProfit } from '@/lib/utils';
+import { generateAdminDashboardPdf } from '@/lib/adminDashboardPdf';
 
 interface RevenueData {
   date: string;
@@ -461,6 +464,58 @@ export const AdminDashboardCharts = () => {
   const profitMargin = todayRevenue > 0 ? (todayProfit / todayRevenue) * 100 : 0;
   const stockTurnover = 2.5; // Placeholder - would need historical data to calculate
 
+  const handleExportPdf = async () => {
+    try {
+      const { data: companyData } = await supabase
+        .from('company_settings')
+        .select('*')
+        .single();
+
+      const periodLabel = period === 'daily' ? 'Journalier' : period === 'weekly' ? 'Hebdomadaire' : 'Mensuel';
+
+      await generateAdminDashboardPdf(
+        {
+          todayRevenue,
+          weekRevenue,
+          monthRevenue,
+          todayProfit,
+          todaySales,
+          avgBasket,
+          totalProducts,
+          totalSellers,
+          lowStockCount,
+          profitMargin,
+        },
+        topProducts,
+        categoryData,
+        topSellers,
+        {
+          company_name: companyData?.company_name || 'Mon Entreprise',
+          address: companyData?.address || '',
+          city: companyData?.city || '',
+          phone: companyData?.phone || '',
+          email: companyData?.email || '',
+          logo_url: companyData?.logo_url,
+          usd_htg_rate: usdHtgRate,
+        },
+        periodLabel
+      );
+
+      toast({
+        title: "PDF exporté",
+        description: "Le rapport du tableau de bord a été téléchargé",
+      });
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'exporter le PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -494,7 +549,7 @@ export const AdminDashboardCharts = () => {
             </Badge>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
             <SelectTrigger className="w-44">
               <Calendar className="w-4 h-4 mr-2" />
@@ -506,6 +561,15 @@ export const AdminDashboardCharts = () => {
               <SelectItem value="monthly">3 mois</SelectItem>
             </SelectContent>
           </Select>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleExportPdf}
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Export PDF</span>
+          </Button>
           <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
