@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2, Receipt, DollarSign, LayoutGrid, List, Download, FileText } from 'lucide-react';
+import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2, Receipt, DollarSign, LayoutGrid, List, Download, FileText, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { SaleDetailsDialog } from './SaleDetailsDialog';
@@ -15,6 +15,7 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { useIsMobile } from '@/hooks/use-mobile';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -26,6 +27,11 @@ import {
   AlertDialogTitle, 
   AlertDialogTrigger 
 } from '@/components/ui/alert-dialog';
+
+interface Seller {
+  user_id: string;
+  full_name: string;
+}
 
 interface Sale {
   id: string;
@@ -78,6 +84,8 @@ export const SalesManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currencyFilter, setCurrencyFilter] = useState<'all' | 'HTG' | 'USD' | 'mixed'>('all');
   const [periodFilter, setPeriodFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [sellerFilter, setSellerFilter] = useState<string>('all');
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
   const [revenueStats, setRevenueStats] = useState<RevenueStats>({ totalHTG: 0, totalUSD: 0, todayHTG: 0, todayUSD: 0 });
   const [tvaStats, setTvaStats] = useState<TvaStats>({ totalTVA_HTG: 0, totalTVA_USD: 0, todayTVA_HTG: 0, todayTVA_USD: 0 });
@@ -140,16 +148,40 @@ export const SalesManagement = () => {
   useEffect(() => {
     fetchSales();
     fetchCompanySettings();
+    fetchSellers();
     checkAdminRole();
   }, []);
 
   const fetchCompanySettings = async () => {
     const { data } = await supabase
       .from('company_settings')
-      .select('usd_htg_rate, default_display_currency, tva_rate')
-      .single();
+      .select('*')
+      .maybeSingle();
     if (data) {
       setCompanySettings(data);
+    }
+  };
+
+  const fetchSellers = async () => {
+    try {
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('is_active', true);
+      
+      if (!rolesData) return;
+      
+      const userIds = rolesData.map(r => r.user_id);
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', userIds);
+      
+      if (profilesData) {
+        setSellers(profilesData);
+      }
+    } catch (error) {
+      console.error('Error fetching sellers:', error);
     }
   };
 
@@ -179,9 +211,14 @@ export const SalesManagement = () => {
       filtered = filtered.filter(sale => filterByPeriod(new Date(sale.created_at), periodFilter));
     }
 
+    // Apply seller filter
+    if (sellerFilter !== 'all') {
+      filtered = filtered.filter(sale => sale.seller_id === sellerFilter);
+    }
+
     setFilteredSales(filtered);
     resetPage();
-  }, [searchTerm, currencyFilter, periodFilter, sales]);
+  }, [searchTerm, currencyFilter, periodFilter, sellerFilter, sales]);
 
   const fetchSales = async () => {
     try {
@@ -391,6 +428,24 @@ export const SalesManagement = () => {
     };
   }, [filteredSales, companySettings]);
 
+  // Chart data for sales evolution
+  const chartData = useMemo(() => {
+    const dateMap = new Map<string, { date: string; revenue: number; sales: number }>();
+    const usdRate = companySettings?.usd_htg_rate || 132;
+    
+    filteredSales.forEach(sale => {
+      const dateKey = new Date(sale.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+      const existing = dateMap.get(dateKey) || { date: dateKey, revenue: 0, sales: 0 };
+      const htg = sale.currencies?.htg || 0;
+      const usd = sale.currencies?.usd || 0;
+      existing.revenue += htg + (usd * usdRate);
+      existing.sales += 1;
+      dateMap.set(dateKey, existing);
+    });
+    
+    return Array.from(dateMap.values()).reverse().slice(-14);
+  }, [filteredSales, companySettings]);
+
   // Export functions
   const exportToExcel = () => {
     const data = filteredSales.map(sale => ({
@@ -410,27 +465,80 @@ export const SalesManagement = () => {
     toast({ title: "Export Excel", description: `${filteredSales.length} ventes exportées` });
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.getWidth();
+    let yPos = 15;
     
-    // Header
-    pdf.setFontSize(18);
-    pdf.text('Rapport des Ventes', pageWidth / 2, 20, { align: 'center' });
-    
-    pdf.setFontSize(10);
-    pdf.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, 28, { align: 'center' });
-    
-    // Stats summary
-    pdf.setFontSize(12);
-    pdf.text(`Total: ${filteredStats.count} ventes`, 20, 45);
-    pdf.text(`Revenus HTG: ${formatNumber(filteredStats.htg)} HTG`, 20, 53);
-    if (filteredStats.usd > 0) {
-      pdf.text(`Revenus USD: $${formatNumber(filteredStats.usd)}`, 20, 61);
+    // Load logo if available
+    if (companySettings?.logo_url) {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = companySettings.logo_url;
+        });
+        pdf.addImage(img, 'PNG', 15, yPos, 30, 30);
+      } catch (e) {
+        console.log('Logo loading failed');
+      }
     }
     
+    // Company info - right side
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(companySettings?.company_name || 'Entreprise', pageWidth - 15, yPos + 5, { align: 'right' });
+    
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(companySettings?.address || '', pageWidth - 15, yPos + 12, { align: 'right' });
+    pdf.text(companySettings?.city || '', pageWidth - 15, yPos + 17, { align: 'right' });
+    pdf.text(`Tél: ${companySettings?.phone || ''}`, pageWidth - 15, yPos + 22, { align: 'right' });
+    pdf.text(companySettings?.email || '', pageWidth - 15, yPos + 27, { align: 'right' });
+    
+    yPos = 55;
+    
+    // Title
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('RAPPORT DES VENTES', pageWidth / 2, yPos, { align: 'center' });
+    
+    // Period info
+    yPos += 8;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    const periodLabels: Record<string, string> = {
+      all: 'Toutes les ventes',
+      today: "Aujourd'hui",
+      week: 'Cette semaine',
+      month: 'Ce mois'
+    };
+    pdf.text(`Période: ${periodLabels[periodFilter]} | Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, yPos, { align: 'center' });
+    
+    // Stats box
+    yPos += 12;
+    pdf.setFillColor(245, 245, 245);
+    pdf.roundedRect(15, yPos, pageWidth - 30, 22, 3, 3, 'F');
+    
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    yPos += 8;
+    pdf.text(`Ventes: ${filteredStats.count}`, 25, yPos);
+    pdf.text(`HTG: ${formatNumber(filteredStats.htg)}`, 70, yPos);
+    pdf.text(`USD: $${formatNumber(filteredStats.usd)}`, 130, yPos);
+    
+    yPos += 7;
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`TVA HTG: ${formatNumber(filteredStats.tvaHtg)}`, 70, yPos);
+    pdf.text(`TVA USD: $${formatNumber(filteredStats.tvaUsd)}`, 130, yPos);
+    
     // Table header
-    let yPos = 75;
+    yPos += 18;
+    pdf.setFillColor(50, 50, 50);
+    pdf.setTextColor(255, 255, 255);
+    pdf.roundedRect(15, yPos - 5, pageWidth - 30, 8, 1, 1, 'F');
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Date', 20, yPos);
@@ -439,19 +547,26 @@ export const SalesManagement = () => {
     pdf.text('Montant', 145, yPos);
     pdf.text('Paiement', 175, yPos);
     
+    pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'normal');
-    yPos += 8;
+    yPos += 10;
     
     // Table rows
-    filteredSales.slice(0, 40).forEach((sale) => {
+    filteredSales.slice(0, 35).forEach((sale, index) => {
       if (yPos > 270) {
         pdf.addPage();
         yPos = 20;
       }
       
+      // Alternate row background
+      if (index % 2 === 0) {
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(15, yPos - 4, pageWidth - 30, 7, 'F');
+      }
+      
       pdf.text(formatDate(sale.created_at).substring(0, 16), 20, yPos);
-      pdf.text((sale.customer_name || 'N/A').substring(0, 20), 55, yPos);
-      pdf.text((sale.profiles?.full_name || 'N/A').substring(0, 18), 100, yPos);
+      pdf.text((sale.customer_name || 'N/A').substring(0, 18), 55, yPos);
+      pdf.text((sale.profiles?.full_name || 'N/A').substring(0, 16), 100, yPos);
       
       const amount = sale.currencies?.htg 
         ? `${formatNumber(sale.currencies.htg).substring(0, 12)} HTG`
@@ -459,14 +574,22 @@ export const SalesManagement = () => {
       pdf.text(amount, 145, yPos);
       pdf.text(sale.payment_method.substring(0, 10), 175, yPos);
       
-      yPos += 6;
+      yPos += 7;
     });
     
-    if (filteredSales.length > 40) {
-      pdf.text(`... et ${filteredSales.length - 40} autres ventes`, 20, yPos + 5);
+    if (filteredSales.length > 35) {
+      pdf.setFont('helvetica', 'italic');
+      pdf.text(`... et ${filteredSales.length - 35} autres ventes`, 20, yPos + 5);
     }
     
-    pdf.save(`ventes_${new Date().toISOString().split('T')[0]}.pdf`);
+    // Footer
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`Généré par ${companySettings?.company_name || 'Système'} - ${new Date().toLocaleString('fr-FR')}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    
+    pdf.save(`rapport_ventes_${new Date().toISOString().split('T')[0]}.pdf`);
     toast({ title: "Export PDF", description: `Rapport généré avec ${filteredSales.length} ventes` });
   };
 
@@ -541,6 +664,60 @@ export const SalesManagement = () => {
         )}
       </div>
 
+      {/* Sales Evolution Chart */}
+      {chartData.length > 1 && (
+        <Card className="shadow-lg">
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Évolution des ventes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-3">
+            <div className="h-[180px] sm:h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                    stroke="hsl(var(--border))"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                    stroke="hsl(var(--border))"
+                    tickFormatter={(val) => val >= 1000 ? `${(val/1000).toFixed(0)}K` : val}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      color: 'hsl(var(--card-foreground))'
+                    }}
+                    formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="hsl(var(--primary))" 
+                    fill="url(#revenueGradient)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Sales Table */}
       <Card className="shadow-lg">
         <CardHeader>
@@ -574,8 +751,8 @@ export const SalesManagement = () => {
               <div className="flex gap-2 flex-wrap">
                 {/* Period filter */}
                 <Select value={periodFilter} onValueChange={(value: 'all' | 'today' | 'week' | 'month') => setPeriodFilter(value)}>
-                  <SelectTrigger className="w-[120px] sm:w-[130px]">
-                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                  <SelectTrigger className="w-[110px] sm:w-[130px]">
+                    <Calendar className="w-4 h-4 mr-1 text-muted-foreground" />
                     <SelectValue placeholder="Période" />
                   </SelectTrigger>
                   <SelectContent>
@@ -586,10 +763,26 @@ export const SalesManagement = () => {
                   </SelectContent>
                 </Select>
                 
+                {/* Seller filter */}
+                <Select value={sellerFilter} onValueChange={setSellerFilter}>
+                  <SelectTrigger className="w-[110px] sm:w-[140px]">
+                    <Users className="w-4 h-4 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="Vendeur" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    {sellers.map(seller => (
+                      <SelectItem key={seller.user_id} value={seller.user_id}>
+                        {seller.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
                 {/* Currency filter */}
                 <Select value={currencyFilter} onValueChange={(value: 'all' | 'HTG' | 'USD' | 'mixed') => setCurrencyFilter(value)}>
-                  <SelectTrigger className="w-[100px] sm:w-[120px]">
-                    <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
+                  <SelectTrigger className="w-[90px] sm:w-[110px]">
+                    <DollarSign className="w-4 h-4 mr-1 text-muted-foreground" />
                     <SelectValue placeholder="Devise" />
                   </SelectTrigger>
                   <SelectContent>
