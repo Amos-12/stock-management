@@ -19,7 +19,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Package, Plus, Edit, Trash2, AlertCircle, Search, Filter, LayoutGrid, List } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, AlertCircle, Search, Filter, LayoutGrid, List, Download, FileText, DollarSign, CheckCircle, XCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -27,6 +27,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCategories, useSousCategories, useSpecificationsModeles } from '@/hooks/useCategories';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/ui/table-pagination';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
 
 interface Product {
   id: string;
@@ -95,6 +97,8 @@ export const ProductManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [sousCategoryFilter, setSousCategoryFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -297,11 +301,19 @@ export const ProductManagement = () => {
       const matchesSousCategory = sousCategoryFilter === 'all' || 
         (product as any).sous_categorie_id === sousCategoryFilter;
       
-      return matchesSearch && matchesCategory && matchesSousCategory;
+      // Status filter
+      const matchesStatus = statusFilter === 'all' || 
+        (statusFilter === 'active' && product.is_active) ||
+        (statusFilter === 'inactive' && !product.is_active);
+      
+      // Currency filter
+      const matchesCurrency = currencyFilter === 'all' || product.currency === currencyFilter;
+      
+      return matchesSearch && matchesCategory && matchesSousCategory && matchesStatus && matchesCurrency;
     });
     setFilteredProducts(filtered);
     resetPage();
-  }, [searchTerm, categoryFilter, sousCategoryFilter, products]);
+  }, [searchTerm, categoryFilter, sousCategoryFilter, statusFilter, currencyFilter, products]);
 
   const { 
     paginatedItems: paginatedProducts, 
@@ -339,6 +351,96 @@ export const ProductManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Export to Excel
+  const exportToExcel = () => {
+    const exportData = filteredProducts.map(p => {
+      const stock = getStockDisplay(p);
+      return {
+        'Nom': p.name,
+        'Code-barres': p.barcode || '-',
+        'Catégorie': categories.find(c => c.value === p.category)?.label || p.category,
+        'Prix': p.price,
+        'Devise': p.currency,
+        'Stock': `${stock.value} ${stock.unit}`,
+        'Seuil alerte': p.alert_threshold,
+        'Statut': p.is_active ? 'Actif' : 'Inactif',
+        'Type vente': p.sale_type === 'retail' ? 'Détail' : 'Gros'
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Produits');
+    XLSX.writeFile(wb, `produits_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast({ title: "Export réussi", description: `${filteredProducts.length} produits exportés en Excel` });
+  };
+
+  // Export to PDF
+  const exportToPDF = async () => {
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    
+    // Header
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Liste des Produits', pageWidth / 2, 15, { align: 'center' });
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Exporté le ${new Date().toLocaleDateString('fr-FR')} - ${filteredProducts.length} produits`, pageWidth / 2, 22, { align: 'center' });
+    
+    // Table headers
+    const headers = ['Nom', 'Catégorie', 'Prix', 'Devise', 'Stock', 'Statut'];
+    const colWidths = [80, 50, 35, 25, 40, 25];
+    let y = 35;
+    let x = 15;
+    
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(x, y - 5, pageWidth - 30, 8, 'F');
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    headers.forEach((h, i) => {
+      pdf.text(h, x, y);
+      x += colWidths[i];
+    });
+    
+    // Table rows
+    y += 8;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    
+    filteredProducts.forEach((p, idx) => {
+      if (y > 190) {
+        pdf.addPage();
+        y = 20;
+      }
+      
+      const stock = getStockDisplay(p);
+      x = 15;
+      
+      if (idx % 2 === 0) {
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(x, y - 4, pageWidth - 30, 6, 'F');
+      }
+      
+      const row = [
+        p.name.substring(0, 35),
+        (categories.find(c => c.value === p.category)?.label || p.category).substring(0, 20),
+        p.price.toFixed(2),
+        p.currency,
+        `${stock.value} ${stock.unit}`,
+        p.is_active ? 'Actif' : 'Inactif'
+      ];
+      
+      row.forEach((cell, i) => {
+        pdf.text(cell.toString(), x, y);
+        x += colWidths[i];
+      });
+      y += 6;
+    });
+    
+    pdf.save(`produits_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast({ title: "Export réussi", description: `${filteredProducts.length} produits exportés en PDF` });
   };
 
   const resetForm = () => {
@@ -1696,7 +1798,7 @@ export const ProductManagement = () => {
         </div>
         {/* Filters Section - Compact and organized */}
         <div className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
-          {/* Row 1: Search + View Toggle */}
+          {/* Row 1: Search + Export + View Toggle */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
@@ -1707,9 +1809,32 @@ export const ProductManagement = () => {
                 className="pl-8 sm:pl-9 h-8 sm:h-10 text-xs sm:text-sm"
               />
             </div>
-            <Badge variant="secondary" className="hidden sm:flex text-xs whitespace-nowrap">
+            <Badge variant="secondary" className="hidden lg:flex text-xs whitespace-nowrap">
               {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
             </Badge>
+            {/* Export buttons */}
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={exportToExcel}
+                className="h-7 sm:h-8 px-2 text-[10px] sm:text-xs"
+                title="Exporter en Excel"
+              >
+                <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <span className="hidden sm:inline ml-1">Excel</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={exportToPDF}
+                className="h-7 sm:h-8 px-2 text-[10px] sm:text-xs"
+                title="Exporter en PDF"
+              >
+                <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <span className="hidden sm:inline ml-1">PDF</span>
+              </Button>
+            </div>
             {/* View mode toggle */}
             <div className="hidden sm:flex items-center gap-1 border rounded-md p-0.5 bg-muted/50">
               <Button
@@ -1731,14 +1856,14 @@ export const ProductManagement = () => {
             </div>
           </div>
           
-          {/* Row 2: Category filters + Badge (mobile) */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="text-[10px] sm:text-xs font-medium">Filtres:</span>
+          {/* Row 2: All filters */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Filter className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span className="text-[9px] sm:text-[10px] font-medium">Filtres:</span>
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="h-7 sm:h-8 w-[120px] sm:w-[150px] text-[10px] sm:text-xs">
+              <SelectTrigger className="h-6 sm:h-7 w-[90px] sm:w-[130px] text-[9px] sm:text-[10px]">
                 <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
               <SelectContent className="z-50 bg-popover">
@@ -1749,7 +1874,7 @@ export const ProductManagement = () => {
               </SelectContent>
             </Select>
             <Select value={sousCategoryFilter} onValueChange={setSousCategoryFilter}>
-              <SelectTrigger className="h-7 sm:h-8 w-[120px] sm:w-[150px] text-[10px] sm:text-xs">
+              <SelectTrigger className="h-6 sm:h-7 w-[90px] sm:w-[130px] text-[9px] sm:text-[10px]">
                 <SelectValue placeholder="Sous-cat." />
               </SelectTrigger>
               <SelectContent className="z-50 bg-popover">
@@ -1759,7 +1884,47 @@ export const ProductManagement = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Badge variant="outline" className="sm:hidden text-[10px] ml-auto">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-6 sm:h-7 w-[75px] sm:w-[100px] text-[9px] sm:text-[10px]">
+                <SelectValue placeholder="Statut" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-popover">
+                <SelectItem value="all" className="text-xs">Tous statuts</SelectItem>
+                <SelectItem value="active" className="text-xs">
+                  <span className="flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3 text-success" />
+                    Actif
+                  </span>
+                </SelectItem>
+                <SelectItem value="inactive" className="text-xs">
+                  <span className="flex items-center gap-1">
+                    <XCircle className="w-3 h-3 text-muted-foreground" />
+                    Inactif
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
+              <SelectTrigger className="h-6 sm:h-7 w-[70px] sm:w-[90px] text-[9px] sm:text-[10px]">
+                <SelectValue placeholder="Devise" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-popover">
+                <SelectItem value="all" className="text-xs">Devises</SelectItem>
+                <SelectItem value="USD" className="text-xs">
+                  <span className="flex items-center gap-1">
+                    <DollarSign className="w-3 h-3 text-emerald-600" />
+                    USD
+                  </span>
+                </SelectItem>
+                <SelectItem value="HTG" className="text-xs">
+                  <span className="flex items-center gap-1">
+                    <span className="w-3 h-3 text-sky-600 font-bold text-[10px]">G</span>
+                    HTG
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge variant="outline" className="lg:hidden text-[9px] sm:text-[10px] ml-auto">
               {filteredProducts.length}
             </Badge>
           </div>
