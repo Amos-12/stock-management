@@ -69,3 +69,29 @@ export function formatCurrencyValue(amount: number, currency: 'USD' | 'HTG'): st
     ? `$${formatNumber(amount)}`
     : `${formatNumber(amount)} HTG`;
 }
+
+// Convert amount from source currency to target currency
+export function convertCurrency(
+  amount: number,
+  sourceCurrency: 'USD' | 'HTG' | string | null,
+  targetCurrency: 'USD' | 'HTG',
+  usdHtgRate: number
+): number {
+  const source = (sourceCurrency || 'HTG') as 'USD' | 'HTG';
+  if (source === targetCurrency) return amount;
+  
+  return source === 'USD'
+    ? amount * usdHtgRate     // USD vers HTG
+    : amount / usdHtgRate;    // HTG vers USD
+}
+
+// Format AND convert an amount
+export function formatConvertedCurrency(
+  amount: number,
+  sourceCurrency: 'USD' | 'HTG' | string | null,
+  targetCurrency: 'USD' | 'HTG',
+  usdHtgRate: number
+): string {
+  const converted = convertCurrency(amount, sourceCurrency, targetCurrency, usdHtgRate);
+  return formatCurrencyValue(converted, targetCurrency);
+}
