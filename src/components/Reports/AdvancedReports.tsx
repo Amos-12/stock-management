@@ -764,7 +764,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
               </CardHeader>
               <CardContent className="p-2 sm:p-4 pt-0">
                 <div className="text-sm sm:text-lg font-bold text-primary">
-                  {formatNumber(reportData.totalRevenueConverted)} <span className="text-[10px] sm:text-sm">HTG</span>
+                  {formatCurrencyDisplay(reportData.totalRevenueConverted)}
                 </div>
                 <p className="text-[8px] sm:text-xs text-muted-foreground hidden sm:block">Taux: 1 USD = {companySettings?.usd_htg_rate || 132} HTG</p>
               </CardContent>
@@ -789,7 +789,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
               </CardHeader>
               <CardContent className="p-2 sm:p-4 pt-0">
                 <div className="text-sm sm:text-lg font-bold">
-                  {formatNumber(reportData.averageOrderValue)} <span className="text-[10px] sm:text-sm">HTG</span>
+                  {formatCurrencyDisplay(reportData.averageOrderValue)}
                 </div>
               </CardContent>
             </Card>
@@ -815,7 +815,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                         <Badge variant="secondary" className="text-[10px] sm:text-xs">{cat.count}</Badge>
                       </div>
                       <div className="text-sm sm:text-lg font-bold mb-1">
-                        {formatNumber(cat.revenue)} <span className="text-[10px] sm:text-sm font-normal">HTG</span>
+                        {formatCurrencyDisplay(cat.revenue)}
                       </div>
                       <div className="w-full bg-secondary rounded-full h-1.5 sm:h-2 mb-1 sm:mb-2">
                         <div 
@@ -858,7 +858,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="font-semibold text-success text-xs sm:text-base">
-                        {formatNumber(product.total_revenue)} <span className="text-[10px] sm:text-sm font-normal">HTG</span>
+                        {formatCurrencyDisplay(product.total_revenue)}
                       </div>
                       <div className="text-[10px] sm:text-sm text-muted-foreground">
                         {reportData.totalRevenueConverted > 0 ? ((product.total_revenue / reportData.totalRevenueConverted) * 100).toFixed(1) : 0}%
