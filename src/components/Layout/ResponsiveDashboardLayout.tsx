@@ -181,7 +181,7 @@ export const ResponsiveDashboardLayout = ({
         )}
       </div>
       
-      <ScrollArea className="flex-1 px-6 py-4">
+      <ScrollArea className="flex-1 px-6 py-4 pb-20">
         <nav className="space-y-1.5">
           {navItems.map((item: any, index: number) => {
             const Icon = item.icon;
