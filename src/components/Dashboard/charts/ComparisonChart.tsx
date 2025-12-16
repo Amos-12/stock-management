@@ -23,6 +23,7 @@ interface ComparisonChartProps {
   height?: number;
   currentLabel?: string;
   previousLabel?: string;
+  currency?: 'USD' | 'HTG';
 }
 
 export const ComparisonChart = ({ 
@@ -31,6 +32,7 @@ export const ComparisonChart = ({
   height = 300,
   currentLabel = "Période actuelle",
   previousLabel = "Période précédente",
+  currency = 'HTG',
 }: ComparisonChartProps) => {
   const formatYAxis = (value: number) => {
     if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
@@ -45,12 +47,15 @@ export const ComparisonChart = ({
     const previous = payload.find(p => p.name === previousLabel)?.value || 0;
     const change = previous > 0 ? ((current - previous) / previous) * 100 : 0;
 
+    const currencySymbol = currency === 'USD' ? '$' : '';
+    const currencySuffix = currency === 'HTG' ? ' HTG' : '';
+
     return (
       <div className="bg-card/95 backdrop-blur-sm p-2 sm:p-3 rounded-lg shadow-xl border border-border text-card-foreground">
         <p className="font-medium text-xs sm:text-sm mb-1.5 sm:mb-2">{label}</p>
         {payload.map((entry, index) => (
           <p key={index} className="text-[10px] sm:text-sm" style={{ color: entry.color }}>
-            {entry.name}: {formatNumber(entry.value)} HTG
+            {entry.name}: {currencySymbol}{formatNumber(entry.value)}{currencySuffix}
           </p>
         ))}
         <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-border">

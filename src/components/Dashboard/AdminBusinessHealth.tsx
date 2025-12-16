@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Activity, TrendingUp, Package, Percent } from 'lucide-react';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, formatCurrencyValue } from '@/lib/utils';
 
 interface AdminBusinessHealthProps {
   revenue: number;
@@ -11,6 +11,7 @@ interface AdminBusinessHealthProps {
   stockTurnover: number;
   lowStockCount: number;
   totalProducts: number;
+  currency?: 'USD' | 'HTG';
 }
 
 export const AdminBusinessHealth = ({
@@ -19,7 +20,8 @@ export const AdminBusinessHealth = ({
   profitMargin,
   stockTurnover,
   lowStockCount,
-  totalProducts
+  totalProducts,
+  currency = 'HTG'
 }: AdminBusinessHealthProps) => {
   // Calculate health score (0-100)
   const revenueScore = Math.min((revenue / revenueTarget) * 100, 100) * 0.4;
@@ -132,8 +134,8 @@ export const AdminBusinessHealth = ({
             className="h-1.5 sm:h-2 bg-muted/30"
           />
           <div className="flex justify-between text-[9px] sm:text-xs text-muted-foreground">
-            <span>{formatNumber(revenue)} HTG</span>
-            <span>{formatNumber(revenueTarget)} HTG</span>
+            <span>{formatCurrencyValue(revenue, currency)}</span>
+            <span>{formatCurrencyValue(revenueTarget, currency)}</span>
           </div>
         </div>
       </CardContent>

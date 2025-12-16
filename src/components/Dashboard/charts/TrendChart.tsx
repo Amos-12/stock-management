@@ -25,6 +25,7 @@ interface TrendChartProps {
   title?: string;
   showBrush?: boolean;
   height?: number;
+  currency?: 'USD' | 'HTG';
 }
 
 export const TrendChart = ({ 
@@ -32,6 +33,7 @@ export const TrendChart = ({
   title = "Tendance des ventes",
   showBrush = true,
   height = 300,
+  currency = 'HTG',
 }: TrendChartProps) => {
   const formatYAxis = (value: number) => {
     if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
@@ -78,7 +80,7 @@ export const TrendChart = ({
                 width={40}
               />
               
-              <Tooltip content={<EnhancedTooltip />} />
+              <Tooltip content={<EnhancedTooltip currency={currency} />} />
               
               <Legend 
                 verticalAlign="top" 

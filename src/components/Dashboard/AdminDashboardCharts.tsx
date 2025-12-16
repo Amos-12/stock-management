@@ -778,7 +778,7 @@ export const AdminDashboardCharts = () => {
                     width={75}
                   />
                   <Tooltip 
-                    formatter={(value: any) => [`${formatNumber(value)} HTG`, 'Revenus']} 
+                    formatter={(value: any) => [displayCurrency === 'USD' ? `$${formatNumber(value)}` : `${formatNumber(value)} HTG`, 'Revenus']} 
                     contentStyle={{ 
                       backgroundColor: 'hsl(var(--card))', 
                       border: '1px solid hsl(var(--border))', 
@@ -808,7 +808,7 @@ export const AdminDashboardCharts = () => {
 
         {/* Top Sellers */}
         <div className="animate-fade-in" style={{ animationDelay: '550ms' }}>
-          <AdminTopSellersChart sellers={topSellers} />
+          <AdminTopSellersChart sellers={topSellers} currency={displayCurrency} />
         </div>
       </div>
 
@@ -901,6 +901,7 @@ export const AdminDashboardCharts = () => {
             stockTurnover={todaySales > 0 ? todaySales / 30 : 0.5}
             lowStockCount={lowStockCount}
             totalProducts={totalProducts}
+            currency={displayCurrency}
           />
         </div>
       </div>
