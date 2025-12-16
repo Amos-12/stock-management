@@ -151,6 +151,27 @@ export type Database = {
         }
         Relationships: []
       }
+      database_size_history: {
+        Row: {
+          id: string
+          recorded_at: string
+          size_mb: number
+          usage_percent: number
+        }
+        Insert: {
+          id?: string
+          recorded_at?: string
+          size_mb: number
+          usage_percent: number
+        }
+        Update: {
+          id?: string
+          recorded_at?: string
+          size_mb?: number
+          usage_percent?: number
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           alert_threshold: number
@@ -656,6 +677,7 @@ export type Database = {
     }
     Functions: {
       check_database_size: { Args: never; Returns: Json }
+      cleanup_database_history: { Args: never; Returns: undefined }
       cleanup_old_data: { Args: never; Returns: Json }
       delete_user_account: { Args: { target_user_id: string }; Returns: Json }
       get_seller_authorized_categories: {
