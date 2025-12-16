@@ -719,7 +719,7 @@ export const AdminDashboardCharts = () => {
                     }}
                     formatter={(value: any, name: string) => [
                       `${formatNumber(value)} HTG`,
-                      name === 'revenue' ? 'Revenus' : 'Bénéfices'
+                      name
                     ]}
                   />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
