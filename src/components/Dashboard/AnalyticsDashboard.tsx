@@ -467,7 +467,7 @@ export const AnalyticsDashboard = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="comparison" className="space-y-4">
+        <TabsContent value="comparison" className="space-y-4 animate-fade-in">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <ComparisonChart 
               data={comparisonData} 
@@ -480,7 +480,7 @@ export const AnalyticsDashboard = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="distribution" className="space-y-4">
+        <TabsContent value="distribution" className="space-y-4 animate-fade-in">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Top Products - Mobile optimized */}
             <Card className="flex flex-col">
