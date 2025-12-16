@@ -112,14 +112,19 @@ export const AdminDashboardCharts = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      // First fetch company settings to get displayCurrency and rate
+      const settings = await fetchCompanySettings();
+      const rate = settings?.usd_htg_rate || 132;
+      const currency = (settings?.default_display_currency || 'HTG') as 'USD' | 'HTG';
+      
+      // Then fetch all data that depends on currency settings
       await Promise.all([
-        fetchCompanySettings(),
-        fetchStatsData(),
-        fetchRevenueData(),
-        fetchTopProducts(),
+        fetchStatsData(rate, currency),
+        fetchRevenueData(rate, currency),
+        fetchTopProducts(rate, currency),
         fetchCategoryData(),
-        fetchTopSellers(),
-        fetchSparklineData()
+        fetchTopSellers(rate, currency),
+        fetchSparklineData(rate, currency)
       ]);
       setLastUpdated(new Date());
     } catch (error) {
@@ -149,9 +154,10 @@ export const AdminDashboardCharts = () => {
     if (data?.default_display_currency) {
       setDisplayCurrency(data.default_display_currency as 'USD' | 'HTG');
     }
+    return data;
   };
 
-  const fetchSparklineData = async () => {
+  const fetchSparklineData = async (rate: number, currency: 'USD' | 'HTG') => {
     const days = 7;
     const sparklineRevenue: number[] = [];
     const sparklineProfit: number[] = [];
@@ -177,14 +183,8 @@ export const AdminDashboardCharts = () => {
         .gte('created_at', dayStart.toISOString())
         .lte('created_at', dayEnd.toISOString());
 
-      const { data: settings } = await supabase
-        .from('company_settings')
-        .select('usd_htg_rate')
-        .single();
-      const rate = settings?.usd_htg_rate || 132;
-
-      sparklineRevenue.push(calculateUnifiedTotal(items || [], rate, displayCurrency).unified);
-      sparklineProfit.push(calculateUnifiedProfit(items || [], rate, displayCurrency));
+      sparklineRevenue.push(calculateUnifiedTotal(items || [], rate, currency).unified);
+      sparklineProfit.push(calculateUnifiedProfit(items || [], rate, currency));
       sparklineSales.push(salesData?.length || 0);
     }
 
@@ -205,14 +205,8 @@ export const AdminDashboardCharts = () => {
     };
   };
 
-  const fetchStatsData = async () => {
+  const fetchStatsData = async (rate: number, currency: 'USD' | 'HTG') => {
     try {
-      const { data: settings } = await supabase
-        .from('company_settings')
-        .select('usd_htg_rate')
-        .single();
-      const rate = settings?.usd_htg_rate || 132;
-
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
@@ -229,8 +223,8 @@ export const AdminDashboardCharts = () => {
         .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', today.toISOString());
       
-      const todayRev = calculateUnifiedTotal(todayItems || [], rate, displayCurrency).unified;
-      const todayPft = calculateUnifiedProfit(todayItems || [], rate, displayCurrency);
+      const todayRev = calculateUnifiedTotal(todayItems || [], rate, currency).unified;
+      const todayPft = calculateUnifiedProfit(todayItems || [], rate, currency);
       setTodayRevenue(todayRev);
       setTodayProfit(todayPft);
 
@@ -249,8 +243,8 @@ export const AdminDashboardCharts = () => {
         .gte('sales.created_at', yesterday.toISOString())
         .lt('sales.created_at', today.toISOString());
       
-      setYesterdayRevenue(calculateUnifiedTotal(yesterdayItems || [], rate, displayCurrency).unified);
-      setYesterdayProfit(calculateUnifiedProfit(yesterdayItems || [], rate, displayCurrency));
+      setYesterdayRevenue(calculateUnifiedTotal(yesterdayItems || [], rate, currency).unified);
+      setYesterdayProfit(calculateUnifiedProfit(yesterdayItems || [], rate, currency));
 
       // Week data
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -259,8 +253,8 @@ export const AdminDashboardCharts = () => {
         .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', weekAgo.toISOString());
       
-      setWeekRevenue(calculateUnifiedTotal(weekItems || [], rate, displayCurrency).unified);
-      setWeekProfit(calculateUnifiedProfit(weekItems || [], rate, displayCurrency));
+      setWeekRevenue(calculateUnifiedTotal(weekItems || [], rate, currency).unified);
+      setWeekProfit(calculateUnifiedProfit(weekItems || [], rate, currency));
 
       // Previous week
       const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
@@ -270,7 +264,7 @@ export const AdminDashboardCharts = () => {
         .gte('sales.created_at', twoWeeksAgo.toISOString())
         .lt('sales.created_at', weekAgo.toISOString());
       
-      setPrevWeekRevenue(calculateUnifiedTotal(prevWeekItems || [], rate, displayCurrency).unified);
+      setPrevWeekRevenue(calculateUnifiedTotal(prevWeekItems || [], rate, currency).unified);
 
       // Month data
       const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -279,8 +273,8 @@ export const AdminDashboardCharts = () => {
         .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', monthAgo.toISOString());
       
-      setMonthRevenue(calculateUnifiedTotal(monthItems || [], rate, displayCurrency).unified);
-      setMonthProfit(calculateUnifiedProfit(monthItems || [], rate, displayCurrency));
+      setMonthRevenue(calculateUnifiedTotal(monthItems || [], rate, currency).unified);
+      setMonthProfit(calculateUnifiedProfit(monthItems || [], rate, currency));
 
       // Previous month
       const twoMonthsAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
@@ -290,8 +284,8 @@ export const AdminDashboardCharts = () => {
         .gte('sales.created_at', twoMonthsAgo.toISOString())
         .lt('sales.created_at', monthAgo.toISOString());
       
-      setPrevMonthRevenue(calculateUnifiedTotal(prevMonthItems || [], rate, displayCurrency).unified);
-      setPrevMonthProfit(calculateUnifiedProfit(prevMonthItems || [], rate, displayCurrency));
+      setPrevMonthRevenue(calculateUnifiedTotal(prevMonthItems || [], rate, currency).unified);
+      setPrevMonthProfit(calculateUnifiedProfit(prevMonthItems || [], rate, currency));
 
       // Products count
       const { count: productsCount } = await supabase
@@ -324,7 +318,7 @@ export const AdminDashboardCharts = () => {
     }
   };
 
-  const fetchRevenueData = async () => {
+  const fetchRevenueData = async (rate: number, currency: 'USD' | 'HTG') => {
     const daysBack = period === 'daily' ? 7 : period === 'weekly' ? 28 : 90;
     
     const chartData: RevenueData[] = [];
@@ -349,8 +343,8 @@ export const AdminDashboardCharts = () => {
         .gte('created_at', dayStart.toISOString())
         .lte('created_at', dayEnd.toISOString());
 
-      const revenue = calculateUnifiedTotal(items || [], usdHtgRate, displayCurrency).unified;
-      const profit = calculateUnifiedProfit(items || [], usdHtgRate, displayCurrency);
+      const revenue = calculateUnifiedTotal(items || [], rate, currency).unified;
+      const profit = calculateUnifiedProfit(items || [], rate, currency);
 
       chartData.push({
         date: dayStart.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
@@ -363,7 +357,7 @@ export const AdminDashboardCharts = () => {
     setRevenueData(chartData);
   };
 
-  const fetchTopProducts = async () => {
+  const fetchTopProducts = async (rate: number, currency: 'USD' | 'HTG') => {
     const daysBack = period === 'daily' ? 7 : period === 'weekly' ? 28 : 365;
     const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
     
@@ -379,9 +373,9 @@ export const AdminDashboardCharts = () => {
         acc[item.product_name] = { sales: 0, revenue: 0 };
       }
       acc[item.product_name].sales += Number(item.quantity);
-      const itemRevenue = displayCurrency === 'USD'
-        ? (item.currency === 'USD' ? item.subtotal : item.subtotal / usdHtgRate)
-        : (item.currency === 'USD' ? item.subtotal * usdHtgRate : item.subtotal);
+      const itemRevenue = currency === 'USD'
+        ? (item.currency === 'USD' ? item.subtotal : item.subtotal / rate)
+        : (item.currency === 'USD' ? item.subtotal * rate : item.subtotal);
       acc[item.product_name].revenue += itemRevenue;
       return acc;
     }, {});
@@ -420,26 +414,49 @@ export const AdminDashboardCharts = () => {
     setCategoryData(chartData);
   };
 
-  const fetchTopSellers = async () => {
+  const fetchTopSellers = async (rate: number, currency: 'USD' | 'HTG') => {
     try {
-      const { data: salesData } = await supabase
-        .from('sales')
-        .select('seller_id, total_amount');
+      // Fetch sale_items with currency for proper conversion
+      const { data: saleItemsData } = await supabase
+        .from('sale_items')
+        .select('subtotal, currency, sales!inner(seller_id)');
 
-      const sellerGroups = salesData?.reduce((acc: any, sale) => {
-        if (!acc[sale.seller_id]) {
-          acc[sale.seller_id] = { sales: 0, revenue: 0 };
+      const sellerGroups = saleItemsData?.reduce((acc: any, item: any) => {
+        const sellerId = item.sales.seller_id;
+        if (!acc[sellerId]) {
+          acc[sellerId] = { sales: new Set(), revenue: 0 };
         }
-        acc[sale.seller_id].sales += 1;
-        acc[sale.seller_id].revenue += sale.total_amount;
+        // Convert to display currency
+        const convertedRevenue = currency === 'USD'
+          ? (item.currency === 'USD' ? item.subtotal : item.subtotal / rate)
+          : (item.currency === 'USD' ? item.subtotal * rate : item.subtotal);
+        
+        acc[sellerId].revenue += convertedRevenue;
         return acc;
       }, {}) || {};
+
+      // Count unique sales per seller
+      const { data: salesCountData } = await supabase
+        .from('sales')
+        .select('seller_id');
+
+      salesCountData?.forEach(sale => {
+        if (sellerGroups[sale.seller_id]) {
+          sellerGroups[sale.seller_id].sales.add(sale.seller_id);
+        }
+      });
 
       const sellerIds = Object.keys(sellerGroups);
       if (sellerIds.length === 0) {
         setTopSellers([]);
         return;
       }
+
+      // Get sales count per seller
+      const salesCountBySeller: Record<string, number> = {};
+      salesCountData?.forEach(sale => {
+        salesCountBySeller[sale.seller_id] = (salesCountBySeller[sale.seller_id] || 0) + 1;
+      });
 
       const { data: profilesData } = await supabase
         .from('profiles')
@@ -452,7 +469,7 @@ export const AdminDashboardCharts = () => {
           const stats = sellerGroups[sellerId];
           return {
             name: profile?.full_name || 'Vendeur inconnu',
-            sales: stats.sales,
+            sales: salesCountBySeller[sellerId] || 0,
             revenue: stats.revenue
           };
         })
