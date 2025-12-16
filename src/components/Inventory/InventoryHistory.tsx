@@ -239,12 +239,11 @@ export const InventoryHistory = () => {
   }, [movements]);
 
   const getMovementBadge = (type: string, quantity: number, prev: number, next: number) => {
-    const isPositive = next > prev;
-    const isNegative = next < prev;
+    const diff = next - prev;
     
     if (['restock', 'adjustment_in', 'return', 'in'].includes(type)) {
       return (
-        <Badge className="bg-green-600 text-white border-green-700 flex items-center gap-1">
+        <Badge className="bg-emerald-600 text-white border-emerald-700 flex items-center gap-1">
           <ArrowUpCircle className="w-3 h-3" />
           +{quantity.toFixed(2)}
         </Badge>
@@ -260,10 +259,11 @@ export const InventoryHistory = () => {
       );
     }
     
+    // Adjustment type
     return (
-      <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20 flex items-center gap-1">
+      <Badge className="bg-blue-600 text-white border-blue-700 flex items-center gap-1">
         <Settings2 className="w-3 h-3" />
-        {isPositive ? '+' : isNegative ? '' : ''}{next - prev}
+        {diff > 0 ? '+' : ''}{diff.toFixed(2)}
       </Badge>
     );
   };
@@ -501,9 +501,24 @@ export const InventoryHistory = () => {
               </SelectTrigger>
               <SelectContent className="z-[100]">
                 <SelectItem value="all">Tous les types</SelectItem>
-                <SelectItem value="in">Entrées</SelectItem>
-                <SelectItem value="out">Sorties</SelectItem>
-                <SelectItem value="adjustment">Ajustements</SelectItem>
+                <SelectItem value="in">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    Entrées
+                  </span>
+                </SelectItem>
+                <SelectItem value="out">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                    Sorties
+                  </span>
+                </SelectItem>
+                <SelectItem value="adjustment">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    Ajustements
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
 
