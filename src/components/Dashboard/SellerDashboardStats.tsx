@@ -288,10 +288,20 @@ export const SellerDashboardStats = () => {
     <div className="space-y-3 sm:space-y-6">
       {/* Header with refresh */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2">
             <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
             <span className="hidden sm:inline">MàJ:</span> {lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          </Badge>
+          <Badge 
+            variant="outline" 
+            className={`text-[10px] sm:text-xs px-1.5 sm:px-2 ${
+              displayCurrency === 'USD' 
+                ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700' 
+                : 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+            }`}
+          >
+            {displayCurrency === 'USD' ? '$ USD' : 'HTG'}
           </Badge>
         </div>
         <Button 
