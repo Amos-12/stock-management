@@ -420,7 +420,7 @@ export const AnalyticsDashboard = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <KPICard
           title="Revenus"
           value={kpis.revenue.current}
@@ -449,17 +449,10 @@ export const AnalyticsDashboard = () => {
           previousValue={kpis.avgTicket.previous}
           icon={Target}
         />
-        <KPICard
-          title="Vendeurs actifs"
-          value={kpis.uniqueSellers.current}
-          previousValue={kpis.uniqueSellers.previous}
-          icon={Users}
-          format="number"
-        />
       </div>
 
       {/* Main Trend Chart - without Brush */}
-      <TrendChart data={trendData} title={`Tendance des ventes - ${periodLabels[period]}`} showBrush={false} />
+      <TrendChart data={trendData} title={`Tendance des ventes - ${periodLabels[period]}`} showBrush={false} height={250} />
 
       {/* Tabs for different views */}
       <Tabs defaultValue="comparison" className="space-y-4">
@@ -489,13 +482,13 @@ export const AnalyticsDashboard = () => {
 
         <TabsContent value="distribution" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Top Products - Full height */}
+            {/* Top Products */}
             <Card className="flex flex-col">
               <CardHeader className="pb-2 shrink-0">
-                <CardTitle className="text-lg font-semibold">Top 10 Produits</CardTitle>
+                <CardTitle className="text-sm sm:text-lg font-semibold">Top 10 Produits</CardTitle>
               </CardHeader>
               <CardContent className="flex-1">
-                <div className="h-[450px]">
+                <div className="h-[280px] sm:h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={topProducts} layout="vertical" margin={{ left: 5, right: 60, top: 5, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -541,13 +534,13 @@ export const AnalyticsDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Category Distribution - Full height */}
+            {/* Category Distribution */}
             <Card className="flex flex-col bg-card">
               <CardHeader className="pb-2 shrink-0">
-                <CardTitle className="text-lg font-semibold text-card-foreground">Distribution par catégorie</CardTitle>
+                <CardTitle className="text-sm sm:text-lg font-semibold text-card-foreground">Distribution par catégorie</CardTitle>
               </CardHeader>
               <CardContent className="flex-1">
-                <div className="h-[450px]">
+                <div className="h-[280px] sm:h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -556,8 +549,8 @@ export const AnalyticsDashboard = () => {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={140}
-                        innerRadius={80}
+                        outerRadius="80%"
+                        innerRadius="50%"
                         paddingAngle={2}
                         animationBegin={0}
                         animationDuration={800}
