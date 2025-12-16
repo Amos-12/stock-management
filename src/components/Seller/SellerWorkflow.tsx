@@ -951,12 +951,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     setIsProcessing(true);
 
     try {
-      const subtotal = getSubtotal();
+      // Use unified total (properly converted to display currency) for all calculations
+      const { amount: unifiedSubtotal, currency: displayCurrency } = getUnifiedTotal();
       const discountAmount = getDiscountAmount();
-      const afterDiscount = getFinalTotal();  // Sous-total après remise (HT)
+      const afterDiscount = Math.max(0, unifiedSubtotal - discountAmount);
       const tvaRate = companySettings?.tva_rate || 0;
       const tvaAmount = afterDiscount * (tvaRate / 100);
-      const totalAmount = afterDiscount + tvaAmount;  // Total TTC incluant la TVA
+      const totalAmount = afterDiscount + tvaAmount;  // Total TTC in display currency
 
       // === VALIDATION EN TEMPS RÉEL DU STOCK ===
       // Récupérer les données fraîches de la base pour tous les produits du panier
@@ -1024,7 +1025,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         customer_name: customerName.trim() || null,
         customer_address: customerAddress.trim() ? customerAddress.trim() : null,
         payment_method: paymentMethod,
-        subtotal: subtotal,
+        subtotal: unifiedSubtotal,
         discount_type: discountType,
         discount_value: parseFloat(discountValue) || 0,
         discount_amount: discountAmount,
@@ -1087,10 +1088,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       handleStepChange('success');
       triggerConfetti();
       playSuccess();
+      
+      // Store calculated values for consistent display on success page
       setCompletedSale({
         ...data.sale,
         payment_method: paymentMethod,
         customer_address: customerAddress.trim() || null,
+        // Store calculated values to avoid recalculation issues
+        calculated_total: totalAmount,
+        calculated_discount: discountAmount,
+        calculated_subtotal: unifiedSubtotal,
+        calculated_currency: displayCurrency,
         items: cart.map(item => {
           const itemTotal = item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity);
           const unitPrice = item.actualPrice !== undefined ? (item.actualPrice / item.cartQuantity) : item.price;
@@ -1101,7 +1109,8 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
             dimension: item.dimension,
             diametre: item.diametre,
             unit_price: unitPrice,
-            total: itemTotal
+            total: itemTotal,
+            currency: item.currency
           };
         })
       });
@@ -2267,20 +2276,22 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Articles</p>
                     <p className="font-medium">{completedSale?.items?.length || 0} produit(s)</p>
                   </div>
-                  {getDiscountAmount() > 0 && (
+                  {(completedSale?.calculated_discount || 0) > 0 && (
                     <div>
                       <p className="text-xs text-muted-foreground uppercase tracking-wide">Remise</p>
-                      <p className="font-medium text-destructive">-{formatAmount(getDiscountAmount(), companySettings?.default_display_currency || 'HTG')}</p>
+                      <p className="font-medium text-destructive">
+                        -{formatAmount(completedSale?.calculated_discount || 0, completedSale?.calculated_currency || 'HTG')}
+                      </p>
                     </div>
                   )}
                 </div>
 
-                {/* Total en vedette */}
+                {/* Total en vedette - use stored calculated values */}
                 <div className="pt-4 border-t border-border">
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-semibold">Total payé</span>
                     <span className="text-2xl font-bold text-success">
-                      {formatAmount(getUnifiedFinalTotal().amount, getUnifiedFinalTotal().currency)}
+                      {formatAmount(completedSale?.calculated_total || 0, completedSale?.calculated_currency || 'HTG')}
                     </span>
                   </div>
                 </div>

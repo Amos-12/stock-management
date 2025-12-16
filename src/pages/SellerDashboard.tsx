@@ -5,17 +5,15 @@ import { SellerWorkflow } from '@/components/Seller/SellerWorkflow';
 import { SellerDashboardStats } from '@/components/Dashboard/SellerDashboardStats';
 import { StockAlerts } from '@/components/Notifications/StockAlerts';
 import { ProductManagement } from '@/components/Products/ProductManagement';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   TrendingUp,
   Receipt,
-  ShoppingCart,
-  Package,
-  Home,
-  AlertCircle
+  Calendar
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import logo from '@/assets/logo.png';
 
 interface Sale {
@@ -34,14 +32,21 @@ const SellerDashboard = () => {
   const [loadingApproval, setLoadingApproval] = useState(true);
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'HTG'>('HTG');
   const [usdHtgRate, setUsdHtgRate] = useState(132);
+  const [periodFilter, setPeriodFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   useEffect(() => {
     if (user && !authLoading) {
       checkApprovalStatus();
-      fetchMySales();
       fetchCompanySettings();
     }
   }, [user, authLoading]);
+
+  // Refetch sales when period filter changes
+  useEffect(() => {
+    if (user && !authLoading && currentSection === 'history') {
+      fetchMySales();
+    }
+  }, [periodFilter, currentSection]);
 
   const fetchCompanySettings = async () => {
     const { data } = await supabase
@@ -80,12 +85,26 @@ const SellerDashboard = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('sales')
         .select('*')
         .eq('seller_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .order('created_at', { ascending: false });
+
+      // Apply period filter
+      const now = new Date();
+      if (periodFilter === 'today') {
+        query = query.gte('created_at', startOfDay(now).toISOString());
+      } else if (periodFilter === 'week') {
+        query = query.gte('created_at', startOfWeek(now, { weekStartsOn: 1 }).toISOString());
+      } else if (periodFilter === 'month') {
+        query = query.gte('created_at', startOfMonth(now).toISOString());
+      } else {
+        // Only limit when showing all
+        query = query.limit(20);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setSales(data || []);
@@ -105,22 +124,59 @@ const SellerDashboard = () => {
       case 'notifications':
         return <StockAlerts />;
       case 'history':
+        const periodLabels: Record<string, string> = {
+          all: '20 récentes',
+          today: "Aujourd'hui",
+          week: 'Cette semaine',
+          month: 'Ce mois'
+        };
+        
+        // Calculate total for filtered period
+        const periodTotal = sales.reduce((sum, sale) => sum + sale.total_amount, 0);
+        
         return (
           <Card className="shadow-lg">
             <CardHeader className="pb-2 sm:pb-4 px-3 sm:px-6">
-              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
-                Mes Ventes
-                <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1">
-                  (10 récentes)
-                </span>
-              </CardTitle>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+                  Mes Ventes
+                  <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1">
+                    ({sales.length} ventes)
+                  </span>
+                </CardTitle>
+                <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as typeof periodFilter)}>
+                  <SelectTrigger className="w-36 h-8 text-xs">
+                    <Calendar className="w-3 h-3 mr-1" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">20 récentes</SelectItem>
+                    <SelectItem value="today">Aujourd'hui</SelectItem>
+                    <SelectItem value="week">Cette semaine</SelectItem>
+                    <SelectItem value="month">Ce mois</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Period stats */}
+              {sales.length > 0 && (
+                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                  <span>Total {periodLabels[periodFilter]}:</span>
+                  <span className="font-semibold text-foreground">
+                    {displayCurrency === 'USD' 
+                      ? `$${(periodTotal / usdHtgRate).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                      : `${periodTotal.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} HTG`
+                    }
+                  </span>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="px-3 sm:px-6">
               {sales.length === 0 ? (
                 <div className="text-center py-6 sm:py-8 text-muted-foreground">
                   <Receipt className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 opacity-50" />
-                  <p className="text-xs sm:text-sm">Aucune vente enregistrée</p>
+                  <p className="text-xs sm:text-sm">Aucune vente pour cette période</p>
                 </div>
               ) : (
                 <div className="space-y-2 sm:space-y-3">
@@ -143,8 +199,8 @@ const SellerDashboard = () => {
                             })}
                           </span>
                           <span className="hidden sm:inline">•</span>
-                          <span className="px-1.5 py-0.5 bg-muted rounded text-[9px] sm:text-xs">
-                            {sale.payment_method || 'N/A'}
+                          <span className="px-1.5 py-0.5 bg-muted rounded text-[9px] sm:text-xs capitalize">
+                            {sale.payment_method === 'espece' ? 'Espèces' : sale.payment_method === 'cheque' ? 'Chèque' : sale.payment_method === 'virement' ? 'Virement' : sale.payment_method || 'N/A'}
                           </span>
                         </div>
                       </div>
