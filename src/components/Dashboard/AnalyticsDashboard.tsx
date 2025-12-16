@@ -482,30 +482,41 @@ export const AnalyticsDashboard = () => {
 
         <TabsContent value="distribution" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Top Products */}
+            {/* Top Products - Mobile optimized */}
             <Card className="flex flex-col">
               <CardHeader className="pb-2 shrink-0">
-                <CardTitle className="text-sm sm:text-lg font-semibold">Top 10 Produits</CardTitle>
+                <CardTitle className="text-sm sm:text-lg font-semibold flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  Top 10 Produits
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex-1">
                 <div className="h-[280px] sm:h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topProducts} layout="vertical" margin={{ left: 5, right: 60, top: 5, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <BarChart 
+                      data={topProducts} 
+                      layout="vertical" 
+                      margin={{ left: 0, right: 40, top: 5, bottom: 5 }}
+                      barSize={window.innerWidth < 640 ? 12 : 18}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                       <XAxis 
                         type="number" 
                         tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} 
-                        tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }} 
+                        tick={{ fontSize: 9, fill: 'hsl(var(--foreground))' }} 
                         stroke="hsl(var(--foreground))"
-                        height={25} 
+                        height={20}
+                        axisLine={false}
                       />
                       <YAxis 
                         type="category" 
                         dataKey="name" 
-                        tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
+                        tick={{ fontSize: 9, fill: 'hsl(var(--foreground))' }}
                         stroke="hsl(var(--foreground))"
-                        width={100}
-                        tickFormatter={(v) => v.length > 14 ? `${v.slice(0, 14)}...` : v}
+                        width={70}
+                        tickFormatter={(v) => v.length > 10 ? `${v.slice(0, 10)}…` : v}
+                        axisLine={false}
+                        tickLine={false}
                       />
                       <Tooltip 
                         formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
@@ -514,6 +525,8 @@ export const AnalyticsDashboard = () => {
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px',
                           color: 'hsl(var(--card-foreground))',
+                          padding: '6px 10px',
+                          fontSize: '11px',
                         }}
                       />
                       <Bar dataKey="revenue" fill="#2563eb" radius={[0, 4, 4, 0]} animationDuration={800}>
@@ -522,10 +535,10 @@ export const AnalyticsDashboard = () => {
                           position="right" 
                           formatter={(value: number) => {
                             const total = topProducts.reduce((sum, p) => sum + p.revenue, 0);
-                            const percent = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+                            const percent = total > 0 ? ((value / total) * 100).toFixed(0) : '0';
                             return `${percent}%`;
                           }}
-                          style={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
+                          style={{ fontSize: 8, fill: 'hsl(var(--muted-foreground))' }}
                         />
                       </Bar>
                     </BarChart>
