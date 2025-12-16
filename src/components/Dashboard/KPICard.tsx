@@ -159,10 +159,10 @@ export const KPICard = ({
       <CardContent className={isSmall ? "p-2 sm:p-3" : "p-2 sm:p-4"}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className={`font-medium text-muted-foreground truncate ${isSmall ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm'}`}>
+            <p className={`font-medium text-muted-foreground truncate ${isSmall ? 'text-[9px] sm:text-[10px] md:text-xs' : 'text-[10px] sm:text-xs md:text-sm'}`}>
               {title}
             </p>
-            <p className={`font-bold text-foreground mt-0.5 sm:mt-1 truncate ${isSmall ? 'text-sm sm:text-base' : 'text-base sm:text-xl'}`}>
+            <p className={`font-bold text-foreground mt-0.5 sm:mt-1 truncate ${isSmall ? 'text-[10px] sm:text-sm md:text-base' : 'text-xs sm:text-base md:text-xl'}`}>
               {formatValue()}
             </p>
             
