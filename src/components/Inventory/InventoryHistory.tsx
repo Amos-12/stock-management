@@ -180,8 +180,10 @@ export const InventoryHistory = () => {
       ['sale', 'adjustment_out', 'loss', 'out'].includes(m.movement_type)
     ).reduce((sum, m) => sum + m.quantity, 0);
     
+    // Count adjustments: includes adjustment types AND manual restocks (restock without sale_id)
     const adjustments = movements.filter(m => 
       ['adjustment', 'inventory_adjustment', 'adjustment_in', 'adjustment_out'].includes(m.movement_type) ||
+      (m.movement_type === 'restock' && !m.sale_id) ||
       (m.reason?.toLowerCase().includes('ajustement') || m.reason?.toLowerCase().includes('inventaire'))
     ).length;
 
@@ -323,51 +325,51 @@ export const InventoryHistory = () => {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Entrées</p>
-                <p className="text-xl font-bold text-green-600">+{formatNumber(stats.ins)}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Entrées</p>
+                <p className="text-sm sm:text-xl font-bold text-green-600">+{formatNumber(stats.ins)}</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-green-500 opacity-50" />
+              <TrendingUp className="w-5 h-5 sm:w-8 sm:h-8 text-green-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Sorties</p>
-                <p className="text-xl font-bold text-red-600">-{formatNumber(stats.outs)}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Sorties</p>
+                <p className="text-sm sm:text-xl font-bold text-red-600">-{formatNumber(stats.outs)}</p>
               </div>
-              <TrendingDown className="w-8 h-8 text-red-500 opacity-50" />
+              <TrendingDown className="w-5 h-5 sm:w-8 sm:h-8 text-red-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Ajustements</p>
-                <p className="text-xl font-bold text-blue-600">{stats.adjustments}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Ajustements</p>
+                <p className="text-sm sm:text-xl font-bold text-blue-600">{stats.adjustments}</p>
               </div>
-              <Settings2 className="w-8 h-8 text-blue-500 opacity-50" />
+              <Settings2 className="w-5 h-5 sm:w-8 sm:h-8 text-blue-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total mouvements</p>
-                <p className="text-xl font-bold">{stats.total}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Total mouvements</p>
+                <p className="text-sm sm:text-xl font-bold">{stats.total}</p>
               </div>
-              <Package className="w-8 h-8 text-primary opacity-50" />
+              <Package className="w-5 h-5 sm:w-8 sm:h-8 text-primary opacity-50" />
             </div>
           </CardContent>
         </Card>

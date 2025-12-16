@@ -745,7 +745,7 @@ export const AdminDashboardCharts = () => {
         </div>
 
         {/* Recent Activities - 1/3 width */}
-        <div className="animate-fade-in hidden lg:block" style={{ animationDelay: '450ms' }}>
+        <div className="animate-fade-in" style={{ animationDelay: '450ms' }}>
           <RecentActivities />
         </div>
       </div>
