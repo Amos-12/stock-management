@@ -221,8 +221,20 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:w-auto max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between gap-2">
           <DialogTitle className="text-base sm:text-lg">Détails de la vente</DialogTitle>
+          {companySettings?.default_display_currency && (
+            <Badge 
+              variant="outline" 
+              className={`text-xs px-2 py-1 ${
+                companySettings.default_display_currency === 'USD' 
+                  ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700' 
+                  : 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+              }`}
+            >
+              Affichage: {companySettings.default_display_currency === 'USD' ? '$ USD' : 'HTG'}
+            </Badge>
+          )}
         </DialogHeader>
 
         {loading ? (

@@ -406,8 +406,15 @@ export const generateReceipt = (
     baseSubtotal = saleData.subtotal;
   }
   
-  // Discount amount (use stored value directly)
-  const discountAmount = saleData.discount_amount || 0;
+  // Discount amount - convert to display currency if needed
+  let discountAmount = 0;
+  if (saleData.discount_amount > 0) {
+    // Le discount est stocké en HTG, convertir si on affiche en USD
+    discountAmount = displayCurrency === 'HTG' 
+      ? saleData.discount_amount 
+      : saleData.discount_amount / rate;
+  }
+  
   if (discountAmount > 0) {
     pdf.setFont('helvetica', 'normal');
     const discountLabel = saleData.discount_type === 'percentage' 
