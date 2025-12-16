@@ -41,46 +41,49 @@ const SortableCategoryRow = ({ category, getSousCategoriesCount, onEdit, onDelet
 
   return (
     <TableRow ref={setNodeRef} style={style} className={isDragging ? 'bg-muted' : ''}>
-      <TableCell className="hidden sm:table-cell w-8">
-        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+      <TableCell className="hidden sm:table-cell w-8 p-1 sm:p-2">
+        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-0.5 sm:p-1 hover:bg-muted rounded">
+          <GripVertical className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </button>
       </TableCell>
-      <TableCell className="hidden sm:table-cell">{category.ordre}</TableCell>
-      <TableCell className="font-medium">{category.nom}</TableCell>
-      <TableCell className="hidden md:table-cell text-muted-foreground">{category.slug}</TableCell>
-      <TableCell className="hidden sm:table-cell">
-        <Badge variant="secondary">
+      <TableCell className="hidden sm:table-cell text-xs sm:text-sm p-1 sm:p-2">{category.ordre}</TableCell>
+      <TableCell className="font-medium text-xs sm:text-sm p-1 sm:p-2">{category.nom}</TableCell>
+      <TableCell className="hidden md:table-cell text-muted-foreground text-xs sm:text-sm p-1 sm:p-2">{category.slug}</TableCell>
+      <TableCell className="hidden sm:table-cell p-1 sm:p-2">
+        <Badge variant="secondary" className="text-[10px] sm:text-xs">
           {getSousCategoriesCount(category.id)}
         </Badge>
       </TableCell>
-      <TableCell>
-        <Badge variant={category.is_active ? "default" : "secondary"}>
+      <TableCell className="p-1 sm:p-2">
+        <Badge variant={category.is_active ? "default" : "secondary"} className="text-[10px] sm:text-xs">
           {category.is_active ? 'Active' : 'Inactive'}
         </Badge>
       </TableCell>
-      <TableCell className="text-right">
-        <div className="flex justify-end gap-1 sm:gap-2">
+      <TableCell className="text-right p-1 sm:p-2">
+        <div className="flex justify-end gap-0.5 sm:gap-1">
           <Button
             variant="ghost"
             size="sm"
+            className="h-6 w-6 sm:h-8 sm:w-8 p-0"
             onClick={() => onViewSubcategories(category)}
           >
-            <Layers className="h-4 w-4" />
+            <Layers className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            className="h-6 w-6 sm:h-8 sm:w-8 p-0"
             onClick={() => onEdit(category)}
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            className="h-6 w-6 sm:h-8 sm:w-8 p-0"
             onClick={() => onDelete(category)}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
         </div>
       </TableCell>
@@ -353,47 +356,48 @@ export const CategoryManagement = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
-          <TabsTrigger value="categories" className="flex items-center gap-2 py-2">
-            <FolderTree className="h-4 w-4" />
+        <TabsList className="grid w-full grid-cols-3 h-auto p-0.5 sm:p-1">
+          <TabsTrigger value="categories" className="flex items-center gap-1 sm:gap-2 py-1.5 sm:py-2 text-[10px] sm:text-sm">
+            <FolderTree className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Catégories</span>
             <span className="sm:hidden">Cat.</span>
           </TabsTrigger>
-          <TabsTrigger value="subcategories" className="flex items-center gap-2 py-2">
-            <Layers className="h-4 w-4" />
-            <span className="hidden sm:inline">Sous-catégories</span>
-            <span className="sm:hidden">Sous-cat.</span>
+          <TabsTrigger value="subcategories" className="flex items-center gap-1 sm:gap-2 py-1.5 sm:py-2 text-[10px] sm:text-sm">
+            <Layers className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Sous-cat.</span>
+            <span className="sm:hidden">S-Cat.</span>
           </TabsTrigger>
-          <TabsTrigger value="specifications" className="flex items-center gap-2 py-2">
-            <Settings className="h-4 w-4" />
+          <TabsTrigger value="specifications" className="flex items-center gap-1 sm:gap-2 py-1.5 sm:py-2 text-[10px] sm:text-sm">
+            <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Spécifications</span>
             <span className="sm:hidden">Specs</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="categories">
+        <TabsContent value="categories" className="mt-2 sm:mt-4">
           <Card>
-            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <CardTitle className="flex items-center gap-2">
-                <FolderTree className="h-5 w-5" />
-                Gestion des Catégories
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 p-3 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-lg">
+                <FolderTree className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">Gestion des Catégories</span>
+                <span className="sm:hidden">Catégories</span>
               </CardTitle>
               <Dialog open={isDialogOpen} onOpenChange={(open) => {
                 setIsDialogOpen(open);
                 if (!open) resetForm();
               }}>
                 <DialogTrigger asChild>
-                  <Button className="w-full sm:w-auto">
-                    <Plus className="h-4 w-4 mr-2" />
+                  <Button className="w-full sm:w-auto h-8 sm:h-10 text-xs sm:text-sm">
+                    <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     <span className="hidden sm:inline">Nouvelle Catégorie</span>
                     <span className="sm:hidden">Nouvelle</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>
+                    <DialogTitle className="text-base sm:text-lg">
                       {editingCategory ? 'Modifier la Catégorie' : 'Nouvelle Catégorie'}
                     </DialogTitle>
                   </DialogHeader>
@@ -454,19 +458,19 @@ export const CategoryManagement = () => {
                 </DialogContent>
               </Dialog>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
+            <CardContent className="p-2 sm:p-6">
+              <div className="overflow-x-auto -mx-2 sm:mx-0">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="hidden sm:table-cell w-8"></TableHead>
-                        <TableHead className="hidden sm:table-cell">Ordre</TableHead>
-                        <TableHead>Nom</TableHead>
-                        <TableHead className="hidden md:table-cell">Slug</TableHead>
-                        <TableHead className="hidden sm:table-cell">Sous-cat.</TableHead>
-                        <TableHead>Statut</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Ordre</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Nom</TableHead>
+                        <TableHead className="hidden md:table-cell text-xs sm:text-sm">Slug</TableHead>
+                        <TableHead className="hidden sm:table-cell text-xs sm:text-sm">S-Cat.</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Statut</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

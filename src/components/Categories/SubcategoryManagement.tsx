@@ -45,47 +45,50 @@ const SortableSubcategoryRow = ({
 
   return (
     <TableRow ref={setNodeRef} style={style} className={isDragging ? 'bg-muted' : ''}>
-      <TableCell className="hidden sm:table-cell w-8">
-        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+      <TableCell className="hidden sm:table-cell w-8 p-1 sm:p-2">
+        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-0.5 sm:p-1 hover:bg-muted rounded">
+          <GripVertical className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </button>
       </TableCell>
-      <TableCell className="hidden sm:table-cell">{sousCategorie.ordre}</TableCell>
-      <TableCell className="font-medium">{sousCategorie.nom}</TableCell>
-      <TableCell className="hidden md:table-cell">
-        <Badge variant="outline">{getCategoryName(sousCategorie.categorie_id)}</Badge>
+      <TableCell className="hidden sm:table-cell text-xs sm:text-sm p-1 sm:p-2">{sousCategorie.ordre}</TableCell>
+      <TableCell className="font-medium text-xs sm:text-sm p-1 sm:p-2">{sousCategorie.nom}</TableCell>
+      <TableCell className="hidden md:table-cell p-1 sm:p-2">
+        <Badge variant="outline" className="text-[10px] sm:text-xs">{getCategoryName(sousCategorie.categorie_id)}</Badge>
       </TableCell>
-      <TableCell className="hidden sm:table-cell">
-        <Badge variant="secondary" className="text-xs">{getStockTypeLabel(sousCategorie.stock_type)}</Badge>
+      <TableCell className="hidden sm:table-cell p-1 sm:p-2">
+        <Badge variant="secondary" className="text-[10px] sm:text-xs">{getStockTypeLabel(sousCategorie.stock_type)}</Badge>
       </TableCell>
-      <TableCell>
-        <Badge variant={sousCategorie.is_active ? "default" : "secondary"}>
+      <TableCell className="p-1 sm:p-2">
+        <Badge variant={sousCategorie.is_active ? "default" : "secondary"} className="text-[10px] sm:text-xs">
           {sousCategorie.is_active ? 'Active' : 'Inactive'}
         </Badge>
       </TableCell>
-      <TableCell className="text-right">
-        <div className="flex justify-end gap-1 sm:gap-2">
+      <TableCell className="text-right p-1 sm:p-2">
+        <div className="flex justify-end gap-0.5 sm:gap-1">
           <Button
             variant="ghost"
             size="sm"
+            className="h-6 w-6 sm:h-8 sm:w-8 p-0"
             onClick={() => onManageSpecs(sousCategorie.id)}
             title="Gérer les spécifications"
           >
-            <Settings className="h-4 w-4" />
+            <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            className="h-6 w-6 sm:h-8 sm:w-8 p-0"
             onClick={() => onEdit(sousCategorie)}
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            className="h-6 w-6 sm:h-8 sm:w-8 p-0"
             onClick={() => onDelete(sousCategorie)}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
         </div>
       </TableCell>
@@ -377,18 +380,18 @@ export const SubcategoryManagement = ({
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-col gap-4">
-          <CardTitle className="flex items-center gap-2">
-            <Layers className="h-5 w-5" />
+        <CardHeader className="flex flex-col gap-2 sm:gap-4 p-3 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-lg">
+            <Layers className="h-4 w-4 sm:h-5 sm:w-5" />
             <span className="hidden sm:inline">Gestion des Sous-catégories</span>
             <span className="sm:hidden">Sous-catégories</span>
           </CardTitle>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             <Select 
               value={selectedCategoryId || 'all'} 
               onValueChange={(value) => onSelectCategory(value === 'all' ? null : value)}
             >
-              <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px] h-8 sm:h-10 text-xs sm:text-sm">
                 <SelectValue placeholder="Filtrer par catégorie" />
               </SelectTrigger>
               <SelectContent>
@@ -403,8 +406,8 @@ export const SubcategoryManagement = ({
               if (!open) resetForm();
             }}>
               <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button className="w-full sm:w-auto h-8 sm:h-10 text-xs sm:text-sm">
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Nouvelle Sous-catégorie</span>
                   <span className="sm:hidden">Nouvelle</span>
                 </Button>

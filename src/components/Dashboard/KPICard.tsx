@@ -12,7 +12,7 @@ interface KPICardProps {
   sparklineData?: { value: number }[];
   format?: 'currency' | 'number' | 'percent';
   colorScheme?: 'default' | 'success' | 'warning' | 'danger' | 'accent' | 'seller-revenue' | 'seller-profit' | 'seller-sales' | 'seller-average' | 'admin-revenue' | 'admin-profit' | 'admin-sales' | 'admin-target' | 'admin-inventory' | 'admin-sellers' | 'admin-orders' | 'admin-products';
-  size?: 'default' | 'sm';
+  size?: 'default' | 'sm' | 'xs';
 }
 
 export const KPICard = ({
@@ -153,20 +153,52 @@ export const KPICard = ({
   const gradientId = `gradient-${title.replace(/[^a-zA-Z0-9]/g, '')}`;
   
   const isSmall = size === 'sm';
+  const isXs = size === 'xs';
+  const isCompact = isSmall || isXs;
+
+  const getPadding = () => {
+    if (isXs) return "p-1.5 sm:p-2";
+    if (isSmall) return "p-2 sm:p-3";
+    return "p-2 sm:p-4";
+  };
+
+  const getTitleSize = () => {
+    if (isXs) return "text-[8px] sm:text-[9px] md:text-xs";
+    if (isSmall) return "text-[9px] sm:text-[10px] md:text-xs";
+    return "text-[10px] sm:text-xs md:text-sm";
+  };
+
+  const getValueSize = () => {
+    if (isXs) return "text-[9px] sm:text-xs md:text-sm";
+    if (isSmall) return "text-[10px] sm:text-sm md:text-base";
+    return "text-xs sm:text-base md:text-xl";
+  };
+
+  const getIconPadding = () => {
+    if (isXs) return "p-0.5 sm:p-1";
+    if (isSmall) return "p-1 sm:p-1.5";
+    return "p-1.5 sm:p-2.5";
+  };
+
+  const getIconSize = () => {
+    if (isXs) return "w-2.5 h-2.5 sm:w-3 sm:h-3";
+    if (isSmall) return "w-3 h-3 sm:w-4 sm:h-4";
+    return "w-4 h-4 sm:w-5 sm:h-5";
+  };
 
   return (
     <Card className={`relative overflow-hidden bg-card transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 dark:border-border/50 dark:hover:shadow-primary/5 ${getCardAccentClass()}`}>
-      <CardContent className={isSmall ? "p-2 sm:p-3" : "p-2 sm:p-4"}>
-        <div className="flex items-start justify-between gap-2">
+      <CardContent className={getPadding()}>
+        <div className="flex items-start justify-between gap-1 sm:gap-2">
           <div className="flex-1 min-w-0">
-            <p className={`font-medium text-muted-foreground truncate ${isSmall ? 'text-[9px] sm:text-[10px] md:text-xs' : 'text-[10px] sm:text-xs md:text-sm'}`}>
+            <p className={`font-medium text-muted-foreground truncate ${getTitleSize()}`}>
               {title}
             </p>
-            <p className={`font-bold text-foreground mt-0.5 sm:mt-1 truncate ${isSmall ? 'text-[10px] sm:text-sm md:text-base' : 'text-xs sm:text-base md:text-xl'}`}>
+            <p className={`font-bold text-foreground mt-0.5 truncate ${getValueSize()}`}>
               {formatValue()}
             </p>
             
-            {previousValue !== undefined && !isSmall && (
+            {previousValue !== undefined && !isCompact && (
               <div className="hidden sm:flex items-center gap-1 mt-2">
                 {isNeutral ? (
                   <Minus className="w-3 h-3 text-muted-foreground" />
@@ -192,12 +224,12 @@ export const KPICard = ({
           </div>
           
           {/* Gradient icon container for light mode */}
-          <div className={`rounded-lg sm:rounded-xl ${getIconGradientClasses()} shadow-sm ${isSmall ? 'p-1 sm:p-1.5' : 'p-1.5 sm:p-2.5'}`}>
-            <Icon className={`${isSmall ? 'w-3 h-3 sm:w-4 sm:h-4' : 'w-4 h-4 sm:w-5 sm:h-5'} ${getIconColorClasses()}`} />
+          <div className={`rounded-md sm:rounded-lg ${getIconGradientClasses()} shadow-sm ${getIconPadding()}`}>
+            <Icon className={`${getIconSize()} ${getIconColorClasses()}`} />
           </div>
         </div>
 
-        {sparklineData && sparklineData.length > 0 && !isSmall && (
+        {sparklineData && sparklineData.length > 0 && !isCompact && (
           <div className="mt-2 sm:mt-3 h-8 sm:h-12 -mx-1 sm:-mx-2 hidden sm:block">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
