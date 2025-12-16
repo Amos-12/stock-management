@@ -539,19 +539,37 @@ export const AdminDashboardCharts = () => {
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* Header with refresh and indicators */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
-        <h2 className="text-lg sm:text-2xl font-bold text-foreground">Tableau de Bord</h2>
+      <div className="flex flex-col gap-2">
+        {/* Row 1: Title + Action buttons */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg sm:text-2xl font-bold text-foreground">Tableau de Bord</h2>
+          <div className="flex items-center gap-1.5">
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              onClick={handleExportPdf}
+            >
+              <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={fetchData} disabled={loading}>
+              <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </div>
+        
+        {/* Row 2: Badges and period selector */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <Badge variant="outline" className="flex items-center gap-1 text-[10px] sm:text-xs px-1.5 sm:px-2">
             <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-            <span className="hidden sm:inline">MàJ:</span> {lastUpdated.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+            {lastUpdated.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
           </Badge>
           <Badge variant="outline" className="flex items-center gap-1 text-[10px] sm:text-xs bg-muted/50 px-1.5 sm:px-2">
             <DollarSign className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
             1 USD = {formatNumber(usdHtgRate)} HTG
           </Badge>
           <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
-            <SelectTrigger className="w-32 sm:w-40 h-7 sm:h-8 text-[10px] sm:text-xs">
+            <SelectTrigger className="w-[115px] sm:w-40 h-7 sm:h-8 text-[10px] sm:text-xs">
               <Calendar className="w-3 h-3 mr-1" />
               <SelectValue />
             </SelectTrigger>
@@ -561,19 +579,6 @@ export const AdminDashboardCharts = () => {
               <SelectItem value="monthly">3 mois</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <Button 
-            variant="outline" 
-            size="icon"
-            className="h-7 w-7 sm:h-8 sm:w-8"
-            onClick={handleExportPdf}
-          >
-            <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
-          </Button>
-          <Button variant="outline" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={fetchData} disabled={loading}>
-            <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
         </div>
       </div>
 
