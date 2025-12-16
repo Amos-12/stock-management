@@ -245,11 +245,11 @@ export const CompanySettings = () => {
                   <Image className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   <CardTitle className="text-sm sm:text-base">Logo</CardTitle>
                 </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${openSections.logo ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${openSections.logo ? 'rotate-180' : ''}`} />
               </div>
             </CardHeader>
           </CollapsibleTrigger>
-          <CollapsibleContent>
+          <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
             <CardContent className="pt-0 space-y-3">
               {logoPreview && (
                 <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
@@ -340,11 +340,11 @@ export const CompanySettings = () => {
                   <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   <CardTitle className="text-sm sm:text-base">Entreprise</CardTitle>
                 </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${openSections.company ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${openSections.company ? 'rotate-180' : ''}`} />
               </div>
             </CardHeader>
           </CollapsibleTrigger>
-          <CollapsibleContent>
+          <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
             <CardContent className="pt-0 space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm">Nom</Label>
@@ -400,11 +400,11 @@ export const CompanySettings = () => {
                   <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   <CardTitle className="text-sm sm:text-base">Adresse</CardTitle>
                 </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${openSections.address ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${openSections.address ? 'rotate-180' : ''}`} />
               </div>
             </CardHeader>
           </CollapsibleTrigger>
-          <CollapsibleContent>
+          <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
             <CardContent className="pt-0 space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm">Adresse</Label>
@@ -439,11 +439,11 @@ export const CompanySettings = () => {
                   <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   <CardTitle className="text-sm sm:text-base">Devises</CardTitle>
                 </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${openSections.currency ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${openSections.currency ? 'rotate-180' : ''}`} />
               </div>
             </CardHeader>
           </CollapsibleTrigger>
-          <CollapsibleContent>
+          <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
             <CardContent className="pt-0 space-y-3">
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <div className="space-y-1.5">
@@ -502,11 +502,11 @@ export const CompanySettings = () => {
                   <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   <CardTitle className="text-sm sm:text-base">Paiement & TVA</CardTitle>
                 </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${openSections.payment ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${openSections.payment ? 'rotate-180' : ''}`} />
               </div>
             </CardHeader>
           </CollapsibleTrigger>
-          <CollapsibleContent>
+          <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
             <CardContent className="pt-0 space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm">Taux de TVA (%)</Label>
@@ -539,26 +539,6 @@ export const CompanySettings = () => {
         </Collapsible>
       </Card>
 
-      {/* Mobile Save Button */}
-      <div className="sm:hidden pb-4">
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full gap-2"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Enregistrement...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4" />
-              Enregistrer les modifications
-            </>
-          )}
-        </Button>
-      </div>
     </div>
   );
 };
