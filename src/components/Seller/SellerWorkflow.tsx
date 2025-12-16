@@ -31,7 +31,8 @@ import {
   Grid3X3,
   List,
   Keyboard,
-  X
+  X,
+  Calculator
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
@@ -141,6 +142,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
   const [cartPulse, setCartPulse] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [discountError, setDiscountError] = useState<string | null>(null);
 
   // Step transition helpers
   const getStepOrder = (step: WorkflowStep): number => {
@@ -889,6 +891,49 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       return Math.min(discVal, unifiedSubtotal);
     }
     return 0;
+  };
+
+  // Validate discount value and return error message if invalid
+  const validateDiscount = (value: string, type: 'percentage' | 'amount' | 'none'): string | null => {
+    if (type === 'none') return null;
+    
+    const { amount: unifiedSubtotal } = getUnifiedTotal();
+    const discVal = parseFloat(value) || 0;
+    const displayCurrency = companySettings?.default_display_currency || 'HTG';
+    
+    if (discVal < 0) {
+      return 'La valeur doit être positive';
+    }
+    
+    if (type === 'percentage') {
+      if (discVal > 100) {
+        return 'Le pourcentage ne peut pas dépasser 100%';
+      }
+    } else if (type === 'amount') {
+      if (discVal > unifiedSubtotal) {
+        return `La remise ne peut pas dépasser ${formatAmount(unifiedSubtotal, displayCurrency)}`;
+      }
+    }
+    return null;
+  };
+
+  // Handler for discount value change with validation
+  const handleDiscountValueChange = (value: string) => {
+    setDiscountValue(value);
+    const error = validateDiscount(value, discountType);
+    setDiscountError(error);
+  };
+
+  // Handler for discount type change with validation
+  const handleDiscountTypeChange = (type: 'none' | 'percentage' | 'amount') => {
+    setDiscountType(type);
+    if (type === 'none') {
+      setDiscountValue('0');
+      setDiscountError(null);
+    } else {
+      const error = validateDiscount(discountValue, type);
+      setDiscountError(error);
+    }
   };
 
   const getFinalTotal = () => {
@@ -1946,7 +1991,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                       {['none', 'percentage', 'amount'].map((type) => (
                         <button
                           key={type}
-                          onClick={() => setDiscountType(type as 'none' | 'percentage' | 'amount')}
+                          onClick={() => handleDiscountTypeChange(type as 'none' | 'percentage' | 'amount')}
                           className={`px-2 py-1 text-xs rounded transition-all ${
                             discountType === type
                               ? 'bg-primary text-primary-foreground'
@@ -1960,35 +2005,65 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   </div>
                   
                   {discountType !== 'none' && (
-                    <div className="flex gap-2">
-                      {/* Quick discount buttons */}
-                      {discountType === 'percentage' && (
-                        <div className="flex gap-1 flex-wrap">
-                          {[5, 10, 15, 20].map((pct) => (
-                            <button
-                              key={pct}
-                              onClick={() => setDiscountValue(pct.toString())}
-                              className={`px-2 py-1 text-xs rounded border transition-all ${
-                                discountValue === pct.toString()
-                                  ? 'border-primary bg-primary/10 text-primary'
-                                  : 'border-border hover:border-primary/50'
-                              }`}
-                            >
-                              {pct}%
-                            </button>
-                          ))}
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        {/* Quick discount buttons */}
+                        {discountType === 'percentage' && (
+                          <div className="flex gap-1 flex-wrap">
+                            {[5, 10, 15, 20].map((pct) => (
+                              <button
+                                key={pct}
+                                onClick={() => handleDiscountValueChange(pct.toString())}
+                                className={`px-2 py-1 text-xs rounded border transition-all ${
+                                  discountValue === pct.toString()
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border hover:border-primary/50'
+                                }`}
+                              >
+                                {pct}%
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <Input
+                          type="number"
+                          min="0"
+                          max={discountType === 'percentage' ? '100' : undefined}
+                          step={discountType === 'percentage' ? '1' : '0.01'}
+                          value={discountValue}
+                          onChange={(e) => handleDiscountValueChange(e.target.value)}
+                          placeholder="0"
+                          className={`h-8 w-20 text-sm ${discountError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                        />
+                      </div>
+                      
+                      {/* Real-time discount display */}
+                      {parseFloat(discountValue) > 0 && (
+                        <div className={`p-2 rounded-lg border ${discountError ? 'bg-destructive/10 border-destructive/30' : 'bg-muted/50 border-muted'}`}>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Calculator className="w-3 h-3" />
+                              Remise calculée :
+                            </span>
+                            <span className={`font-semibold ${discountError ? 'text-destructive' : 'text-success'}`}>
+                              -{formatAmount(getDiscountAmount(), companySettings?.default_display_currency || 'HTG')}
+                            </span>
+                          </div>
+                          {discountType === 'percentage' && !discountError && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {discountValue}% du sous-total unifié
+                            </p>
+                          )}
                         </div>
                       )}
-                      <Input
-                        type="number"
-                        min="0"
-                        max={discountType === 'percentage' ? '100' : undefined}
-                        step={discountType === 'percentage' ? '1' : '0.01'}
-                        value={discountValue}
-                        onChange={(e) => setDiscountValue(e.target.value)}
-                        placeholder="0"
-                        className="h-8 w-20 text-sm"
-                      />
+
+                      {/* Error message */}
+                      {discountError && (
+                        <div className="flex items-center gap-1.5 text-destructive text-xs animate-in fade-in duration-200">
+                          <AlertCircle className="w-3 h-3" />
+                          <span>{discountError}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2122,7 +2197,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
               </Button>
               <Button
                 onClick={processSale}
-                disabled={isProcessing}
+                disabled={isProcessing || !!discountError}
                 className="flex-1 gap-2"
                 variant="default"
               >
