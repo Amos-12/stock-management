@@ -8,7 +8,7 @@ interface KPICardProps {
   value: number;
   previousValue?: number;
   icon: LucideIcon;
-  currency?: string;
+  currency?: 'USD' | 'HTG';
   sparklineData?: { value: number }[];
   format?: 'currency' | 'number' | 'percent';
   colorScheme?: 'default' | 'success' | 'warning' | 'danger' | 'accent' | 'seller-revenue' | 'seller-profit' | 'seller-sales' | 'seller-average' | 'admin-revenue' | 'admin-profit' | 'admin-sales' | 'admin-target' | 'admin-inventory' | 'admin-sellers' | 'admin-orders' | 'admin-products';
@@ -36,7 +36,9 @@ export const KPICard = ({
   const formatValue = () => {
     switch (format) {
       case 'currency':
-        return `${formatNumber(value)} ${currency}`;
+        return currency === 'USD' 
+          ? `$${formatNumber(value)}` 
+          : `${formatNumber(value)} HTG`;
       case 'percent':
         return `${formatNumber(value)}%`;
       case 'number':

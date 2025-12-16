@@ -147,10 +147,14 @@ export const SellerPerformanceReport = () => {
             
             if (currency === 'USD') {
               stats.total_revenue_usd += amount;
-              stats.total_revenue_converted += amount * companySettings.usd_htg_rate;
+              stats.total_revenue_converted += companySettings.default_display_currency === 'USD' 
+                ? amount 
+                : amount * companySettings.usd_htg_rate;
             } else {
               stats.total_revenue_htg += amount;
-              stats.total_revenue_converted += amount;
+              stats.total_revenue_converted += companySettings.default_display_currency === 'USD' 
+                ? amount / companySettings.usd_htg_rate 
+                : amount;
             }
             
             stats.total_profit += item.profit_amount || 0;
@@ -161,7 +165,9 @@ export const SellerPerformanceReport = () => {
             }
             const sellerProducts = productSalesMap.get(sale.seller_id)!;
             const existing = sellerProducts.get(item.product_name) || { quantity: 0, revenue: 0 };
-            const revenueConverted = currency === 'USD' ? amount * companySettings.usd_htg_rate : amount;
+            const revenueConverted = companySettings.default_display_currency === 'USD'
+              ? (currency === 'USD' ? amount : amount / companySettings.usd_htg_rate)
+              : (currency === 'USD' ? amount * companySettings.usd_htg_rate : amount);
             sellerProducts.set(item.product_name, {
               quantity: existing.quantity + item.quantity,
               revenue: existing.revenue + revenueConverted

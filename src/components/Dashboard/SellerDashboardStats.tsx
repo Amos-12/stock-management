@@ -52,14 +52,18 @@ export const SellerDashboardStats = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [usdHtgRate, setUsdHtgRate] = useState(132);
+  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'HTG'>('HTG');
 
   const fetchCompanySettings = async () => {
     const { data } = await supabase
       .from('company_settings')
-      .select('usd_htg_rate')
+      .select('usd_htg_rate, default_display_currency')
       .single();
     if (data?.usd_htg_rate) {
       setUsdHtgRate(data.usd_htg_rate);
+    }
+    if (data?.default_display_currency) {
+      setDisplayCurrency(data.default_display_currency as 'USD' | 'HTG');
     }
     return data?.usd_htg_rate || 132;
   };
@@ -128,7 +132,7 @@ export const SellerDashboardStats = () => {
         const itemsForSales = allSaleItems.filter(i => 
           salesList.some(s => s.id === i.sale_id)
         );
-        return calculateUnifiedTotal(itemsForSales, rate).unified;
+        return calculateUnifiedTotal(itemsForSales, rate, displayCurrency).unified;
       };
 
       const totalRevenue = calculateRevenue(allSales || []);
@@ -168,9 +172,9 @@ export const SellerDashboardStats = () => {
           acc[item.product_name] = { product_name: item.product_name, quantity: 0, revenue: 0 };
         }
         acc[item.product_name].quantity += Number(item.quantity);
-        const itemRevenue = item.currency === 'USD' 
-          ? item.subtotal * rate 
-          : item.subtotal;
+        const itemRevenue = displayCurrency === 'USD'
+          ? (item.currency === 'USD' ? item.subtotal : item.subtotal / rate)
+          : (item.currency === 'USD' ? item.subtotal * rate : item.subtotal);
         acc[item.product_name].revenue += itemRevenue;
         return acc;
       }, {});
@@ -310,6 +314,7 @@ export const SellerDashboardStats = () => {
           icon={DollarSign}
           sparklineData={revenueSparkline}
           colorScheme="seller-profit"
+          currency={displayCurrency}
         />
         <KPICard
           title="Ventes"
@@ -326,6 +331,7 @@ export const SellerDashboardStats = () => {
           icon={ShoppingCart}
           colorScheme="seller-average"
           size="sm"
+          currency={displayCurrency}
         />
         <KPICard
           title="Total Ventes"
@@ -339,7 +345,7 @@ export const SellerDashboardStats = () => {
 
       {/* Trend Chart - hidden on mobile */}
       <div className="hidden sm:block">
-        <SellerTrendChart data={trendData} />
+        <SellerTrendChart data={trendData} currency={displayCurrency} />
       </div>
 
       {/* Goals & Comparison Row */}
@@ -349,6 +355,7 @@ export const SellerDashboardStats = () => {
           todayRevenue={stats.todayRevenue}
           averageDailySales={averageDailySales}
           averageDailyRevenue={averageDailyRevenue}
+          currency={displayCurrency}
         />
         <SellerPerformanceComparison
           comparisons={[
@@ -368,6 +375,7 @@ export const SellerDashboardStats = () => {
               previous: stats.lastMonthRevenue 
             }
           ]}
+          currency={displayCurrency}
         />
       </div>
 
@@ -407,9 +415,9 @@ export const SellerDashboardStats = () => {
                             const data = payload[0].payload;
                             return (
                               <div className="bg-card border border-border rounded-lg shadow-lg p-2 sm:p-3 text-xs sm:text-sm">
-                                <p className="font-medium">{data.fullName}</p>
+                              <p className="font-medium">{data.fullName}</p>
                                 <p className="text-muted-foreground">
-                                  {formatNumber(data.revenue)} HTG • {data.quantity} unités
+                                  {displayCurrency === 'USD' ? `$${formatNumber(data.revenue)}` : `${formatNumber(data.revenue)} HTG`} • {data.quantity} unités
                                 </p>
                               </div>
                             );
@@ -453,7 +461,7 @@ export const SellerDashboardStats = () => {
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                           <span className="text-muted-foreground text-[10px] sm:text-xs">{percent}%</span>
-                          <span className="font-medium text-xs sm:text-sm">{formatNumber(product.revenue)}</span>
+                          <span className="font-medium text-xs sm:text-sm">{displayCurrency === 'USD' ? `$${formatNumber(product.revenue)}` : formatNumber(product.revenue)}</span>
                         </div>
                       </div>
                     );

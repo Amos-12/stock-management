@@ -102,6 +102,7 @@ export const AdminDashboardCharts = () => {
   const [prevMonthRevenue, setPrevMonthRevenue] = useState(0);
   const [prevMonthProfit, setPrevMonthProfit] = useState(0);
   const [usdHtgRate, setUsdHtgRate] = useState(132);
+  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'HTG'>('HTG');
 
   // Sparkline data
   const [revenueSparkline, setRevenueSparkline] = useState<number[]>([]);
@@ -140,10 +141,13 @@ export const AdminDashboardCharts = () => {
   const fetchCompanySettings = async () => {
     const { data } = await supabase
       .from('company_settings')
-      .select('usd_htg_rate')
+      .select('usd_htg_rate, default_display_currency')
       .single();
     if (data?.usd_htg_rate) {
       setUsdHtgRate(data.usd_htg_rate);
+    }
+    if (data?.default_display_currency) {
+      setDisplayCurrency(data.default_display_currency as 'USD' | 'HTG');
     }
   };
 
@@ -179,8 +183,8 @@ export const AdminDashboardCharts = () => {
         .single();
       const rate = settings?.usd_htg_rate || 132;
 
-      sparklineRevenue.push(calculateUnifiedTotal(items || [], rate).unified);
-      sparklineProfit.push(calculateUnifiedProfit(items || [], rate));
+      sparklineRevenue.push(calculateUnifiedTotal(items || [], rate, displayCurrency).unified);
+      sparklineProfit.push(calculateUnifiedProfit(items || [], rate, displayCurrency));
       sparklineSales.push(salesData?.length || 0);
     }
 
@@ -225,8 +229,8 @@ export const AdminDashboardCharts = () => {
         .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', today.toISOString());
       
-      const todayRev = calculateUnifiedTotal(todayItems || [], rate).unified;
-      const todayPft = calculateUnifiedProfit(todayItems || [], rate);
+      const todayRev = calculateUnifiedTotal(todayItems || [], rate, displayCurrency).unified;
+      const todayPft = calculateUnifiedProfit(todayItems || [], rate, displayCurrency);
       setTodayRevenue(todayRev);
       setTodayProfit(todayPft);
 
@@ -245,8 +249,8 @@ export const AdminDashboardCharts = () => {
         .gte('sales.created_at', yesterday.toISOString())
         .lt('sales.created_at', today.toISOString());
       
-      setYesterdayRevenue(calculateUnifiedTotal(yesterdayItems || [], rate).unified);
-      setYesterdayProfit(calculateUnifiedProfit(yesterdayItems || [], rate));
+      setYesterdayRevenue(calculateUnifiedTotal(yesterdayItems || [], rate, displayCurrency).unified);
+      setYesterdayProfit(calculateUnifiedProfit(yesterdayItems || [], rate, displayCurrency));
 
       // Week data
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -255,8 +259,8 @@ export const AdminDashboardCharts = () => {
         .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', weekAgo.toISOString());
       
-      setWeekRevenue(calculateUnifiedTotal(weekItems || [], rate).unified);
-      setWeekProfit(calculateUnifiedProfit(weekItems || [], rate));
+      setWeekRevenue(calculateUnifiedTotal(weekItems || [], rate, displayCurrency).unified);
+      setWeekProfit(calculateUnifiedProfit(weekItems || [], rate, displayCurrency));
 
       // Previous week
       const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
@@ -266,7 +270,7 @@ export const AdminDashboardCharts = () => {
         .gte('sales.created_at', twoWeeksAgo.toISOString())
         .lt('sales.created_at', weekAgo.toISOString());
       
-      setPrevWeekRevenue(calculateUnifiedTotal(prevWeekItems || [], rate).unified);
+      setPrevWeekRevenue(calculateUnifiedTotal(prevWeekItems || [], rate, displayCurrency).unified);
 
       // Month data
       const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -275,8 +279,8 @@ export const AdminDashboardCharts = () => {
         .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', monthAgo.toISOString());
       
-      setMonthRevenue(calculateUnifiedTotal(monthItems || [], rate).unified);
-      setMonthProfit(calculateUnifiedProfit(monthItems || [], rate));
+      setMonthRevenue(calculateUnifiedTotal(monthItems || [], rate, displayCurrency).unified);
+      setMonthProfit(calculateUnifiedProfit(monthItems || [], rate, displayCurrency));
 
       // Previous month
       const twoMonthsAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
@@ -286,8 +290,8 @@ export const AdminDashboardCharts = () => {
         .gte('sales.created_at', twoMonthsAgo.toISOString())
         .lt('sales.created_at', monthAgo.toISOString());
       
-      setPrevMonthRevenue(calculateUnifiedTotal(prevMonthItems || [], rate).unified);
-      setPrevMonthProfit(calculateUnifiedProfit(prevMonthItems || [], rate));
+      setPrevMonthRevenue(calculateUnifiedTotal(prevMonthItems || [], rate, displayCurrency).unified);
+      setPrevMonthProfit(calculateUnifiedProfit(prevMonthItems || [], rate, displayCurrency));
 
       // Products count
       const { count: productsCount } = await supabase
@@ -345,8 +349,8 @@ export const AdminDashboardCharts = () => {
         .gte('created_at', dayStart.toISOString())
         .lte('created_at', dayEnd.toISOString());
 
-      const revenue = calculateUnifiedTotal(items || [], usdHtgRate).unified;
-      const profit = calculateUnifiedProfit(items || [], usdHtgRate);
+      const revenue = calculateUnifiedTotal(items || [], usdHtgRate, displayCurrency).unified;
+      const profit = calculateUnifiedProfit(items || [], usdHtgRate, displayCurrency);
 
       chartData.push({
         date: dayStart.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
@@ -375,9 +379,9 @@ export const AdminDashboardCharts = () => {
         acc[item.product_name] = { sales: 0, revenue: 0 };
       }
       acc[item.product_name].sales += Number(item.quantity);
-      const itemRevenue = item.currency === 'USD' 
-        ? item.subtotal * usdHtgRate 
-        : item.subtotal;
+      const itemRevenue = displayCurrency === 'USD'
+        ? (item.currency === 'USD' ? item.subtotal : item.subtotal / usdHtgRate)
+        : (item.currency === 'USD' ? item.subtotal * usdHtgRate : item.subtotal);
       acc[item.product_name].revenue += itemRevenue;
       return acc;
     }, {});
@@ -591,7 +595,7 @@ export const AdminDashboardCharts = () => {
             previousValue={yesterdayRevenue}
             icon={DollarSign}
             format="currency"
-            currency="HTG"
+            currency={displayCurrency}
             sparklineData={revenueSparkline.map(v => ({ value: v }))}
             colorScheme="admin-revenue"
           />
@@ -603,7 +607,7 @@ export const AdminDashboardCharts = () => {
             previousValue={yesterdayProfit}
             icon={TrendingUp}
             format="currency"
-            currency="HTG"
+            currency={displayCurrency}
             sparklineData={profitSparkline.map(v => ({ value: v }))}
             colorScheme="admin-profit"
           />
@@ -615,7 +619,7 @@ export const AdminDashboardCharts = () => {
             previousValue={prevWeekRevenue}
             icon={Wallet}
             format="currency"
-            currency="HTG"
+            currency={displayCurrency}
             sparklineData={salesSparkline.map(v => ({ value: v }))}
             colorScheme="admin-target"
           />
@@ -627,7 +631,7 @@ export const AdminDashboardCharts = () => {
             previousValue={prevMonthProfit}
             icon={TrendingUp}
             format="currency"
-            currency="HTG"
+            currency={displayCurrency}
             sparklineData={profitSparkline.map(v => ({ value: v }))}
             colorScheme="admin-profit"
           />
@@ -652,7 +656,7 @@ export const AdminDashboardCharts = () => {
             value={avgBasket}
             icon={BarChart3}
             format="currency"
-            currency="HTG"
+            currency={displayCurrency}
             colorScheme="admin-orders"
             size="sm"
           />
@@ -664,7 +668,7 @@ export const AdminDashboardCharts = () => {
             previousValue={prevMonthRevenue}
             icon={Target}
             format="currency"
-            currency="HTG"
+            currency={displayCurrency}
             colorScheme="admin-inventory"
             size="sm"
           />
@@ -718,7 +722,7 @@ export const AdminDashboardCharts = () => {
                       fontSize: '12px'
                     }}
                     formatter={(value: any, name: string) => [
-                      `${formatNumber(value)} HTG`,
+                      displayCurrency === 'USD' ? `$${formatNumber(value)}` : `${formatNumber(value)} HTG`,
                       name
                     ]}
                   />

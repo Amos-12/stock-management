@@ -11,9 +11,10 @@ interface ComparisonData {
 
 interface SellerPerformanceComparisonProps {
   comparisons: ComparisonData[];
+  currency?: 'USD' | 'HTG';
 }
 
-export const SellerPerformanceComparison = ({ comparisons }: SellerPerformanceComparisonProps) => {
+export const SellerPerformanceComparison = ({ comparisons, currency = 'HTG' }: SellerPerformanceComparisonProps) => {
   const getChangePercent = (current: number, previous: number) => {
     if (previous === 0) return current > 0 ? 100 : 0;
     return ((current - previous) / previous) * 100;
@@ -44,7 +45,7 @@ export const SellerPerformanceComparison = ({ comparisons }: SellerPerformanceCo
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
                 <p className="font-bold text-lg">
-                  {formatNumber(item.current)}{item.suffix || ' HTG'}
+                  {item.suffix ? `${formatNumber(item.current)}${item.suffix}` : (currency === 'USD' ? `$${formatNumber(item.current)}` : `${formatNumber(item.current)} HTG`)}
                 </p>
               </div>
               <div className="text-right space-y-1">
@@ -65,7 +66,7 @@ export const SellerPerformanceComparison = ({ comparisons }: SellerPerformanceCo
                   {isPositive ? '+' : ''}{change.toFixed(1)}%
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  vs {formatNumber(item.previous)}{item.suffix || ' HTG'}
+                  vs {item.suffix ? `${formatNumber(item.previous)}${item.suffix}` : (currency === 'USD' ? `$${formatNumber(item.previous)}` : `${formatNumber(item.previous)} HTG`)}
                 </p>
               </div>
             </div>
