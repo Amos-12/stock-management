@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2, Receipt, DollarSign, LayoutGrid, List, Download, FileText, Users } from 'lucide-react';
+import { ShoppingCart, Search, TrendingUp, Calendar, Eye, Trash2, Receipt, DollarSign, LayoutGrid, List, Download, FileText, Users, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { SaleDetailsDialog } from './SaleDetailsDialog';
@@ -728,6 +728,24 @@ export const SalesManagement = () => {
                   <SelectItem value="mixed">Mixte</SelectItem>
                 </SelectContent>
               </Select>
+              
+              {/* Reset filters button */}
+              {(searchTerm || periodFilter !== 'all' || sellerFilter !== 'all' || currencyFilter !== 'all') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-2.5 shrink-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setPeriodFilter('all');
+                    setSellerFilter('all');
+                    setCurrencyFilter('all');
+                  }}
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                  <span className="hidden sm:inline text-xs">Reset</span>
+                </Button>
+              )}
               
               {/* View toggle - desktop only */}
               {!isMobile && (
