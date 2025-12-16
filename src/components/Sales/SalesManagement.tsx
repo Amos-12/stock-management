@@ -407,6 +407,8 @@ export const SalesManagement = () => {
     let tvaHtg = 0;
     let tvaUsd = 0;
     const tvaRate = companySettings?.tva_rate || 0;
+    const rate = companySettings?.usd_htg_rate || 132;
+    const displayCurrency = (companySettings?.default_display_currency || 'HTG') as 'USD' | 'HTG';
     
     filteredSales.forEach(sale => {
       htg += sale.currencies?.htg || 0;
@@ -419,26 +421,50 @@ export const SalesManagement = () => {
     tvaHtg = htg - htgHT;
     tvaUsd = usd - usdHT;
     
+    // Unified total converted to display currency
+    const unifiedTotal = displayCurrency === 'HTG'
+      ? htg + (usd * rate)
+      : usd + (htg / rate);
+    
+    const unifiedTva = displayCurrency === 'HTG'
+      ? tvaHtg + (tvaUsd * rate)
+      : tvaUsd + (tvaHtg / rate);
+    
     return {
       count: filteredSales.length,
       htg,
       usd,
       tvaHtg,
-      tvaUsd
+      tvaUsd,
+      unifiedTotal,
+      unifiedTva,
+      displayCurrency
     };
   }, [filteredSales, companySettings]);
 
 
   // Export functions
   const exportToExcel = () => {
-    const data = filteredSales.map(sale => ({
-      'Date': formatDate(sale.created_at),
-      'Client': sale.customer_name || 'Non renseigné',
-      'Vendeur': sale.profiles?.full_name || 'N/A',
-      'Montant HTG': sale.currencies?.htg?.toFixed(2) || '0.00',
-      'Montant USD': sale.currencies?.usd?.toFixed(2) || '0.00',
-      'Paiement': sale.payment_method
-    }));
+    const rate = companySettings?.usd_htg_rate || 132;
+    const displayCurrency = (companySettings?.default_display_currency || 'HTG') as 'USD' | 'HTG';
+    
+    const data = filteredSales.map(sale => {
+      const htg = sale.currencies?.htg || 0;
+      const usd = sale.currencies?.usd || 0;
+      const convertedTotal = displayCurrency === 'HTG' 
+        ? htg + (usd * rate)
+        : usd + (htg / rate);
+      
+      return {
+        'Date': formatDate(sale.created_at),
+        'Client': sale.customer_name || 'Non renseigné',
+        'Vendeur': sale.profiles?.full_name || 'N/A',
+        [`Total (${displayCurrency})`]: convertedTotal.toFixed(2),
+        'Montant HTG': htg.toFixed(2),
+        'Montant USD': usd.toFixed(2),
+        'Paiement': sale.payment_method
+      };
+    });
     
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -505,17 +531,20 @@ export const SalesManagement = () => {
     pdf.setFillColor(245, 245, 245);
     pdf.roundedRect(15, yPos, pageWidth - 30, 22, 3, 3, 'F');
     
+    const displayCurrency = filteredStats.displayCurrency;
+    const currencySymbol = displayCurrency === 'USD' ? '$' : '';
+    const currencySuffix = displayCurrency === 'HTG' ? ' HTG' : '';
+    
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'bold');
     yPos += 8;
     pdf.text(`Ventes: ${filteredStats.count}`, 25, yPos);
-    pdf.text(`HTG: ${formatNumber(filteredStats.htg)}`, 70, yPos);
-    pdf.text(`USD: $${formatNumber(filteredStats.usd)}`, 130, yPos);
+    pdf.text(`Total: ${currencySymbol}${formatNumber(filteredStats.unifiedTotal)}${currencySuffix}`, 70, yPos);
     
     yPos += 7;
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`TVA HTG: ${formatNumber(filteredStats.tvaHtg)}`, 70, yPos);
-    pdf.text(`TVA USD: $${formatNumber(filteredStats.tvaUsd)}`, 130, yPos);
+    pdf.text(`TVA: ${currencySymbol}${formatNumber(filteredStats.unifiedTva)}${currencySuffix}`, 70, yPos);
+    pdf.text(`(HTG: ${formatNumber(filteredStats.htg)} | USD: $${formatNumber(filteredStats.usd)})`, 130, yPos);
     
     // Table header
     yPos += 18;
@@ -527,12 +556,14 @@ export const SalesManagement = () => {
     pdf.text('Date', 20, yPos);
     pdf.text('Client', 55, yPos);
     pdf.text('Vendeur', 100, yPos);
-    pdf.text('Montant', 145, yPos);
+    pdf.text(`Montant (${displayCurrency})`, 145, yPos);
     pdf.text('Paiement', 175, yPos);
     
     pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'normal');
     yPos += 10;
+    
+    const rate = companySettings?.usd_htg_rate || 132;
     
     // Table rows
     filteredSales.slice(0, 35).forEach((sale, index) => {
@@ -551,9 +582,11 @@ export const SalesManagement = () => {
       pdf.text((sale.customer_name || 'N/A').substring(0, 18), 55, yPos);
       pdf.text((sale.profiles?.full_name || 'N/A').substring(0, 16), 100, yPos);
       
-      const amount = sale.currencies?.htg 
-        ? `${formatNumber(sale.currencies.htg).substring(0, 12)} HTG`
-        : `$${formatNumber(sale.currencies?.usd || 0).substring(0, 10)}`;
+      // Convert amount to display currency
+      const htg = sale.currencies?.htg || 0;
+      const usd = sale.currencies?.usd || 0;
+      const convertedAmount = displayCurrency === 'HTG' ? htg + (usd * rate) : usd + (htg / rate);
+      const amount = `${currencySymbol}${formatNumber(convertedAmount).substring(0, 12)}${currencySuffix}`;
       pdf.text(amount, 145, yPos);
       pdf.text(sale.payment_method.substring(0, 10), 175, yPos);
       
@@ -594,7 +627,7 @@ export const SalesManagement = () => {
           <CardContent className="p-2 sm:p-3 md:p-4">
             <div className="flex items-center justify-between gap-1 sm:gap-2">
               <div className="min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Ventes filtrées</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Ventes</p>
                 <p className="text-sm sm:text-base md:text-lg font-bold">{filteredStats.count}</p>
               </div>
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500/15 flex items-center justify-center shrink-0">
@@ -604,33 +637,20 @@ export const SalesManagement = () => {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card className="shadow-sm border-primary/30">
           <CardContent className="p-2 sm:p-3 md:p-4">
             <div className="flex items-center justify-between gap-1 sm:gap-2">
               <div className="min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Revenu HTG</p>
-                <p className="text-sm sm:text-base md:text-lg font-bold truncate">
-                  {formatCompactNumber(filteredStats.htg, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Revenu Total</p>
+                <p className="text-sm sm:text-base md:text-lg font-bold truncate text-primary">
+                  {filteredStats.displayCurrency === 'USD' 
+                    ? `$${formatCompactNumber(filteredStats.unifiedTotal, isMobile)}`
+                    : `${formatCompactNumber(filteredStats.unifiedTotal, isMobile)} HTG`
+                  }
                 </p>
               </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm">
-          <CardContent className="p-2 sm:p-3 md:p-4">
-            <div className="flex items-center justify-between gap-1 sm:gap-2">
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Revenu USD</p>
-                <p className="text-sm sm:text-base md:text-lg font-bold truncate">
-                  ${formatCompactNumber(filteredStats.usd, isMobile)}
-                </p>
-              </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
-                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -643,7 +663,10 @@ export const SalesManagement = () => {
                 <div className="min-w-0">
                   <p className="text-[10px] sm:text-xs text-muted-foreground">TVA ({companySettings.tva_rate}%)</p>
                   <p className="text-sm sm:text-base md:text-lg font-bold truncate">
-                    {formatCompactNumber(filteredStats.tvaHtg, isMobile)} <span className="text-[10px] sm:text-xs font-normal">HTG</span>
+                    {filteredStats.displayCurrency === 'USD'
+                      ? `$${formatCompactNumber(filteredStats.unifiedTva, isMobile)}`
+                      : `${formatCompactNumber(filteredStats.unifiedTva, isMobile)} HTG`
+                    }
                   </p>
                 </div>
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-violet-500/15 flex items-center justify-center shrink-0">
