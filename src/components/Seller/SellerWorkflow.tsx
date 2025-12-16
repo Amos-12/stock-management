@@ -876,14 +876,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     }
   };
 
+  // Calculate discount amount based on UNIFIED total (properly converted)
   const getDiscountAmount = () => {
-    const subtotal = getSubtotal();
+    const { amount: unifiedSubtotal } = getUnifiedTotal();
     const discVal = parseFloat(discountValue) || 0;
     
     if (discountType === 'percentage') {
-      return Math.min(subtotal * (discVal / 100), subtotal);
+      // Percentage of the unified total
+      return Math.min(unifiedSubtotal * (discVal / 100), unifiedSubtotal);
     } else if (discountType === 'amount') {
-      return Math.min(discVal, subtotal);
+      // Fixed amount - user enters in display currency
+      return Math.min(discVal, unifiedSubtotal);
     }
     return 0;
   };
