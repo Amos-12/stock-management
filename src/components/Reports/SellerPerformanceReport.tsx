@@ -155,15 +155,16 @@ export const SellerPerformanceReport = () => {
             
             stats.total_profit += item.profit_amount || 0;
             
-            // Track products for this seller
+            // Track products for this seller (convert to display currency for proper comparison)
             if (!productSalesMap.has(sale.seller_id)) {
               productSalesMap.set(sale.seller_id, new Map());
             }
             const sellerProducts = productSalesMap.get(sale.seller_id)!;
             const existing = sellerProducts.get(item.product_name) || { quantity: 0, revenue: 0 };
+            const revenueConverted = currency === 'USD' ? amount * companySettings.usd_htg_rate : amount;
             sellerProducts.set(item.product_name, {
               quantity: existing.quantity + item.quantity,
-              revenue: existing.revenue + item.subtotal
+              revenue: existing.revenue + revenueConverted
             });
           });
         }
