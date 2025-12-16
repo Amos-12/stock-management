@@ -539,46 +539,42 @@ export const AdminDashboardCharts = () => {
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* Header with refresh and indicators */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-start sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="text-lg sm:text-2xl font-bold text-foreground">Tableau de Bord</h2>
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 mt-1">
-              <Badge variant="outline" className="flex items-center gap-1 text-[10px] sm:text-xs px-1.5 sm:px-2">
-                <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                <span className="hidden sm:inline">Dernière MàJ:</span> {lastUpdated.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-              </Badge>
-              <Badge variant="outline" className="flex items-center gap-1 text-[10px] sm:text-xs bg-muted/50 px-1.5 sm:px-2">
-                <DollarSign className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
-                1 USD = {formatNumber(usdHtgRate)} HTG
-              </Badge>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-            <Button 
-              variant="outline" 
-              size="icon"
-              className="h-8 w-8 sm:h-9 sm:w-9"
-              onClick={handleExportPdf}
-            >
-              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={fetchData} disabled={loading}>
-              <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+        <h2 className="text-lg sm:text-2xl font-bold text-foreground">Tableau de Bord</h2>
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <Badge variant="outline" className="flex items-center gap-1 text-[10px] sm:text-xs px-1.5 sm:px-2">
+            <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+            <span className="hidden sm:inline">MàJ:</span> {lastUpdated.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          </Badge>
+          <Badge variant="outline" className="flex items-center gap-1 text-[10px] sm:text-xs bg-muted/50 px-1.5 sm:px-2">
+            <DollarSign className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
+            1 USD = {formatNumber(usdHtgRate)} HTG
+          </Badge>
+          <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
+            <SelectTrigger className="w-32 sm:w-40 h-7 sm:h-8 text-[10px] sm:text-xs">
+              <Calendar className="w-3 h-3 mr-1" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">7 derniers jours</SelectItem>
+              <SelectItem value="weekly">4 semaines</SelectItem>
+              <SelectItem value="monthly">3 mois</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
-          <SelectTrigger className="w-full sm:w-44 h-8 sm:h-9 text-xs sm:text-sm">
-            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="daily">7 derniers jours</SelectItem>
-            <SelectItem value="weekly">4 semaines</SelectItem>
-            <SelectItem value="monthly">3 mois</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <Button 
+            variant="outline" 
+            size="icon"
+            className="h-7 w-7 sm:h-8 sm:w-8"
+            onClick={handleExportPdf}
+          >
+            <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+          </Button>
+          <Button variant="outline" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={fetchData} disabled={loading}>
+            <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards - Row 1: Métriques prioritaires */}
@@ -823,19 +819,18 @@ export const AdminDashboardCharts = () => {
           <CardContent className="px-3 sm:px-6">
             <div className="flex flex-col items-center gap-3 sm:gap-4">
               {/* Pie Chart */}
-              <div className="relative flex-shrink-0">
-                <ResponsiveContainer width={140} height={140} className="sm:!w-[180px] sm:!h-[180px]">
+              <div className="relative w-[140px] h-[140px] sm:w-[180px] sm:h-[180px]">
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={categoryData}
                       cx="50%"
                       cy="50%"
-                      outerRadius={55}
-                      innerRadius={35}
+                      outerRadius="85%"
+                      innerRadius="55%"
                       fill="#8884d8"
                       dataKey="value"
                       paddingAngle={3}
-                      className="sm:!outerRadius-[80px] sm:!innerRadius-[50px]"
                     >
                       {categoryData.map((entry, index) => (
                         <Cell 
@@ -859,8 +854,8 @@ export const AdminDashboardCharts = () => {
                   </PieChart>
                 </ResponsiveContainer>
                 {/* Total in center */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                  <p className="text-base sm:text-xl font-bold text-foreground">{categoryData.reduce((sum, c) => sum + c.value, 0)}</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <p className="text-lg sm:text-2xl font-bold text-foreground">{categoryData.reduce((sum, c) => sum + c.value, 0)}</p>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">Produits</p>
                 </div>
               </div>

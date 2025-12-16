@@ -607,27 +607,27 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* Controls */}
       <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5" />
+        <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-lg">
+            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
             Rapports Avancés
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="p-3 sm:p-6 pt-0 space-y-3 sm:space-y-4">
           {/* Main filters row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
             {/* Date Range */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Période</label>
-              <div className="flex items-center gap-2">
+            <div className="space-y-1 sm:space-y-2">
+              <label className="text-xs sm:text-sm font-medium text-foreground">Période</label>
+              <div className="flex items-center gap-1 sm:gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1 justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(dateRange.from, 'dd/MM/yyyy', { locale: fr })}
+                    <Button variant="outline" size="sm" className="flex-1 justify-start text-left font-normal h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
+                      <CalendarIcon className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                      {format(dateRange.from, 'dd/MM/yy', { locale: fr })}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -639,12 +639,12 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                     />
                   </PopoverContent>
                 </Popover>
-                <span className="text-muted-foreground text-sm">→</span>
+                <span className="text-muted-foreground text-xs sm:text-sm">→</span>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1 justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(dateRange.to, 'dd/MM/yyyy', { locale: fr })}
+                    <Button variant="outline" size="sm" className="flex-1 justify-start text-left font-normal h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
+                      <CalendarIcon className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                      {format(dateRange.to, 'dd/MM/yy', { locale: fr })}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -660,10 +660,10 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
             </div>
 
             {/* Report Type */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Type de rapport</label>
+            <div className="space-y-1 sm:space-y-2">
+              <label className="text-xs sm:text-sm font-medium text-foreground">Type de rapport</label>
               <Select value={reportType} onValueChange={(value: any) => setReportType(value)}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -676,23 +676,23 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
 
             {/* Dynamic Filters */}
             <div className="sm:col-span-2 lg:col-span-2">
-              <label className="text-sm font-medium text-foreground block mb-2">Filtres</label>
+              <label className="text-xs sm:text-sm font-medium text-foreground block mb-1 sm:mb-2">Filtres</label>
               {renderDynamicFilters()}
             </div>
           </div>
 
           {/* Actions row */}
-          <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
-            <Button onClick={generateReport} disabled={loading} className="gap-2">
-              <TrendingUp className="w-4 h-4" />
-              {loading ? 'Génération...' : 'Actualiser le rapport'}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2 border-t">
+            <Button onClick={generateReport} disabled={loading} size="sm" className="gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm">
+              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+              {loading ? 'Génération...' : 'Actualiser'}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={!reportData} className="gap-2">
-                  <Download className="w-4 h-4" />
-                  Exporter
-                  <ChevronDown className="w-4 h-4" />
+                <Button variant="outline" disabled={!reportData} size="sm" className="gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm">
+                  <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Exporter</span>
+                  <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -717,64 +717,64 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
       {reportData && (
         <>
           {/* Summary Cards with Multi-Currency */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
             <Card className="shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ventes USD</CardTitle>
-                <DollarSign className="h-4 w-4 text-green-500" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 sm:p-4 pb-1 sm:pb-2">
+                <CardTitle className="text-[10px] sm:text-sm font-medium">Ventes USD</CardTitle>
+                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
               </CardHeader>
-              <CardContent>
-                <div className="text-lg font-bold text-green-600">
+              <CardContent className="p-2 sm:p-4 pt-0">
+                <div className="text-sm sm:text-lg font-bold text-green-600">
                   $ {formatNumber(reportData.totalRevenueUSD)}
                 </div>
               </CardContent>
             </Card>
 
             <Card className="shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ventes HTG</CardTitle>
-                <DollarSign className="h-4 w-4 text-blue-500" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 sm:p-4 pb-1 sm:pb-2">
+                <CardTitle className="text-[10px] sm:text-sm font-medium">Ventes HTG</CardTitle>
+                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
               </CardHeader>
-              <CardContent>
-                <div className="text-lg font-bold text-blue-600">
-                  {formatNumber(reportData.totalRevenueHTG)} HTG
+              <CardContent className="p-2 sm:p-4 pt-0">
+                <div className="text-sm sm:text-lg font-bold text-blue-600">
+                  {formatNumber(reportData.totalRevenueHTG)} <span className="text-[10px] sm:text-sm">HTG</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="shadow-lg border-primary">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Converti</CardTitle>
-                <TrendingUp className="h-4 w-4 text-primary" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 sm:p-4 pb-1 sm:pb-2">
+                <CardTitle className="text-[10px] sm:text-sm font-medium">Total Converti</CardTitle>
+                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
               </CardHeader>
-              <CardContent>
-                <div className="text-lg font-bold text-primary">
-                  {formatNumber(reportData.totalRevenueConverted)} HTG
+              <CardContent className="p-2 sm:p-4 pt-0">
+                <div className="text-sm sm:text-lg font-bold text-primary">
+                  {formatNumber(reportData.totalRevenueConverted)} <span className="text-[10px] sm:text-sm">HTG</span>
                 </div>
-                <p className="text-xs text-muted-foreground">Taux: 1 USD = {companySettings?.usd_htg_rate || 132} HTG</p>
+                <p className="text-[8px] sm:text-xs text-muted-foreground hidden sm:block">Taux: 1 USD = {companySettings?.usd_htg_rate || 132} HTG</p>
               </CardContent>
             </Card>
 
             <Card className="shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Nombre de Ventes</CardTitle>
-                <BarChart3 className="h-4 w-4 text-warning" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 sm:p-4 pb-1 sm:pb-2">
+                <CardTitle className="text-[10px] sm:text-sm font-medium">Nb Ventes</CardTitle>
+                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 text-warning" />
               </CardHeader>
-              <CardContent>
-                <div className="text-lg font-bold text-warning">
+              <CardContent className="p-2 sm:p-4 pt-0">
+                <div className="text-sm sm:text-lg font-bold text-warning">
                   {reportData.totalSales}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Panier Moyen</CardTitle>
-                <Target className="h-4 w-4 text-muted-foreground" />
+            <Card className="shadow-lg col-span-2 sm:col-span-1">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 sm:p-4 pb-1 sm:pb-2">
+                <CardTitle className="text-[10px] sm:text-sm font-medium">Panier Moyen</CardTitle>
+                <Target className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-lg font-bold">
-                  {formatNumber(reportData.averageOrderValue)} HTG
+              <CardContent className="p-2 sm:p-4 pt-0">
+                <div className="text-sm sm:text-lg font-bold">
+                  {formatNumber(reportData.averageOrderValue)} <span className="text-[10px] sm:text-sm">HTG</span>
                 </div>
               </CardContent>
             </Card>
@@ -782,34 +782,34 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
 
           {/* Category Distribution */}
           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PieChart className="w-5 h-5" />
+            <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-lg">
+                <PieChart className="w-4 h-4 sm:w-5 sm:h-5" />
                 Répartition par Catégorie
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
                 {reportData.categoryDistribution.map((cat, index) => {
                   const colors = ['hsl(var(--primary))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))', 'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
                   const color = colors[index % colors.length];
                   return (
-                    <div key={cat.category} className="p-4 rounded-lg border" style={{ borderLeft: `4px solid ${color}` }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium capitalize">{cat.category}</span>
-                        <Badge variant="secondary">{cat.count}</Badge>
+                    <div key={cat.category} className="p-2 sm:p-4 rounded-lg border" style={{ borderLeft: `4px solid ${color}` }}>
+                      <div className="flex items-center justify-between mb-1 sm:mb-2">
+                        <span className="font-medium capitalize text-xs sm:text-base truncate max-w-[120px] sm:max-w-none">{cat.category}</span>
+                        <Badge variant="secondary" className="text-[10px] sm:text-xs">{cat.count}</Badge>
                       </div>
-                      <div className="text-lg font-bold mb-1">
-                        {formatNumber(cat.revenue)} HTG
+                      <div className="text-sm sm:text-lg font-bold mb-1">
+                        {formatNumber(cat.revenue)} <span className="text-[10px] sm:text-sm font-normal">HTG</span>
                       </div>
-                      <div className="w-full bg-secondary rounded-full h-2 mb-2">
+                      <div className="w-full bg-secondary rounded-full h-1.5 sm:h-2 mb-1 sm:mb-2">
                         <div 
-                          className="h-2 rounded-full transition-all duration-300"
+                          className="h-1.5 sm:h-2 rounded-full transition-all duration-300"
                           style={{ width: `${cat.percentage}%`, backgroundColor: color }}
                         />
                       </div>
-                      <div className="text-sm text-muted-foreground text-center font-medium">
-                        {cat.percentage.toFixed(1)}% du CA total
+                      <div className="text-[10px] sm:text-sm text-muted-foreground text-center font-medium">
+                        {cat.percentage.toFixed(1)}% du CA
                       </div>
                     </div>
                   );
@@ -820,33 +820,33 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
 
           {/* Top Products */}
           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
+            <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-lg">
+                <Package className="w-4 h-4 sm:w-5 sm:h-5" />
                 Top 10 des Produits
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <div className="space-y-2 sm:space-y-4">
                 {reportData.topProducts.map((product, index) => (
-                  <div key={product.product_name} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center">
+                  <div key={product.product_name} className="flex items-center justify-between p-2 sm:p-4 bg-muted/30 rounded-lg gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <Badge variant="outline" className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-sm flex-shrink-0">
                         {index + 1}
                       </Badge>
-                      <div>
-                        <div className="font-medium">{product.product_name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {product.quantity_sold} unités vendues
+                      <div className="min-w-0">
+                        <div className="font-medium text-xs sm:text-base truncate">{product.product_name}</div>
+                        <div className="text-[10px] sm:text-sm text-muted-foreground">
+                          {product.quantity_sold} unités
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-success">
-                        {formatNumber(product.total_revenue)} HTG
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-semibold text-success text-xs sm:text-base">
+                        {formatNumber(product.total_revenue)} <span className="text-[10px] sm:text-sm font-normal">HTG</span>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {reportData.totalRevenueConverted > 0 ? ((product.total_revenue / reportData.totalRevenueConverted) * 100).toFixed(1) : 0}% du CA
+                      <div className="text-[10px] sm:text-sm text-muted-foreground">
+                        {reportData.totalRevenueConverted > 0 ? ((product.total_revenue / reportData.totalRevenueConverted) * 100).toFixed(1) : 0}%
                       </div>
                     </div>
                   </div>
@@ -857,27 +857,27 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
 
           {/* Payment Methods */}
           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PieChart className="w-5 h-5" />
+            <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-lg">
+                <PieChart className="w-4 h-4 sm:w-5 sm:h-5" />
                 Répartition des Paiements
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
                 {reportData.paymentMethods.map((method) => (
-                  <div key={method.method} className="p-4 bg-muted/30 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium capitalize">{method.method}</span>
-                      <Badge variant="secondary">{method.count}</Badge>
+                  <div key={method.method} className="p-2 sm:p-4 bg-muted/30 rounded-lg">
+                    <div className="flex items-center justify-between mb-1 sm:mb-2">
+                      <span className="font-medium capitalize text-xs sm:text-base">{method.method}</span>
+                      <Badge variant="secondary" className="text-[10px] sm:text-xs">{method.count}</Badge>
                     </div>
-                    <div className="w-full bg-secondary rounded-full h-2">
+                    <div className="w-full bg-secondary rounded-full h-1.5 sm:h-2">
                       <div 
-                        className="bg-primary h-2 rounded-full transition-all duration-300"
+                        className="bg-primary h-1.5 sm:h-2 rounded-full transition-all duration-300"
                         style={{ width: `${method.percentage}%` }}
                       />
                     </div>
-                    <div className="text-sm text-muted-foreground mt-1">
+                    <div className="text-[10px] sm:text-sm text-muted-foreground mt-1">
                       {method.percentage.toFixed(1)}% des ventes
                     </div>
                   </div>
