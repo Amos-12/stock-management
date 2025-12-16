@@ -7,6 +7,7 @@ interface SellerGoalsCardProps {
   todayRevenue: number;
   averageDailySales: number;
   averageDailyRevenue: number;
+  currency?: 'USD' | 'HTG';
 }
 
 export const SellerGoalsCard = ({
@@ -14,6 +15,7 @@ export const SellerGoalsCard = ({
   todayRevenue,
   averageDailySales,
   averageDailyRevenue,
+  currency = 'HTG',
 }: SellerGoalsCardProps) => {
   // Goals based on average + 20% stretch target
   const salesGoal = Math.max(Math.ceil(averageDailySales * 1.2), 1);
@@ -80,7 +82,7 @@ export const SellerGoalsCard = ({
                 <Trophy className="w-4 h-4 text-amber-500 animate-pulse drop-shadow-md" />
               )}
               <span className="text-sm font-bold">
-                {formatNumber(todayRevenue)} / {formatNumber(revenueGoal)} HTG
+                {currency === 'USD' ? `$${formatNumber(todayRevenue)} / $${formatNumber(revenueGoal)}` : `${formatNumber(todayRevenue)} / ${formatNumber(revenueGoal)} HTG`}
               </span>
             </div>
           </div>
@@ -101,7 +103,9 @@ export const SellerGoalsCard = ({
           <p className="text-xs text-muted-foreground">
             {revenueAchieved 
               ? '🎉 Objectif atteint !' 
-              : `${formatNumber(revenueGoal - todayRevenue)} HTG restants`
+              : currency === 'USD' 
+                ? `$${formatNumber(revenueGoal - todayRevenue)} restants`
+                : `${formatNumber(revenueGoal - todayRevenue)} HTG restants`
             }
           </p>
         </div>

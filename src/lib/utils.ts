@@ -15,7 +15,8 @@ export function formatNumber(value: number, decimals = 2): string {
 // Calculate unified total from multi-currency items
 export function calculateUnifiedTotal(
   items: Array<{ subtotal: number; currency?: string | null }>,
-  usdHtgRate: number
+  usdHtgRate: number,
+  displayCurrency: 'USD' | 'HTG' = 'HTG'
 ): { htg: number; usd: number; unified: number } {
   let htgTotal = 0;
   let usdTotal = 0;
@@ -28,17 +29,22 @@ export function calculateUnifiedTotal(
     }
   });
   
+  const unified = displayCurrency === 'USD'
+    ? usdTotal + (htgTotal / usdHtgRate)
+    : htgTotal + (usdTotal * usdHtgRate);
+  
   return {
     htg: htgTotal,
     usd: usdTotal,
-    unified: htgTotal + (usdTotal * usdHtgRate)
+    unified
   };
 }
 
 // Calculate unified profit from multi-currency items
 export function calculateUnifiedProfit(
   items: Array<{ profit_amount?: number | null; currency?: string | null }>,
-  usdHtgRate: number
+  usdHtgRate: number,
+  displayCurrency: 'USD' | 'HTG' = 'HTG'
 ): number {
   let htgProfit = 0;
   let usdProfit = 0;
@@ -52,5 +58,14 @@ export function calculateUnifiedProfit(
     }
   });
   
-  return htgProfit + (usdProfit * usdHtgRate);
+  return displayCurrency === 'USD'
+    ? usdProfit + (htgProfit / usdHtgRate)
+    : htgProfit + (usdProfit * usdHtgRate);
+}
+
+// Format currency value with symbol
+export function formatCurrencyValue(amount: number, currency: 'USD' | 'HTG'): string {
+  return currency === 'USD'
+    ? `$${formatNumber(amount)}`
+    : `${formatNumber(amount)} HTG`;
 }
