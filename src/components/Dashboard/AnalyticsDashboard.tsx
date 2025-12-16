@@ -380,6 +380,16 @@ export const AnalyticsDashboard = () => {
             <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
             <span>1 USD = {formatNumber(usdHtgRate)} HTG</span>
           </Badge>
+          <Badge 
+            variant="outline" 
+            className={`text-[10px] sm:text-xs px-2 py-1 ${
+              displayCurrency === 'USD' 
+                ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700' 
+                : 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+            }`}
+          >
+            Affichage: {displayCurrency === 'USD' ? '$ USD' : 'HTG'}
+          </Badge>
 
           <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
             <SelectTrigger className="w-[110px] sm:w-[140px] h-7 sm:h-9 text-xs sm:text-sm">
