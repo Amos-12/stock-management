@@ -470,26 +470,28 @@ export const InventoryManagement = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Warehouse className="w-7 h-7" />
-            Gestion d'Inventaire
+          <h2 className="text-lg sm:text-2xl font-bold text-foreground flex items-center gap-2">
+            <Warehouse className="w-5 h-5 sm:w-7 sm:h-7" />
+            <span className="hidden sm:inline">Gestion d'Inventaire</span>
+            <span className="sm:hidden">Inventaire</span>
           </h2>
-          <p className="text-muted-foreground">Vue en temps réel du stock</p>
+          <p className="text-xs sm:text-base text-muted-foreground">Vue en temps réel du stock</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={fetchProducts} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={fetchProducts} disabled={loading}>
+            <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
-          <Button variant="outline" onClick={exportToExcel}>
-            <Download className="w-4 h-4 mr-2" />
-            Excel
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none h-8 sm:h-9 text-xs sm:text-sm" onClick={exportToExcel}>
+            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Excel</span>
+            <span className="sm:hidden">XLS</span>
           </Button>
-          <Button variant="outline" onClick={exportToPDF}>
-            <Download className="w-4 h-4 mr-2" />
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none h-8 sm:h-9 text-xs sm:text-sm" onClick={exportToPDF}>
+            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             PDF
           </Button>
         </div>
@@ -497,7 +499,7 @@ export const InventoryManagement = () => {
 
       {/* Tabs for switching between standard and quick inventory */}
       <Tabs defaultValue="standard" className="w-full">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+        <TabsList className="grid w-full max-w-lg grid-cols-3 h-8 sm:h-9">
           <TabsTrigger value="standard" className="gap-2">
             <List className="w-4 h-4" />
             <span className="hidden sm:inline">Inventaire</span>
@@ -523,18 +525,19 @@ export const InventoryManagement = () => {
         </TabsContent>
 
         {/* Standard Inventory Tab */}
-        <TabsContent value="standard" className="mt-6 space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <TabsContent value="standard" className="mt-3 sm:mt-6 space-y-3 sm:space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-3 sm:pt-6 px-3 sm:px-6">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="min-w-0">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1 cursor-help">
-                        Valeur estimée
-                        <Info className="w-3 h-3" />
+                      <p className="text-[10px] sm:text-sm text-muted-foreground flex items-center gap-1 cursor-help">
+                        <span className="hidden sm:inline">Valeur estimée</span>
+                        <span className="sm:hidden">Valeur</span>
+                        <Info className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
                       </p>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -542,49 +545,50 @@ export const InventoryManagement = () => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <p className="text-xl font-bold">
+                <p className="text-sm sm:text-xl font-bold truncate">
                   {stats.totalValueUSD > 0 && <span className="text-green-600">${formatNumber(stats.totalValueUSD)}</span>}
                   {stats.totalValueUSD > 0 && stats.totalValueHTG > 0 && <span className="text-muted-foreground"> + </span>}
-                  {stats.totalValueHTG > 0 && <span>{formatNumber(stats.totalValueHTG)} HTG</span>}
+                  {stats.totalValueHTG > 0 && <span className="hidden sm:inline">{formatNumber(stats.totalValueHTG)} HTG</span>}
+                  {stats.totalValueHTG > 0 && <span className="sm:hidden">{formatNumber(stats.totalValueHTG)}</span>}
                 </p>
               </div>
-              <DollarSign className="w-8 h-8 text-primary opacity-50" />
+              <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-primary opacity-50 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-3 sm:pt-6 px-3 sm:px-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Produits totaux</p>
-                <p className="text-xl font-bold">{stats.totalProducts}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Produits</p>
+                <p className="text-sm sm:text-xl font-bold">{stats.totalProducts}</p>
               </div>
-              <Package className="w-8 h-8 text-blue-500 opacity-50" />
+              <Package className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
 
         <Card className={stats.alerteCount > 0 ? 'border-orange-500' : ''}>
-          <CardContent className="pt-6">
+          <CardContent className="pt-3 sm:pt-6 px-3 sm:px-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">En alerte</p>
-                <p className="text-xl font-bold text-orange-500">{stats.alerteCount}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">En alerte</p>
+                <p className="text-sm sm:text-xl font-bold text-orange-500">{stats.alerteCount}</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-orange-500 opacity-50" />
+              <AlertTriangle className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
 
         <Card className={stats.ruptureCount > 0 ? 'border-destructive' : ''}>
-          <CardContent className="pt-6">
+          <CardContent className="pt-3 sm:pt-6 px-3 sm:px-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">En rupture</p>
-                <p className="text-xl font-bold text-destructive">{stats.ruptureCount}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">En rupture</p>
+                <p className="text-sm sm:text-xl font-bold text-destructive">{stats.ruptureCount}</p>
               </div>
-              <TrendingDown className="w-8 h-8 text-destructive opacity-50" />
+              <TrendingDown className="w-6 h-6 sm:w-8 sm:h-8 text-destructive opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -592,88 +596,91 @@ export const InventoryManagement = () => {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <CardContent className="pt-3 sm:pt-6 px-3 sm:px-6">
+          <div className="flex flex-col gap-2 sm:gap-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher un produit..."
+                placeholder="Rechercher..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-8 sm:pl-9 h-8 sm:h-9 text-xs sm:text-sm"
               />
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full lg:w-48">
-                <SelectValue placeholder="Catégorie" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toutes catégories</SelectItem>
-                {categories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={stockLevel} onValueChange={(v) => setStockLevel(v as StockLevel)}>
-              <SelectTrigger className="w-full lg:w-40">
-                <SelectValue placeholder="Niveau stock" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous niveaux</SelectItem>
-                <SelectItem value="rupture">Rupture</SelectItem>
-                <SelectItem value="alerte">Alerte</SelectItem>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="eleve">Élevé</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full lg:w-36">
-                <SelectValue placeholder="Statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                <SelectItem value="active">Actifs</SelectItem>
-                <SelectItem value="inactive">Inactifs</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-4">
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes</SelectItem>
+                  {categories.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={stockLevel} onValueChange={(v) => setStockLevel(v as StockLevel)}>
+                <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Stock" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="rupture">Rupture</SelectItem>
+                  <SelectItem value="alerte">Alerte</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="eleve">Élevé</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="active">Actifs</SelectItem>
+                  <SelectItem value="inactive">Inactifs</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Products Table/Cards */}
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <CardTitle className="flex items-center gap-2">
+        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
               {selectedProducts.size > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {selectedProducts.size} sélectionné{selectedProducts.size > 1 ? 's' : ''}
+                <Badge variant="secondary" className="ml-1 sm:ml-2 text-[10px] sm:text-xs">
+                  {selectedProducts.size} sél.
                 </Badge>
               )}
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Button 
                 variant={viewMode === 'table' ? 'default' : 'outline'} 
                 size="sm"
                 onClick={() => setViewMode('table')}
-                className="hidden sm:flex"
+                className="hidden sm:flex h-7 sm:h-8 text-xs"
               >
-                <List className="w-4 h-4 mr-1" />
+                <List className="w-3.5 h-3.5 mr-1" />
                 Tableau
               </Button>
               <Button 
                 variant={viewMode === 'cards' ? 'default' : 'outline'} 
                 size="sm"
                 onClick={() => setViewMode('cards')}
+                className="h-7 sm:h-8 text-xs"
               >
-                <LayoutGrid className="w-4 h-4 sm:mr-1" />
+                <LayoutGrid className="w-3.5 h-3.5 sm:mr-1" />
                 <span className="hidden sm:inline">Cartes</span>
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6">
           {/* Cards View */}
           {viewMode === 'cards' && (
             <ScrollArea className="h-[500px]">

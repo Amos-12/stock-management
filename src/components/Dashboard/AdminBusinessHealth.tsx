@@ -44,37 +44,38 @@ export const AdminBusinessHealth = ({
 
   return (
     <Card className="dark:admin-card-profit overflow-hidden">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Activity className="h-5 w-5 text-admin-profit" />
-            Santé Business
+      <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-6">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-sm sm:text-lg flex items-center gap-1.5 sm:gap-2">
+            <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-admin-profit" />
+            <span className="hidden sm:inline">Santé Business</span>
+            <span className="sm:hidden">Santé</span>
           </CardTitle>
-          <Badge className={status.color}>{status.label}</Badge>
+          <Badge className={`${status.color} text-[10px] sm:text-xs px-1.5 sm:px-2`}>{status.label}</Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 sm:space-y-6 px-3 sm:px-6">
         {/* Circular Progress */}
         <div className="flex items-center justify-center">
           <div className="relative">
-            <svg className="w-44 h-44 transform -rotate-90">
+            <svg className="w-28 h-28 sm:w-44 sm:h-44 transform -rotate-90">
               {/* Background circle */}
               <circle
-                cx="88"
-                cy="88"
-                r={radius}
+                cx="50%"
+                cy="50%"
+                r="40%"
                 stroke="currentColor"
-                strokeWidth="12"
+                strokeWidth="10"
                 fill="none"
                 className="text-muted/30"
               />
               {/* Progress circle */}
               <circle
-                cx="88"
-                cy="88"
-                r={radius}
+                cx="50%"
+                cy="50%"
+                r="40%"
                 stroke="url(#healthGradient)"
-                strokeWidth="12"
+                strokeWidth="10"
                 fill="none"
                 strokeLinecap="round"
                 strokeDasharray={circumference}
@@ -89,48 +90,48 @@ export const AdminBusinessHealth = ({
               </defs>
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`text-4xl font-bold ${status.textColor}`}>{healthScore}</span>
-              <span className="text-sm text-muted-foreground">/ 100</span>
+              <span className={`text-2xl sm:text-4xl font-bold ${status.textColor}`}>{healthScore}</span>
+              <span className="text-[10px] sm:text-sm text-muted-foreground">/ 100</span>
             </div>
           </div>
         </div>
 
         {/* Mini Metrics */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="text-center p-3 rounded-lg bg-muted/50 dark:bg-muted/20">
-            <div className="flex justify-center mb-1">
-              <Percent className="h-4 w-4 text-admin-profit" />
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
+          <div className="text-center p-1.5 sm:p-3 rounded-lg bg-muted/50 dark:bg-muted/20">
+            <div className="flex justify-center mb-0.5 sm:mb-1">
+              <Percent className="h-3 w-3 sm:h-4 sm:w-4 text-admin-profit" />
             </div>
-            <div className="text-lg font-bold text-admin-profit">{profitMargin.toFixed(1)}%</div>
-            <div className="text-xs text-muted-foreground">Marge brute</div>
+            <div className="text-sm sm:text-lg font-bold text-admin-profit">{profitMargin.toFixed(1)}%</div>
+            <div className="text-[9px] sm:text-xs text-muted-foreground">Marge</div>
           </div>
-          <div className="text-center p-3 rounded-lg bg-muted/50 dark:bg-muted/20">
-            <div className="flex justify-center mb-1">
-              <TrendingUp className="h-4 w-4 text-admin-revenue" />
+          <div className="text-center p-1.5 sm:p-3 rounded-lg bg-muted/50 dark:bg-muted/20">
+            <div className="flex justify-center mb-0.5 sm:mb-1">
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-admin-revenue" />
             </div>
-            <div className="text-lg font-bold text-admin-revenue">{stockTurnover.toFixed(1)}x</div>
-            <div className="text-xs text-muted-foreground">Rotation stock</div>
+            <div className="text-sm sm:text-lg font-bold text-admin-revenue">{stockTurnover.toFixed(1)}x</div>
+            <div className="text-[9px] sm:text-xs text-muted-foreground">Rotation</div>
           </div>
-          <div className="text-center p-3 rounded-lg bg-muted/50 dark:bg-muted/20">
-            <div className="flex justify-center mb-1">
-              <Package className="h-4 w-4 text-admin-target" />
+          <div className="text-center p-1.5 sm:p-3 rounded-lg bg-muted/50 dark:bg-muted/20">
+            <div className="flex justify-center mb-0.5 sm:mb-1">
+              <Package className="h-3 w-3 sm:h-4 sm:w-4 text-admin-target" />
             </div>
-            <div className="text-lg font-bold text-admin-target">{lowStockCount}</div>
-            <div className="text-xs text-muted-foreground">Stock bas</div>
+            <div className="text-sm sm:text-lg font-bold text-admin-target">{lowStockCount}</div>
+            <div className="text-[9px] sm:text-xs text-muted-foreground">Stock bas</div>
           </div>
         </div>
 
         {/* Revenue Progress */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Objectif revenus</span>
+        <div className="space-y-1.5 sm:space-y-2">
+          <div className="flex justify-between text-[10px] sm:text-sm">
+            <span className="text-muted-foreground">Objectif</span>
             <span className="font-medium">{Math.round((revenue / revenueTarget) * 100)}%</span>
           </div>
           <Progress 
             value={Math.min((revenue / revenueTarget) * 100, 100)} 
-            className="h-2 bg-muted/30"
+            className="h-1.5 sm:h-2 bg-muted/30"
           />
-          <div className="flex justify-between text-xs text-muted-foreground">
+          <div className="flex justify-between text-[9px] sm:text-xs text-muted-foreground">
             <span>{formatNumber(revenue)} HTG</span>
             <span>{formatNumber(revenueTarget)} HTG</span>
           </div>
