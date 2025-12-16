@@ -213,6 +213,13 @@ export const TvaReport = () => {
     });
   };
 
+  const formatDateCompact = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit'
+    });
+  };
+
   const getTvaForSale = (sale: TvaSaleData) => {
     if (!companySettings) return { ht: 0, tva: 0, ttc: 0 };
     const tvaRate = companySettings.tva_rate || 0;
@@ -242,41 +249,43 @@ export const TvaReport = () => {
   const tvaRate = companySettings?.tva_rate || 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calculator className="w-5 h-5" />
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Calculator className="w-4 h-4 sm:w-5 sm:h-5" />
             Rapport TVA Collectée
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="space-y-2">
-              <Label>Date début</Label>
+        <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 items-end">
+            <div className="space-y-1 sm:space-y-2">
+              <Label className="text-xs sm:text-sm">Date début</Label>
               <Input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
+                className="h-8 sm:h-10 text-xs sm:text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Date fin</Label>
+            <div className="space-y-1 sm:space-y-2">
+              <Label className="text-xs sm:text-sm">Date fin</Label>
               <Input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
+                className="h-8 sm:h-10 text-xs sm:text-sm"
               />
             </div>
-            <Button onClick={fetchTvaData} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Générer
+            <Button onClick={fetchTvaData} disabled={loading} className="h-8 sm:h-10 text-xs sm:text-sm">
+              <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Générer</span>
             </Button>
             {salesData.length > 0 && (
-              <Button variant="outline" onClick={handleExportPDF}>
-                <Download className="w-4 h-4 mr-2" />
-                Export PDF
+              <Button variant="outline" onClick={handleExportPDF} className="h-8 sm:h-10 text-xs sm:text-sm">
+                <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export PDF</span>
               </Button>
             )}
           </div>
@@ -285,18 +294,18 @@ export const TvaReport = () => {
 
       {/* Summary Cards */}
       {salesData.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
           <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Total HT</p>
-              <p className="text-xl font-bold">
+            <CardContent className="p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-muted-foreground">Total HT</p>
+              <p className="text-base sm:text-xl font-bold">
                 {displayCurrency === 'HTG' 
                   ? `${formatNumber(totals.unifiedTotalHT)} HTG`
                   : `$${formatNumber(totals.unifiedTotalHT)}`
                 }
               </p>
               {totals.totalHT_USD > 0 && totals.totalHT_HTG > 0 && (
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                   <span>{formatNumber(totals.totalHT_HTG)} HTG</span>
                   <span className="mx-1">+</span>
                   <span>${formatNumber(totals.totalHT_USD)}</span>
@@ -306,16 +315,16 @@ export const TvaReport = () => {
           </Card>
 
           <Card className="border-l-4 border-l-orange-500">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">TVA Collectée ({tvaRate}%)</p>
-              <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
+            <CardContent className="p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-muted-foreground">TVA ({tvaRate}%)</p>
+              <p className="text-base sm:text-xl font-bold text-orange-600 dark:text-orange-400">
                 {displayCurrency === 'HTG' 
                   ? `${formatNumber(totals.unifiedTotalTVA)} HTG`
                   : `$${formatNumber(totals.unifiedTotalTVA)}`
                 }
               </p>
               {totals.totalTVA_USD > 0 && totals.totalTVA_HTG > 0 && (
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                   <span>{formatNumber(totals.totalTVA_HTG)} HTG</span>
                   <span className="mx-1">+</span>
                   <span>${formatNumber(totals.totalTVA_USD)}</span>
@@ -325,16 +334,16 @@ export const TvaReport = () => {
           </Card>
 
           <Card className="border-l-4 border-l-green-500">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Total TTC</p>
-              <p className="text-xl font-bold text-green-600 dark:text-green-400">
+            <CardContent className="p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-muted-foreground">Total TTC</p>
+              <p className="text-base sm:text-xl font-bold text-green-600 dark:text-green-400">
                 {displayCurrency === 'HTG' 
                   ? `${formatNumber(totals.unifiedTotalTTC)} HTG`
                   : `$${formatNumber(totals.unifiedTotalTTC)}`
                 }
               </p>
               {totals.totalTTC_USD > 0 && totals.totalTTC_HTG > 0 && (
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                   <span>{formatNumber(totals.totalTTC_HTG)} HTG</span>
                   <span className="mx-1">+</span>
                   <span>${formatNumber(totals.totalTTC_USD)}</span>
@@ -348,24 +357,24 @@ export const TvaReport = () => {
       {/* Details Table */}
       {salesData.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Détail des ventes ({totalItems} ventes)
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+              Détail ({totalItems} ventes)
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
             <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>N° Vente</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead className="text-right">Montant HT</TableHead>
-                    <TableHead className="text-center">TVA</TableHead>
-                    <TableHead className="text-right">Montant TVA</TableHead>
-                    <TableHead className="text-right">Total TTC</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Date</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden sm:table-cell">N° Vente</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Client</TableHead>
+                    <TableHead className="text-right text-xs sm:text-sm">HT</TableHead>
+                    <TableHead className="text-center text-xs sm:text-sm hidden sm:table-cell">TVA</TableHead>
+                    <TableHead className="text-right text-xs sm:text-sm">TVA</TableHead>
+                    <TableHead className="text-right text-xs sm:text-sm">TTC</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -373,31 +382,34 @@ export const TvaReport = () => {
                     const { ht, tva, ttc } = getTvaForSale(sale);
                     return (
                       <TableRow key={sale.id}>
-                        <TableCell>{formatDate(sale.created_at)}</TableCell>
-                        <TableCell className="font-mono text-xs">
+                        <TableCell className="text-xs sm:text-sm">
+                          <span className="sm:hidden">{formatDateCompact(sale.created_at)}</span>
+                          <span className="hidden sm:inline">{formatDate(sale.created_at)}</span>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs hidden sm:table-cell">
                           {sale.id.substring(0, 8)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs sm:text-sm max-w-[80px] sm:max-w-none truncate">
                           {sale.customer_name || <span className="text-muted-foreground italic">-</span>}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right text-xs sm:text-sm">
                           {displayCurrency === 'HTG' 
-                            ? `${formatNumber(ht)} HTG`
+                            ? `${formatNumber(ht)}`
                             : `$${formatNumber(ht)}`
                           }
                         </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline">{tvaRate}%</Badge>
+                        <TableCell className="text-center hidden sm:table-cell">
+                          <Badge variant="outline" className="text-xs">{tvaRate}%</Badge>
                         </TableCell>
-                        <TableCell className="text-right text-orange-600 dark:text-orange-400">
+                        <TableCell className="text-right text-xs sm:text-sm text-orange-600 dark:text-orange-400">
                           {displayCurrency === 'HTG' 
-                            ? `${formatNumber(tva)} HTG`
+                            ? `${formatNumber(tva)}`
                             : `$${formatNumber(tva)}`
                           }
                         </TableCell>
-                        <TableCell className="text-right font-bold">
+                        <TableCell className="text-right text-xs sm:text-sm font-bold">
                           {displayCurrency === 'HTG' 
-                            ? `${formatNumber(ttc)} HTG`
+                            ? `${formatNumber(ttc)}`
                             : `$${formatNumber(ttc)}`
                           }
                         </TableCell>
@@ -423,9 +435,9 @@ export const TvaReport = () => {
 
       {salesData.length === 0 && !loading && (
         <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            <Calculator className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Sélectionnez une période et cliquez sur "Générer" pour voir le rapport TVA</p>
+          <CardContent className="p-6 sm:p-8 text-center text-muted-foreground">
+            <Calculator className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 opacity-50" />
+            <p className="text-sm sm:text-base">Sélectionnez une période et cliquez sur "Générer" pour voir le rapport TVA</p>
           </CardContent>
         </Card>
       )}
