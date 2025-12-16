@@ -59,20 +59,21 @@ export const SellerDashboardStats = () => {
       .from('company_settings')
       .select('usd_htg_rate, default_display_currency')
       .single();
-    if (data?.usd_htg_rate) {
-      setUsdHtgRate(data.usd_htg_rate);
-    }
-    if (data?.default_display_currency) {
-      setDisplayCurrency(data.default_display_currency as 'USD' | 'HTG');
-    }
-    return data?.usd_htg_rate || 132;
+    
+    const rate = data?.usd_htg_rate || 132;
+    const currency = (data?.default_display_currency || 'HTG') as 'USD' | 'HTG';
+    
+    setUsdHtgRate(rate);
+    setDisplayCurrency(currency);
+    
+    return { rate, currency };
   };
 
   const fetchStats = useCallback(async () => {
     if (!user) return;
 
     try {
-      const rate = await fetchCompanySettings();
+      const { rate, currency } = await fetchCompanySettings();
 
       const { data: allSales, error: allError } = await supabase
         .from('sales')
@@ -132,7 +133,7 @@ export const SellerDashboardStats = () => {
         const itemsForSales = allSaleItems.filter(i => 
           salesList.some(s => s.id === i.sale_id)
         );
-        return calculateUnifiedTotal(itemsForSales, rate, displayCurrency).unified;
+        return calculateUnifiedTotal(itemsForSales, rate, currency).unified;
       };
 
       const totalRevenue = calculateRevenue(allSales || []);
@@ -172,7 +173,7 @@ export const SellerDashboardStats = () => {
           acc[item.product_name] = { product_name: item.product_name, quantity: 0, revenue: 0 };
         }
         acc[item.product_name].quantity += Number(item.quantity);
-        const itemRevenue = displayCurrency === 'USD'
+        const itemRevenue = currency === 'USD'
           ? (item.currency === 'USD' ? item.subtotal : item.subtotal / rate)
           : (item.currency === 'USD' ? item.subtotal * rate : item.subtotal);
         acc[item.product_name].revenue += itemRevenue;
@@ -508,7 +509,12 @@ export const SellerDashboardStats = () => {
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className="font-bold text-xs sm:text-sm text-success dark:text-[hsl(160,84%,45%)]">{formatNumber(Number(sale.total_amount))}</div>
+                      <div className="font-bold text-xs sm:text-sm text-success dark:text-[hsl(160,84%,45%)]">
+                        {displayCurrency === 'USD' 
+                          ? `$${formatNumber(Number(sale.total_amount))}` 
+                          : `${formatNumber(Number(sale.total_amount))} HTG`
+                        }
+                      </div>
                       <Badge variant="outline" className="text-[9px] sm:text-xs px-1 sm:px-2">
                         {sale.payment_method || 'N/A'}
                       </Badge>
