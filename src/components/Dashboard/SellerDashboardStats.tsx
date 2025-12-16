@@ -128,21 +128,25 @@ export const SellerDashboardStats = () => {
         return d >= twoMonthsAgo && d < monthAgo;
       }) || [];
 
-      // Calculate revenue with proper currency conversion
-      const calculateRevenue = (salesList: any[]) => {
-        const itemsForSales = allSaleItems.filter(i => 
-          salesList.some(s => s.id === i.sale_id)
-        );
-        return calculateUnifiedTotal(itemsForSales, rate, currency).unified;
+      // Calculate revenue TTC with proper currency conversion
+      // total_amount is stored in HTG and includes TVA (TTC)
+      const calculateRevenueTTC = (salesList: any[]) => {
+        return salesList.reduce((sum, sale) => {
+          // total_amount is in HTG, convert to display currency if needed
+          const amount = currency === 'USD' 
+            ? sale.total_amount / rate 
+            : sale.total_amount;
+          return sum + amount;
+        }, 0);
       };
 
-      const totalRevenue = calculateRevenue(allSales || []);
-      const todayRevenue = calculateRevenue(todaySales);
-      const yesterdayRevenue = calculateRevenue(yesterdaySales);
-      const weekRevenue = calculateRevenue(weekSales);
-      const lastWeekRevenue = calculateRevenue(lastWeekSales);
-      const monthRevenue = calculateRevenue(monthSales);
-      const lastMonthRevenue = calculateRevenue(lastMonthSales);
+      const totalRevenue = calculateRevenueTTC(allSales || []);
+      const todayRevenue = calculateRevenueTTC(todaySales);
+      const yesterdayRevenue = calculateRevenueTTC(yesterdaySales);
+      const weekRevenue = calculateRevenueTTC(weekSales);
+      const lastWeekRevenue = calculateRevenueTTC(lastWeekSales);
+      const monthRevenue = calculateRevenueTTC(monthSales);
+      const lastMonthRevenue = calculateRevenueTTC(lastMonthSales);
 
       // Calculate trend data for last 7 days
       const trendDataCalc: TrendDataPoint[] = [];
@@ -157,7 +161,7 @@ export const SellerDashboardStats = () => {
           return d >= date && d < nextDate;
         }) || [];
         
-        const dayRevenue = calculateRevenue(daySales);
+        const dayRevenue = calculateRevenueTTC(daySales);
         
         trendDataCalc.push({
           date: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
@@ -521,7 +525,7 @@ export const SellerDashboardStats = () => {
                     <div className="text-right flex-shrink-0">
                       <div className="font-bold text-xs sm:text-sm text-success dark:text-[hsl(160,84%,45%)]">
                         {displayCurrency === 'USD' 
-                          ? `$${formatNumber(Number(sale.total_amount))}` 
+                          ? `$${formatNumber(Number(sale.total_amount) / usdHtgRate)}` 
                           : `${formatNumber(Number(sale.total_amount))} HTG`
                         }
                       </div>
