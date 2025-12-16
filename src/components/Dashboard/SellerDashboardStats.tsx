@@ -222,13 +222,6 @@ export const SellerDashboardStats = () => {
     if (!user) return;
 
     try {
-      // Fetch company settings for TVA rate
-      const { data: settings } = await supabase
-        .from('company_settings')
-        .select('tva_rate')
-        .single();
-      const tvaRate = settings?.tva_rate || 0;
-
       const { data: salesData, error } = await supabase
         .from('sales')
         .select('*')
@@ -243,50 +236,20 @@ export const SellerDashboardStats = () => {
         return;
       }
 
-      // Fetch sale_items for these sales to get proper TTC per currency
-      const saleIds = salesData.map(s => s.id);
-      const { data: saleItems } = await supabase
-        .from('sale_items')
-        .select('sale_id, subtotal, currency')
-        .in('sale_id', saleIds);
-
-      // Build currency map for each sale
-      const saleItemsMap = new Map<string, { htg: number; usd: number }>();
-      (saleItems || []).forEach(item => {
-        const existing = saleItemsMap.get(item.sale_id) || { htg: 0, usd: 0 };
-        if (item.currency === 'USD') {
-          existing.usd += item.subtotal;
-        } else {
-          existing.htg += item.subtotal;
-        }
-        saleItemsMap.set(item.sale_id, existing);
-      });
-
-      // Enrich sales with TTC currencies
-      const enrichedSales = salesData.map(sale => {
-        const rawCurrencies = saleItemsMap.get(sale.id) || { htg: 0, usd: 0 };
-        const totalRaw = rawCurrencies.htg + rawCurrencies.usd;
-        
-        // Apply discount proportionally
-        const discountRatio = totalRaw > 0 ? (sale.discount_amount || 0) / totalRaw : 0;
-        const htgAfterDiscount = rawCurrencies.htg * (1 - discountRatio);
-        const usdAfterDiscount = rawCurrencies.usd * (1 - discountRatio);
-        
-        // Add TVA to get TTC
-        return {
-          ...sale,
-          currencies: {
-            htg: htgAfterDiscount * (1 + tvaRate / 100),
-            usd: usdAfterDiscount * (1 + tvaRate / 100)
-          }
-        };
-      });
+      // Use total_amount directly (it's already TTC in HTG)
+      // Just convert to displayCurrency if needed
+      const enrichedSales = salesData.map(sale => ({
+        ...sale,
+        displayAmount: displayCurrency === 'USD' 
+          ? Number(sale.total_amount) / usdHtgRate 
+          : Number(sale.total_amount)
+      }));
 
       setRecentSales(enrichedSales);
     } catch (error) {
       console.error('Error fetching recent sales:', error);
     }
-  }, [user]);
+  }, [user, displayCurrency, usdHtgRate]);
 
   useEffect(() => {
     if (user) {
@@ -575,31 +538,12 @@ export const SellerDashboardStats = () => {
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      {sale.currencies ? (
-                        <div className="font-bold text-xs sm:text-sm text-success dark:text-[hsl(160,84%,45%)]">
-                          {sale.currencies.htg > 0 && (
-                            <div>{formatNumber(sale.currencies.htg)} HTG</div>
-                          )}
-                          {sale.currencies.usd > 0 && (
-                            <div className="text-[10px] sm:text-xs text-muted-foreground">
-                              ${formatNumber(sale.currencies.usd)}
-                            </div>
-                          )}
-                          {!sale.currencies.htg && !sale.currencies.usd && (
-                            <div>{displayCurrency === 'USD' 
-                              ? `$${formatNumber(Number(sale.total_amount) / usdHtgRate)}` 
-                              : `${formatNumber(Number(sale.total_amount))} HTG`
-                            }</div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="font-bold text-xs sm:text-sm text-success dark:text-[hsl(160,84%,45%)]">
-                          {displayCurrency === 'USD' 
-                            ? `$${formatNumber(Number(sale.total_amount) / usdHtgRate)}` 
-                            : `${formatNumber(Number(sale.total_amount))} HTG`
-                          }
-                        </div>
-                      )}
+                      <div className="font-bold text-xs sm:text-sm text-success dark:text-[hsl(160,84%,45%)]">
+                        {displayCurrency === 'USD' 
+                          ? `$${formatNumber(sale.displayAmount || Number(sale.total_amount) / usdHtgRate)}` 
+                          : `${formatNumber(sale.displayAmount || Number(sale.total_amount))} HTG`
+                        }
+                      </div>
                       <Badge variant="outline" className="text-[9px] sm:text-xs px-1 sm:px-2">
                         {sale.payment_method || 'N/A'}
                       </Badge>

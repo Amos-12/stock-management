@@ -855,26 +855,31 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     }
   };
 
-  // Calculate unified total WITH discount applied (final amount to pay)
+  // Calculate unified total WITH discount AND TVA applied (final TTC amount to pay)
   const getUnifiedFinalTotal = () => {
     const { totalUSD, totalHTG } = getTotalsByCurrency();
     const rate = companySettings?.usd_htg_rate || 132;
     const displayCurrency = companySettings?.default_display_currency || 'HTG';
     const discountAmount = getDiscountAmount();
+    const tvaRate = companySettings?.tva_rate || 0;
     
     if (displayCurrency === 'HTG') {
       // Convert everything to HTG
       const unifiedHTG = totalHTG + (totalUSD * rate);
       // Apply discount to unified total
-      const finalUnifiedHTG = Math.max(0, unifiedHTG - discountAmount);
-      return { amount: finalUnifiedHTG, currency: 'HTG' as const };
+      const afterDiscount = Math.max(0, unifiedHTG - discountAmount);
+      // Add TVA to get TTC
+      const tva = afterDiscount * (tvaRate / 100);
+      return { amount: afterDiscount + tva, currency: 'HTG' as const };
     } else {
       // Convert everything to USD
       const unifiedUSD = totalUSD + (totalHTG / rate);
       // Convert discount to USD and apply
       const discountInUSD = discountAmount / rate;
-      const finalUnifiedUSD = Math.max(0, unifiedUSD - discountInUSD);
-      return { amount: finalUnifiedUSD, currency: 'USD' as const };
+      const afterDiscount = Math.max(0, unifiedUSD - discountInUSD);
+      // Add TVA to get TTC
+      const tva = afterDiscount * (tvaRate / 100);
+      return { amount: afterDiscount + tva, currency: 'USD' as const };
     }
   };
 
@@ -1998,7 +2003,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                               : 'bg-muted hover:bg-muted/80'
                           }`}
                         >
-                          {type === 'none' ? 'Aucune' : type === 'percentage' ? '%' : 'HTG'}
+                          {type === 'none' ? 'Aucune' : type === 'percentage' ? '%' : (companySettings?.default_display_currency || 'HTG')}
                         </button>
                       ))}
                     </div>
@@ -2265,7 +2270,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
                   {getDiscountAmount() > 0 && (
                     <div>
                       <p className="text-xs text-muted-foreground uppercase tracking-wide">Remise</p>
-                      <p className="font-medium text-destructive">-{formatAmount(getDiscountAmount())}</p>
+                      <p className="font-medium text-destructive">-{formatAmount(getDiscountAmount(), companySettings?.default_display_currency || 'HTG')}</p>
                     </div>
                   )}
                 </div>
