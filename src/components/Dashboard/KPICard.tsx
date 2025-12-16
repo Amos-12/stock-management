@@ -156,18 +156,18 @@ export const KPICard = ({
 
   return (
     <Card className={`relative overflow-hidden bg-card transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 dark:border-border/50 dark:hover:shadow-primary/5 ${getCardAccentClass()}`}>
-      <CardContent className={isSmall ? "p-3" : "p-4"}>
-        <div className="flex items-start justify-between">
+      <CardContent className={isSmall ? "p-2 sm:p-3" : "p-2 sm:p-4"}>
+        <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className={`font-medium text-muted-foreground truncate ${isSmall ? 'text-xs' : 'text-sm'}`}>
+            <p className={`font-medium text-muted-foreground truncate ${isSmall ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm'}`}>
               {title}
             </p>
-            <p className={`font-bold text-foreground mt-1 truncate ${isSmall ? 'text-base' : 'text-xl'}`}>
+            <p className={`font-bold text-foreground mt-0.5 sm:mt-1 truncate ${isSmall ? 'text-sm sm:text-base' : 'text-base sm:text-xl'}`}>
               {formatValue()}
             </p>
             
             {previousValue !== undefined && !isSmall && (
-              <div className="flex items-center gap-1 mt-2">
+              <div className="hidden sm:flex items-center gap-1 mt-2">
                 {isNeutral ? (
                   <Minus className="w-3 h-3 text-muted-foreground" />
                 ) : isPositive ? (
@@ -184,7 +184,7 @@ export const KPICard = ({
                 }`}>
                   {isPositive ? '+' : ''}{trend.toFixed(1)}%
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground hidden lg:inline">
                   vs précédent
                 </span>
               </div>
@@ -192,13 +192,13 @@ export const KPICard = ({
           </div>
           
           {/* Gradient icon container for light mode */}
-          <div className={`rounded-xl ${getIconGradientClasses()} shadow-sm ${isSmall ? 'p-1.5' : 'p-2.5'}`}>
-            <Icon className={`${isSmall ? 'w-4 h-4' : 'w-5 h-5'} ${getIconColorClasses()}`} />
+          <div className={`rounded-lg sm:rounded-xl ${getIconGradientClasses()} shadow-sm ${isSmall ? 'p-1 sm:p-1.5' : 'p-1.5 sm:p-2.5'}`}>
+            <Icon className={`${isSmall ? 'w-3 h-3 sm:w-4 sm:h-4' : 'w-4 h-4 sm:w-5 sm:h-5'} ${getIconColorClasses()}`} />
           </div>
         </div>
 
         {sparklineData && sparklineData.length > 0 && !isSmall && (
-          <div className="mt-3 h-12 -mx-2">
+          <div className="mt-2 sm:mt-3 h-8 sm:h-12 -mx-1 sm:-mx-2 hidden sm:block">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparklineData}>
                 <defs>

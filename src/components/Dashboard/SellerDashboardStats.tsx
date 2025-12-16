@@ -280,13 +280,13 @@ export const SellerDashboardStats = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* Header with refresh */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
-            <Clock className="w-3 h-3 mr-1" />
-            MàJ: {lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2">
+            <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
+            <span className="hidden sm:inline">MàJ:</span> {lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
           </Badge>
         </div>
         <Button 
@@ -294,14 +294,15 @@ export const SellerDashboardStats = () => {
           size="sm" 
           onClick={handleRefresh}
           disabled={refreshing}
+          className="h-7 sm:h-8 text-xs sm:text-sm"
         >
-          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          Actualiser
+          <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          <span className="hidden sm:inline">Actualiser</span>
         </Button>
       </div>
 
       {/* KPI Cards with Sparklines */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <KPICard
           title="Revenu Aujourd'hui"
           value={stats.todayRevenue}
@@ -311,7 +312,7 @@ export const SellerDashboardStats = () => {
           colorScheme="seller-profit"
         />
         <KPICard
-          title="Ventes Aujourd'hui"
+          title="Ventes"
           value={stats.todaySales}
           previousValue={stats.yesterdaySales}
           icon={Receipt}
@@ -324,6 +325,7 @@ export const SellerDashboardStats = () => {
           value={stats.averageSale}
           icon={ShoppingCart}
           colorScheme="seller-average"
+          size="sm"
         />
         <KPICard
           title="Total Ventes"
@@ -331,14 +333,17 @@ export const SellerDashboardStats = () => {
           icon={TrendingUp}
           format="number"
           colorScheme="seller-revenue"
+          size="sm"
         />
       </div>
 
-      {/* Trend Chart */}
-      <SellerTrendChart data={trendData} />
+      {/* Trend Chart - hidden on mobile */}
+      <div className="hidden sm:block">
+        <SellerTrendChart data={trendData} />
+      </div>
 
       {/* Goals & Comparison Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         <SellerGoalsCard
           todaySales={stats.todaySales}
           todayRevenue={stats.todayRevenue}
@@ -353,12 +358,12 @@ export const SellerDashboardStats = () => {
               previous: stats.yesterdayRevenue 
             },
             { 
-              label: "Cette Semaine vs Semaine Dernière", 
+              label: "Cette Semaine", 
               current: stats.weekRevenue, 
               previous: stats.lastWeekRevenue 
             },
             { 
-              label: "Ce Mois vs Mois Dernier", 
+              label: "Ce Mois", 
               current: stats.monthRevenue, 
               previous: stats.lastMonthRevenue 
             }
@@ -367,32 +372,32 @@ export const SellerDashboardStats = () => {
       </div>
 
       {/* Top Products & Recent Sales */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         {/* Top Products with Bar Chart */}
         <Card className="animate-fade-in-up dark:border-border/50 dark:bg-card/80" style={{ animationDelay: '300ms' }}>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Package className="w-5 h-5 text-primary" />
+          <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               Top 5 Produits
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
             {stats.topProducts.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Aucune vente enregistrée</p>
+              <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                <Package className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+                <p className="text-xs sm:text-base">Aucune vente enregistrée</p>
               </div>
             ) : (
               <>
-                <div className="h-[180px] mb-4">
+                <div className="h-[140px] sm:h-[180px] mb-3 sm:mb-4">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topProductsChartData} layout="vertical" margin={{ left: 0, right: 50 }}>
+                    <BarChart data={topProductsChartData} layout="vertical" margin={{ left: 0, right: 40 }}>
                       <XAxis type="number" hide />
                       <YAxis 
                         type="category" 
                         dataKey="name" 
-                        width={100}
-                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                        width={75}
+                        tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
                         axisLine={false}
                         tickLine={false}
                       />
@@ -401,9 +406,9 @@ export const SellerDashboardStats = () => {
                           if (active && payload && payload.length) {
                             const data = payload[0].payload;
                             return (
-                              <div className="bg-card border border-border rounded-lg shadow-lg p-3">
-                                <p className="text-sm font-medium">{data.fullName}</p>
-                                <p className="text-xs text-muted-foreground">
+                              <div className="bg-card border border-border rounded-lg shadow-lg p-2 sm:p-3 text-xs sm:text-sm">
+                                <p className="font-medium">{data.fullName}</p>
+                                <p className="text-muted-foreground">
                                   {formatNumber(data.revenue)} HTG • {data.quantity} unités
                                 </p>
                               </div>
@@ -427,7 +432,7 @@ export const SellerDashboardStats = () => {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5 sm:space-y-2">
                   {stats.topProducts.map((product, index) => {
                     const percent = totalProductRevenue > 0 
                       ? (product.revenue / totalProductRevenue * 100).toFixed(1) 
@@ -435,20 +440,20 @@ export const SellerDashboardStats = () => {
                     return (
                       <div 
                         key={product.product_name} 
-                        className="flex items-center justify-between text-sm p-2 rounded-lg hover:bg-accent/50 transition-colors"
+                        className="flex items-center justify-between text-xs sm:text-sm p-1.5 sm:p-2 rounded-lg hover:bg-accent/50 transition-colors"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                           <Badge 
                             variant={index === 0 ? 'default' : 'outline'} 
-                            className="w-6 h-6 flex items-center justify-center text-xs"
+                            className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[10px] sm:text-xs flex-shrink-0"
                           >
                             {index + 1}
                           </Badge>
-                          <span className="truncate max-w-[150px]">{product.product_name}</span>
+                          <span className="truncate max-w-[100px] sm:max-w-[150px]">{product.product_name}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground text-xs">{percent}%</span>
-                          <span className="font-medium">{formatNumber(product.revenue)} HTG</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                          <span className="text-muted-foreground text-[10px] sm:text-xs">{percent}%</span>
+                          <span className="font-medium text-xs sm:text-sm">{formatNumber(product.revenue)}</span>
                         </div>
                       </div>
                     );
@@ -461,31 +466,31 @@ export const SellerDashboardStats = () => {
 
         {/* Recent Sales */}
         <Card className="animate-fade-in-up dark:border-border/50 dark:bg-card/80" style={{ animationDelay: '350ms' }}>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Receipt className="w-5 h-5 text-primary" />
+          <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               Ventes Récentes
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
             {recentSales.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Aucune vente récente</p>
+              <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                <Receipt className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+                <p className="text-xs sm:text-base">Aucune vente récente</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {recentSales.map((sale, index) => (
                   <div 
                     key={sale.id} 
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-all hover:scale-[1.01]"
+                    className="flex items-center justify-between p-2 sm:p-3 border rounded-lg hover:bg-accent/50 transition-all"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <div>
-                      <div className="font-medium text-sm">
+                    <div className="min-w-0">
+                      <div className="font-medium text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">
                         {sale.customer_name || 'Client anonyme'}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-[10px] sm:text-xs text-muted-foreground">
                         {new Date(sale.created_at).toLocaleString('fr-FR', {
                           day: '2-digit',
                           month: 'short',
@@ -494,9 +499,9 @@ export const SellerDashboardStats = () => {
                         })}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold text-success dark:text-[hsl(160,84%,45%)]">{formatNumber(Number(sale.total_amount))} HTG</div>
-                      <Badge variant="outline" className="text-xs">
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-bold text-xs sm:text-sm text-success dark:text-[hsl(160,84%,45%)]">{formatNumber(Number(sale.total_amount))}</div>
+                      <Badge variant="outline" className="text-[9px] sm:text-xs px-1 sm:px-2">
                         {sale.payment_method || 'N/A'}
                       </Badge>
                     </div>

@@ -537,51 +537,52 @@ export const AdminDashboardCharts = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Header with refresh and indicators */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Tableau de Bord</h2>
-          <div className="flex items-center gap-3 mt-1">
-            <Badge variant="outline" className="flex items-center gap-1.5 text-xs">
-              <Clock className="h-3 w-3" />
-              Dernière MàJ: {lastUpdated.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-            </Badge>
-            <Badge variant="outline" className="flex items-center gap-1.5 text-xs bg-muted/50">
-              <DollarSign className="h-3 w-3 text-primary" />
-              1 USD = {formatNumber(usdHtgRate)} HTG
-            </Badge>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg sm:text-2xl font-bold text-foreground">Tableau de Bord</h2>
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 mt-1">
+              <Badge variant="outline" className="flex items-center gap-1 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                <span className="hidden sm:inline">Dernière MàJ:</span> {lastUpdated.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+              </Badge>
+              <Badge variant="outline" className="flex items-center gap-1 text-[10px] sm:text-xs bg-muted/50 px-1.5 sm:px-2">
+                <DollarSign className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
+                1 USD = {formatNumber(usdHtgRate)} HTG
+              </Badge>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="h-8 w-8 sm:h-9 sm:w-9"
+              onClick={handleExportPdf}
+            >
+              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={fetchData} disabled={loading}>
+              <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
-            <SelectTrigger className="w-44">
-              <Calendar className="w-4 h-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="daily">7 derniers jours</SelectItem>
-              <SelectItem value="weekly">4 semaines</SelectItem>
-              <SelectItem value="monthly">3 mois</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleExportPdf}
-            className="gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Export PDF</span>
-          </Button>
-          <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
+        <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
+          <SelectTrigger className="w-full sm:w-44 h-8 sm:h-9 text-xs sm:text-sm">
+            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="daily">7 derniers jours</SelectItem>
+            <SelectItem value="weekly">4 semaines</SelectItem>
+            <SelectItem value="monthly">3 mois</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* KPI Cards - Row 1: Métriques prioritaires avec ombre style graphique */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Cards - Row 1: Métriques prioritaires */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <div className="animate-fade-in priority-card" style={{ animationDelay: '0ms' }}>
           <KPICard
             title="Revenus Aujourd'hui"
@@ -633,10 +634,10 @@ export const AdminDashboardCharts = () => {
       </div>
 
       {/* KPI Cards - Row 2: Métriques secondaires (petites) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
           <KPICard
-            title="Ventes Aujourd'hui"
+            title="Ventes"
             value={todaySales}
             icon={ShoppingCart}
             format="number"
@@ -669,7 +670,7 @@ export const AdminDashboardCharts = () => {
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '350ms' }}>
           <KPICard
-            title="Produits Actifs"
+            title="Produits"
             value={totalProducts}
             icon={Package}
             format="number"
@@ -680,18 +681,19 @@ export const AdminDashboardCharts = () => {
       </div>
 
       {/* Main Charts Grid - Revenue Chart + Recent Activities */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
         {/* Revenue/Profit Trend - 2/3 width */}
         <div className="lg:col-span-2 animate-fade-in" style={{ animationDelay: '400ms' }}>
           <Card className="admin-card-revenue h-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-admin-revenue" />
-                Évolution Revenus & Bénéfices
+            <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-6">
+              <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-admin-revenue" />
+                <span className="hidden sm:inline">Évolution Revenus & Bénéfices</span>
+                <span className="sm:hidden">Revenus & Bénéfices</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={320}>
+            <CardContent className="px-2 sm:px-6">
+              <ResponsiveContainer width="100%" height={200} className="sm:!h-[320px]">
                 <AreaChart data={revenueData}>
                   <defs>
                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
@@ -704,21 +706,22 @@ export const AdminDashboardCharts = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 11 }} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+                  <YAxis stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 9 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} width={35} />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: 'hsl(var(--card))', 
                       border: '1px solid hsl(var(--border))', 
                       borderRadius: '8px',
-                      color: 'hsl(var(--card-foreground))'
+                      color: 'hsl(var(--card-foreground))',
+                      fontSize: '12px'
                     }}
                     formatter={(value: any, name: string) => [
                       `${formatNumber(value)} HTG`,
                       name === 'revenue' ? 'Revenus' : 'Bénéfices'
                     ]}
                   />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <Area 
                     type="monotone" 
                     dataKey="revenue" 
@@ -742,56 +745,59 @@ export const AdminDashboardCharts = () => {
         </div>
 
         {/* Recent Activities - 1/3 width */}
-        <div className="animate-fade-in" style={{ animationDelay: '450ms' }}>
+        <div className="animate-fade-in hidden lg:block" style={{ animationDelay: '450ms' }}>
           <RecentActivities />
         </div>
       </div>
 
       {/* Bottom Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
         {/* Top Products */}
         <Card className="admin-card-products animate-fade-in" style={{ animationDelay: '500ms' }}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Package className="h-5 w-5 text-admin-products" />
-              Top 10 Produits
+          <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5 text-admin-products" />
+              Top Produits
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={topProducts} layout="vertical" margin={{ left: 10, right: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis 
-                  type="category" 
-                  dataKey="name" 
-                  tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
-                  width={100}
-                />
-                <Tooltip 
-                  formatter={(value: any) => [`${formatNumber(value)} HTG`, 'Revenus']} 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))', 
-                    borderRadius: '8px',
-                    color: 'hsl(var(--card-foreground))' 
-                  }} 
-                />
-                <Bar 
-                  dataKey="revenue" 
-                  fill="hsl(var(--admin-products))" 
-                  radius={[0, 4, 4, 0]}
-                >
-                  <LabelList 
-                    dataKey="percent"
-                    position="right"
-                    formatter={(value: number) => `${value}%`}
-                    fill="hsl(var(--muted-foreground))"
-                    fontSize={11}
+          <CardContent className="px-2 sm:px-6">
+            <div className="h-[250px] sm:h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topProducts.slice(0, window.innerWidth < 640 ? 5 : 10)} layout="vertical" margin={{ left: 5, right: 45 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis 
+                    type="category" 
+                    dataKey="name" 
+                    tick={{ fontSize: 9, fill: 'hsl(var(--foreground))' }}
+                    width={75}
                   />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+                  <Tooltip 
+                    formatter={(value: any) => [`${formatNumber(value)} HTG`, 'Revenus']} 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))', 
+                      borderRadius: '8px',
+                      color: 'hsl(var(--card-foreground))',
+                      fontSize: '11px'
+                    }} 
+                  />
+                  <Bar 
+                    dataKey="revenue" 
+                    fill="hsl(var(--admin-products))" 
+                    radius={[0, 4, 4, 0]}
+                  >
+                    <LabelList 
+                      dataKey="percent"
+                      position="right"
+                      formatter={(value: number) => `${value}%`}
+                      fill="hsl(var(--muted-foreground))"
+                      fontSize={9}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -802,32 +808,34 @@ export const AdminDashboardCharts = () => {
       </div>
 
       {/* Category Distribution & Business Health Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
         {/* Category Distribution */}
         <Card className="admin-card-inventory animate-fade-in" style={{ animationDelay: '600ms' }}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/20">
-                <BarChart3 className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+          <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/20">
+                <BarChart3 className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-cyan-600 dark:text-cyan-400" />
               </div>
-              Distribution par Catégorie
+              <span className="hidden sm:inline">Distribution par Catégorie</span>
+              <span className="sm:hidden">Catégories</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center gap-4">
+          <CardContent className="px-3 sm:px-6">
+            <div className="flex flex-col items-center gap-3 sm:gap-4">
               {/* Pie Chart */}
               <div className="relative flex-shrink-0">
-                <ResponsiveContainer width={180} height={180}>
+                <ResponsiveContainer width={140} height={140} className="sm:!w-[180px] sm:!h-[180px]">
                   <PieChart>
                     <Pie
                       data={categoryData}
                       cx="50%"
                       cy="50%"
-                      outerRadius={80}
-                      innerRadius={50}
+                      outerRadius={55}
+                      innerRadius={35}
                       fill="#8884d8"
                       dataKey="value"
                       paddingAngle={3}
+                      className="sm:!outerRadius-[80px] sm:!innerRadius-[50px]"
                     >
                       {categoryData.map((entry, index) => (
                         <Cell 
@@ -844,33 +852,34 @@ export const AdminDashboardCharts = () => {
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))', 
                         borderRadius: '8px',
-                        color: 'hsl(var(--card-foreground))'
+                        color: 'hsl(var(--card-foreground))',
+                        fontSize: '11px'
                       }} 
                     />
                   </PieChart>
                 </ResponsiveContainer>
                 {/* Total in center */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                  <p className="text-xl font-bold text-foreground">{categoryData.reduce((sum, c) => sum + c.value, 0)}</p>
-                  <p className="text-xs text-muted-foreground">Produits</p>
+                  <p className="text-base sm:text-xl font-bold text-foreground">{categoryData.reduce((sum, c) => sum + c.value, 0)}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Produits</p>
                 </div>
               </div>
               
               {/* Legend as compact list */}
-              <div className="w-full space-y-1.5">
-                {categoryData.slice(0, 6).map((category, index) => {
+              <div className="w-full space-y-1 sm:space-y-1.5">
+                {categoryData.slice(0, 4).map((category, index) => {
                   const total = categoryData.reduce((sum, c) => sum + c.value, 0);
                   const percent = total > 0 ? ((category.value / total) * 100).toFixed(0) : 0;
                   return (
-                    <div key={index} className="flex items-center justify-between px-2 py-1 rounded bg-muted/30">
-                      <div className="flex items-center gap-2">
+                    <div key={index} className="flex items-center justify-between px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-muted/30">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
                         <div 
-                          className="w-2.5 h-2.5 rounded-full" 
+                          className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full" 
                           style={{ backgroundColor: category.color }}
                         />
-                        <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{category.name}</span>
+                        <span className="text-[10px] sm:text-xs font-medium text-foreground truncate max-w-[80px] sm:max-w-[100px]">{category.name}</span>
                       </div>
-                      <span className="text-xs font-semibold text-foreground">{percent}%</span>
+                      <span className="text-[10px] sm:text-xs font-semibold text-foreground">{percent}%</span>
                     </div>
                   );
                 })}
