@@ -675,83 +675,81 @@ export const SalesManagement = () => {
             </div>
           </div>
           <div className="flex flex-col gap-3 mt-4">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher par client ou vendeur..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {/* Period filter */}
-                <Select value={periodFilter} onValueChange={(value: 'all' | 'today' | 'week' | 'month') => setPeriodFilter(value)}>
-                  <SelectTrigger className="w-[110px] sm:w-[130px]">
-                    <Calendar className="w-4 h-4 mr-1 text-muted-foreground" />
-                    <SelectValue placeholder="Période" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tout</SelectItem>
-                    <SelectItem value="today">Aujourd'hui</SelectItem>
-                    <SelectItem value="week">Cette semaine</SelectItem>
-                    <SelectItem value="month">Ce mois</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                {/* Seller filter */}
-                <Select value={sellerFilter} onValueChange={setSellerFilter}>
-                  <SelectTrigger className="w-[110px] sm:w-[140px]">
-                    <Users className="w-4 h-4 mr-1 text-muted-foreground" />
-                    <SelectValue placeholder="Vendeur" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    {sellers.map(seller => (
-                      <SelectItem key={seller.user_id} value={seller.user_id}>
-                        {seller.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                {/* Currency filter */}
-                <Select value={currencyFilter} onValueChange={(value: 'all' | 'HTG' | 'USD' | 'mixed') => setCurrencyFilter(value)}>
-                  <SelectTrigger className="w-[90px] sm:w-[110px]">
-                    <DollarSign className="w-4 h-4 mr-1 text-muted-foreground" />
-                    <SelectValue placeholder="Devise" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Toutes</SelectItem>
-                    <SelectItem value="HTG">HTG</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="mixed">Mixte</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                {/* View toggle - desktop only */}
-                {!isMobile && (
-                  <div className="flex border rounded-md overflow-hidden">
-                    <Button
-                      variant={viewMode === 'table' ? 'default' : 'ghost'}
-                      size="sm"
-                      className="rounded-none h-10 px-3"
-                      onClick={() => setViewMode('table')}
-                    >
-                      <List className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant={viewMode === 'cards' ? 'default' : 'ghost'}
-                      size="sm"
-                      className="rounded-none h-10 px-3"
-                      onClick={() => setViewMode('cards')}
-                    >
-                      <LayoutGrid className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher par client ou vendeur..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex gap-2 items-center overflow-x-auto pb-1">
+              {/* Period filter */}
+              <Select value={periodFilter} onValueChange={(value: 'all' | 'today' | 'week' | 'month') => setPeriodFilter(value)}>
+                <SelectTrigger className="w-[90px] sm:w-[130px] shrink-0 h-9">
+                  <Calendar className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+                  <SelectValue placeholder="Période" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tout</SelectItem>
+                  <SelectItem value="today">Aujourd'hui</SelectItem>
+                  <SelectItem value="week">Cette semaine</SelectItem>
+                  <SelectItem value="month">Ce mois</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {/* Seller filter */}
+              <Select value={sellerFilter} onValueChange={setSellerFilter}>
+                <SelectTrigger className="w-[85px] sm:w-[140px] shrink-0 h-9">
+                  <Users className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+                  <SelectValue placeholder="Vendeur" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  {sellers.map(seller => (
+                    <SelectItem key={seller.user_id} value={seller.user_id}>
+                      {seller.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Currency filter */}
+              <Select value={currencyFilter} onValueChange={(value: 'all' | 'HTG' | 'USD' | 'mixed') => setCurrencyFilter(value)}>
+                <SelectTrigger className="w-[80px] sm:w-[110px] shrink-0 h-9">
+                  <DollarSign className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+                  <SelectValue placeholder="Devise" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toute</SelectItem>
+                  <SelectItem value="HTG">HTG</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="mixed">Mixte</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {/* View toggle - desktop only */}
+              {!isMobile && (
+                <div className="flex border rounded-md overflow-hidden shrink-0">
+                  <Button
+                    variant={viewMode === 'table' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="rounded-none h-9 px-2.5"
+                    onClick={() => setViewMode('table')}
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="rounded-none h-9 px-2.5"
+                    onClick={() => setViewMode('cards')}
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>
