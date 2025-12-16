@@ -222,22 +222,22 @@ export const SalesManagement = () => {
 
   const fetchSales = async () => {
     try {
-      // Fetch sales and their items to calculate per-currency totals
-      const { data: salesData, error } = await supabase
-        .from('sales')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Fetch sales, items and settings in parallel for better performance
+      const [salesResult, itemsResult, settingsResult] = await Promise.all([
+        supabase.from('sales').select('*').order('created_at', { ascending: false }),
+        supabase.from('sale_items').select('sale_id, subtotal, currency'),
+        supabase.from('company_settings').select('tva_rate').single()
+      ]);
 
-      if (error) throw error;
-
-      // Fetch all sale items to calculate currency-specific totals
-      const { data: allItems } = await supabase
-        .from('sale_items')
-        .select('sale_id, subtotal, currency');
+      if (salesResult.error) throw salesResult.error;
+      
+      const salesData = salesResult.data || [];
+      const allItems = itemsResult.data || [];
+      const tvaRate = settingsResult.data?.tva_rate || 0;
 
       // Build a map of sale_id -> currencies (HT amounts from items)
       const saleItemsMap = new Map<string, { htg: number; usd: number }>();
-      (allItems || []).forEach(item => {
+      allItems.forEach(item => {
         const existing = saleItemsMap.get(item.sale_id) || { htg: 0, usd: 0 };
         if (item.currency === 'USD') {
           existing.usd += item.subtotal;
@@ -247,43 +247,41 @@ export const SalesManagement = () => {
         saleItemsMap.set(item.sale_id, existing);
       });
 
-      // Get TVA rate from company settings
-      const { data: settingsData } = await supabase
-        .from('company_settings')
-        .select('tva_rate')
-        .single();
-      const tvaRate = settingsData?.tva_rate || 0;
+      // Batch fetch all seller profiles at once instead of individual queries
+      const uniqueSellerIds = [...new Set(salesData.map(s => s.seller_id))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', uniqueSellerIds);
+      
+      // Create a map for quick profile lookup
+      const profilesMap = new Map<string, string>();
+      (profilesData || []).forEach(p => {
+        profilesMap.set(p.user_id, p.full_name);
+      });
 
-      // Fetch seller names separately
-      const salesWithSellers = await Promise.all(
-        (salesData || []).map(async (sale) => {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('user_id', sale.seller_id)
-            .single();
-          
-          const rawCurrencies = saleItemsMap.get(sale.id) || { htg: 0, usd: 0 };
-          const totalRaw = rawCurrencies.htg + rawCurrencies.usd;
-          
-          // Apply discount proportionally to each currency
-          const discountRatio = totalRaw > 0 ? (sale.discount_amount || 0) / totalRaw : 0;
-          const htgAfterDiscount = rawCurrencies.htg * (1 - discountRatio);
-          const usdAfterDiscount = rawCurrencies.usd * (1 - discountRatio);
-          
-          // Add TVA to get TTC amounts
-          const currencies = {
-            htg: htgAfterDiscount * (1 + tvaRate / 100),
-            usd: usdAfterDiscount * (1 + tvaRate / 100)
-          };
-          
-          return {
-            ...sale,
-            profiles: profileData || { full_name: 'N/A' },
-            currencies
-          };
-        })
-      );
+      // Process sales with pre-fetched data (no more individual queries)
+      const salesWithSellers = salesData.map(sale => {
+        const rawCurrencies = saleItemsMap.get(sale.id) || { htg: 0, usd: 0 };
+        const totalRaw = rawCurrencies.htg + rawCurrencies.usd;
+        
+        // Apply discount proportionally to each currency
+        const discountRatio = totalRaw > 0 ? (sale.discount_amount || 0) / totalRaw : 0;
+        const htgAfterDiscount = rawCurrencies.htg * (1 - discountRatio);
+        const usdAfterDiscount = rawCurrencies.usd * (1 - discountRatio);
+        
+        // Add TVA to get TTC amounts
+        const currencies = {
+          htg: htgAfterDiscount * (1 + tvaRate / 100),
+          usd: usdAfterDiscount * (1 + tvaRate / 100)
+        };
+        
+        return {
+          ...sale,
+          profiles: { full_name: profilesMap.get(sale.seller_id) || 'N/A' },
+          currencies
+        };
+      });
 
       setSales(salesWithSellers as Sale[]);
 
@@ -293,7 +291,7 @@ export const SalesManagement = () => {
       
       const stats: RevenueStats = { totalHTG: 0, totalUSD: 0, todayHTG: 0, todayUSD: 0 };
       
-      (salesData || []).forEach(sale => {
+      salesData.forEach(sale => {
         const currencies = saleItemsMap.get(sale.id) || { htg: 0, usd: 0 };
         // Calculate HT after discount
         const totalRaw = currencies.htg + currencies.usd;
@@ -311,7 +309,7 @@ export const SalesManagement = () => {
       
       setRevenueStats(stats);
       
-      // Calculate TVA stats based on configured tva_rate (use already fetched tvaRate)
+      // Calculate TVA stats
       setTvaStats({
         totalTVA_HTG: stats.totalHTG * tvaRate / 100,
         totalTVA_USD: stats.totalUSD * tvaRate / 100,
