@@ -230,80 +230,100 @@ export const CartSection: React.FC<CartSectionProps> = ({
           return (
             <div 
               key={item.id} 
-              className={`group flex items-center gap-3 p-3 border rounded-lg bg-card hover:border-primary/30 transition-all ${isDeleting ? 'opacity-0 scale-95' : ''}`}
+              className={`group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2.5 sm:p-3 border rounded-lg bg-card hover:border-primary/30 transition-all ${isDeleting ? 'opacity-0 scale-95' : ''}`}
             >
-              {/* Icon */}
-              <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${getCategoryColor(item.category)}`}>
-                {getCategoryIcon(item.category)}
+              {/* Mobile: Line 1 - Icon, Name, Total Price */}
+              <div className="flex items-center gap-2 w-full sm:contents">
+                {/* Icon */}
+                <div className={`shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${getCategoryColor(item.category)}`}>
+                  {getCategoryIcon(item.category)}
+                </div>
+
+                {/* Info - Mobile: just name, Desktop: name + details */}
+                <div className="flex-1 min-w-0 sm:flex-1">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <h4 className="font-medium text-sm truncate">{item.name}</h4>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 hidden sm:inline-flex">
+                      {specs[0] || getCategoryLabel(item.category)}
+                    </Badge>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{getCategoryLabel(item.category)}</span>
+                    <span>•</span>
+                    <span>{formatAmount(item.price, item.currency)}/{item.category === 'ceramique' ? 'm²' : item.unit}</span>
+                  </div>
+                </div>
+
+                {/* Mobile: Total price aligned right */}
+                <span className="font-bold text-sm text-success sm:hidden">{formatAmount(itemTotal, item.currency)}</span>
               </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <h4 className="font-medium text-sm truncate">{item.name}</h4>
-                  {specs.length > 0 && (
-                    <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">
-                      {specs[0]}
-                    </Badge>
+              {/* Mobile: Line 2 - Category, Specs */}
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:hidden pl-10">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  {getCategoryLabel(item.category)}
+                </Badge>
+                {specs[0] && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    {specs[0]}
+                  </Badge>
+                )}
+                <span className="text-[10px]">• {formatAmount(item.price, item.currency)}/{item.category === 'ceramique' ? 'm²' : item.unit}</span>
+              </div>
+
+              {/* Mobile: Line 3 - Quantity Controls + Delete | Desktop: inline */}
+              <div className="flex items-center justify-between w-full sm:w-auto sm:contents pl-10 sm:pl-0">
+                {/* Quantity Controls */}
+                <div className="shrink-0 flex items-center">
+                  {item.category === 'ceramique' ? (
+                    <span className="text-xs sm:text-sm font-medium bg-muted px-2 py-1 rounded">{qtyLabel}</span>
+                  ) : (
+                    <div className="flex items-center">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-l-lg rounded-r-none border-r-0"
+                        onClick={() => onUpdateQuantity(item.id, -1)}
+                        disabled={item.cartQuantity <= 1}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <Input
+                        type="number"
+                        min="1"
+                        max={maxStock}
+                        value={item.cartQuantity}
+                        onChange={(e) => onDirectQuantityChange(item.id, e.target.value)}
+                        className="h-7 sm:h-8 w-10 sm:w-12 text-center text-xs sm:text-sm font-medium rounded-none border-x-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-r-lg rounded-l-none border-l-0"
+                        onClick={() => onUpdateQuantity(item.id, 1)}
+                        disabled={item.cartQuantity >= maxStock}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{getCategoryLabel(item.category)}</span>
-                  <span>•</span>
-                  <span>{formatAmount(item.price, item.currency)}/{item.category === 'ceramique' ? 'm²' : item.unit}</span>
+
+                {/* Desktop: Price + Delete | Mobile: just Delete */}
+                <div className="shrink-0 flex items-center gap-2">
+                  <span className="font-bold text-sm text-success hidden sm:inline">{formatAmount(itemTotal, item.currency)}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 sm:h-8 sm:w-8 p-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-destructive hover:text-destructive hover:bg-destructive/10 transition-opacity"
+                    onClick={() => {
+                      setDeletingItemId(item.id);
+                      setTimeout(() => onRemoveItem(item.id), 200);
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
-              </div>
-
-              {/* Quantity Controls */}
-              <div className="shrink-0 flex items-center">
-                {item.category === 'ceramique' ? (
-                  <span className="text-sm font-medium bg-muted px-2 py-1 rounded">{qtyLabel}</span>
-                ) : (
-                  <div className="flex items-center">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 w-8 rounded-l-lg rounded-r-none border-r-0"
-                      onClick={() => onUpdateQuantity(item.id, -1)}
-                      disabled={item.cartQuantity <= 1}
-                    >
-                      <Minus className="w-3 h-3" />
-                    </Button>
-                    <Input
-                      type="number"
-                      min="1"
-                      max={maxStock}
-                      value={item.cartQuantity}
-                      onChange={(e) => onDirectQuantityChange(item.id, e.target.value)}
-                      className="h-8 w-12 text-center text-sm font-medium rounded-none border-x-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 w-8 rounded-r-lg rounded-l-none border-l-0"
-                      onClick={() => onUpdateQuantity(item.id, 1)}
-                      disabled={item.cartQuantity >= maxStock}
-                    >
-                      <Plus className="w-3 h-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {/* Price + Delete */}
-              <div className="shrink-0 flex items-center gap-2">
-                <span className="font-bold text-sm text-success">{formatAmount(itemTotal, item.currency)}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive hover:bg-destructive/10 transition-opacity"
-                  onClick={() => {
-                    setDeletingItemId(item.id);
-                    setTimeout(() => onRemoveItem(item.id), 200);
-                  }}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
               </div>
             </div>
           );
