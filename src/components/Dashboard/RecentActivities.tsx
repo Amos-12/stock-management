@@ -154,59 +154,60 @@ export const RecentActivities = () => {
 
   return (
     <Card className="h-full animate-fade-in" style={{ animationDelay: '700ms' }}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20">
-            <Activity className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+      <CardHeader className="pb-2 px-3 sm:px-6">
+        <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
+          <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20">
+            <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-violet-600 dark:text-violet-400" />
           </div>
-          Activités Récentes
+          <span className="hidden sm:inline">Activités Récentes</span>
+          <span className="sm:hidden">Activités</span>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[350px] pr-4">
+      <CardContent className="px-3 sm:px-6">
+        <ScrollArea className="h-[250px] sm:h-[350px] pr-2 sm:pr-4">
           {loading ? (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="animate-pulse flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-                  <div className="w-8 h-8 rounded-full bg-muted" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-muted rounded w-3/4" />
-                    <div className="h-3 bg-muted rounded w-1/2" />
+                <div key={i} className="animate-pulse flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-muted/30">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-muted" />
+                  <div className="flex-1 space-y-1 sm:space-y-2">
+                    <div className="h-3 sm:h-4 bg-muted rounded w-3/4" />
+                    <div className="h-2 sm:h-3 bg-muted rounded w-1/2" />
                   </div>
                 </div>
               ))}
             </div>
           ) : activities.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <Activity className="h-12 w-12 mb-2 opacity-50" />
-              <p>Aucune activité récente</p>
+              <Activity className="h-8 w-8 sm:h-12 sm:w-12 mb-2 opacity-50" />
+              <p className="text-xs sm:text-sm">Aucune activité récente</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               {activities.map((activity) => (
                 <div 
                   key={activity.id} 
-                  className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                 >
-                  <div className={`p-2 rounded-full ${getActivityColor(activity.action_type)}`}>
+                  <div className={`p-1.5 sm:p-2 rounded-full ${getActivityColor(activity.action_type)}`}>
                     {getActivityIcon(activity.action_type)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
                       <Badge 
                         variant="secondary" 
-                        className={`text-xs ${getActivityColor(activity.action_type)}`}
+                        className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0 sm:py-0.5 ${getActivityColor(activity.action_type)}`}
                       >
                         {getActivityLabel(activity.action_type)}
                       </Badge>
-                      <span className="text-xs text-muted-foreground truncate">
+                      <span className="text-[10px] sm:text-xs text-muted-foreground truncate">
                         {activity.user_name}
                       </span>
                     </div>
-                    <p className="text-sm text-foreground line-clamp-2">
+                    <p className="text-xs sm:text-sm text-foreground line-clamp-2">
                       {activity.description}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                       {formatDistanceToNow(new Date(activity.created_at), { 
                         addSuffix: true,
                         locale: fr 

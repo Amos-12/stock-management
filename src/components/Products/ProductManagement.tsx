@@ -18,7 +18,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package, Plus, Edit, Trash2, AlertCircle, Search, Filter } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Package, Plus, Edit, Trash2, AlertCircle, Search, Filter, LayoutGrid, List } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -85,6 +87,7 @@ type ProductCategory = 'alimentaires' | 'boissons' | 'gazeuses' | 'electronique'
 export const ProductManagement = () => {
   const { user, role } = useAuth();
   const isAdmin = role === 'admin';
+  const isMobile = useIsMobile();
   const { categories: dynamicCategories } = useCategories();
   const { sousCategories: allSousCategories } = useSousCategories();
   const [products, setProducts] = useState<Product[]>([]);
@@ -95,12 +98,17 @@ export const ProductManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>(isMobile ? 'cards' : 'table');
   const [deleteDialog, setDeleteDialog] = useState<{open: boolean, productId: string | null, productName: string}>({
     open: false, 
     productId: null,
     productName: ''
   });
   
+  // Auto-switch to cards on mobile
+  useEffect(() => {
+    if (isMobile) setViewMode('cards');
+  }, [isMobile]);
   // Form state for dynamic category selection
   const [selectedCategorieId, setSelectedCategorieId] = useState<string>('');
   const [selectedSousCategorieId, setSelectedSousCategorieId] = useState<string>('');
@@ -1723,14 +1731,118 @@ export const ProductManagement = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Badge variant="secondary" className="self-start sm:self-auto">
+            <Badge variant="secondary" className="self-start sm:self-auto text-xs sm:text-sm">
               {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
             </Badge>
+            {/* View mode toggle - hidden on mobile */}
+            <div className="hidden sm:flex items-center gap-1 ml-auto">
+              <Button
+                size="sm"
+                variant={viewMode === 'table' ? 'default' : 'outline'}
+                onClick={() => setViewMode('table')}
+                className="h-8 px-2"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'cards' ? 'default' : 'outline'}
+                onClick={() => setViewMode('cards')}
+                className="h-8 px-2"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="rounded-md border">
+      <CardContent className="p-2 sm:p-6">
+        {viewMode === 'cards' ? (
+          /* Card View */
+          <ScrollArea className="h-[calc(100vh-350px)] min-h-[400px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 pr-2 sm:pr-4">
+              {paginatedProducts.length === 0 ? (
+                <div className="col-span-full text-center py-8 text-muted-foreground">
+                  Aucun produit trouvé
+                </div>
+              ) : (
+                paginatedProducts.map((product) => {
+                  const stock = getStockDisplay(product);
+                  return (
+                    <Card key={product.id} className="p-3 sm:p-4 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <h3 className="font-semibold text-sm sm:text-base line-clamp-2">{product.name}</h3>
+                        <Badge 
+                          variant="outline"
+                          className={`text-[10px] sm:text-xs shrink-0 ${product.currency === 'USD' 
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                            : 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/30 dark:text-sky-400'
+                          }`}
+                        >
+                          {product.currency === 'USD' ? '$ USD' : 'HTG'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-1.5 text-xs sm:text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Catégorie:</span>
+                          <Badge variant="outline" className="text-[10px] sm:text-xs">
+                            {categories.find(c => c.value === product.category)?.label}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Prix:</span>
+                          <span className="font-medium text-success">
+                            {product.currency === 'USD' ? '$' : ''}{product.price.toFixed(2)} {product.currency || 'HTG'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Stock:</span>
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">{stock.value} {stock.unit}</span>
+                            {stock.raw <= product.alert_threshold && (
+                              <AlertCircle className="w-3 h-3 text-warning" />
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Statut:</span>
+                          <Badge variant={product.is_active ? "default" : "secondary"} className="text-[10px] sm:text-xs">
+                            {product.is_active ? "Actif" : "Inactif"}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      {isAdmin && (
+                        <div className="flex gap-2 mt-3 pt-3 border-t">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEdit(product)}
+                            className="flex-1 h-8 text-xs"
+                          >
+                            <Edit className="w-3 h-3 mr-1" />
+                            Modifier
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteClick(product.id, product.name)}
+                            className="h-8 hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        ) : (
+          /* Table View */
+          <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -1840,6 +1952,7 @@ export const ProductManagement = () => {
             </TableBody>
           </Table>
         </div>
+        )}
         <TablePagination
           currentPage={currentPage}
           totalPages={totalPages}
