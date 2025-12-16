@@ -305,11 +305,11 @@ export const InventoryManagement = () => {
       switch (adjustmentModal.type) {
         case 'add':
           newQuantity = stock.raw + qty;
-          movementType = 'restock';
+          movementType = 'in';
           break;
         case 'remove':
           newQuantity = Math.max(0, stock.raw - qty);
-          movementType = 'adjustment_out';
+          movementType = 'out';
           break;
         case 'adjust':
           newQuantity = qty;
