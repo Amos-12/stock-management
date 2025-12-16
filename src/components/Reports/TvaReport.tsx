@@ -256,6 +256,16 @@ export const TvaReport = () => {
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Calculator className="w-4 h-4 sm:w-5 sm:h-5" />
             Rapport TVA Collectée
+            <Badge 
+              variant="outline" 
+              className={`ml-auto text-xs px-2 py-0.5 ${
+                displayCurrency === 'USD' 
+                  ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700' 
+                  : 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+              }`}
+            >
+              {displayCurrency === 'USD' ? '$ USD' : 'HTG'}
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">

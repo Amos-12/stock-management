@@ -262,9 +262,21 @@ export const SellerPerformanceReport = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h2 className="text-lg sm:text-2xl font-bold text-foreground">Performance des Vendeurs</h2>
-          <p className="text-xs sm:text-sm text-muted-foreground">Analyse des ventes par vendeur</p>
+        <div className="flex items-center gap-2">
+          <div>
+            <h2 className="text-lg sm:text-2xl font-bold text-foreground">Performance des Vendeurs</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">Analyse des ventes par vendeur</p>
+          </div>
+          <Badge 
+            variant="outline" 
+            className={`text-xs px-2 py-0.5 ${
+              companySettings.default_display_currency === 'USD' 
+                ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700' 
+                : 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+            }`}
+          >
+            {companySettings.default_display_currency === 'USD' ? '$ USD' : 'HTG'}
+          </Badge>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
           <Select value={period} onValueChange={setPeriod}>
