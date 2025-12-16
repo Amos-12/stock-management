@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -23,9 +24,14 @@ import {
   Activity,
   Clock,
   TrendingDown,
-  Shield
+  Shield,
+  TrendingUp,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface DbSizeInfo {
   size_mb: number;
@@ -52,12 +58,59 @@ interface TableStats {
   color: string;
 }
 
+interface SizeHistoryRecord {
+  id: string;
+  size_mb: number;
+  usage_percent: number;
+  recorded_at: string;
+}
+
+interface ChartDataPoint {
+  date: string;
+  fullDate: string;
+  size_mb: number;
+  usage_percent: number;
+}
+
 export const DatabaseMonitoring = () => {
   const [dbSize, setDbSize] = useState<DbSizeInfo | null>(null);
   const [tableStats, setTableStats] = useState<TableStats[]>([]);
+  const [sizeHistory, setSizeHistory] = useState<ChartDataPoint[]>([]);
+  const [historyPeriod, setHistoryPeriod] = useState<'7d' | '30d' | '90d'>('30d');
   const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [cleaning, setCleaning] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+
+  const fetchSizeHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const daysAgo = historyPeriod === '7d' ? 7 : historyPeriod === '30d' ? 30 : 90;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - daysAgo);
+
+      const { data, error } = await supabase
+        .from('database_size_history')
+        .select('*')
+        .gte('recorded_at', startDate.toISOString())
+        .order('recorded_at', { ascending: true });
+
+      if (error) throw error;
+
+      const chartData: ChartDataPoint[] = (data || []).map((record: SizeHistoryRecord) => ({
+        date: format(new Date(record.recorded_at), historyPeriod === '7d' ? 'dd/MM HH:mm' : 'dd MMM', { locale: fr }),
+        fullDate: format(new Date(record.recorded_at), 'dd MMM yyyy HH:mm', { locale: fr }),
+        size_mb: record.size_mb,
+        usage_percent: record.usage_percent
+      }));
+
+      setSizeHistory(chartData);
+    } catch (error) {
+      console.error('Error fetching size history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyPeriod]);
 
   const fetchTableStats = useCallback(async () => {
     try {
@@ -97,7 +150,7 @@ export const DatabaseMonitoring = () => {
       if (error) throw error;
       setDbSize(data as unknown as DbSizeInfo);
       setLastRefresh(new Date());
-      await fetchTableStats();
+      await Promise.all([fetchTableStats(), fetchSizeHistory()]);
     } catch (error: any) {
       console.error('Error fetching DB size:', error);
       toast({
@@ -108,7 +161,7 @@ export const DatabaseMonitoring = () => {
     } finally {
       setLoading(false);
     }
-  }, [fetchTableStats]);
+  }, [fetchTableStats, fetchSizeHistory]);
 
   const handleManualCleanup = async () => {
     setCleaning(true);
@@ -137,7 +190,11 @@ export const DatabaseMonitoring = () => {
 
   useEffect(() => {
     fetchDbSize();
-  }, [fetchDbSize]);
+  }, []);
+
+  useEffect(() => {
+    fetchSizeHistory();
+  }, [historyPeriod, fetchSizeHistory]);
 
   const getStatusColor = (percent: number) => {
     if (percent >= 80) return 'text-destructive';
@@ -162,6 +219,35 @@ export const DatabaseMonitoring = () => {
   };
 
   const status = dbSize ? getStatusBadge(dbSize.usage_percent) : null;
+
+  // Calculate trend
+  const calculateTrend = () => {
+    if (sizeHistory.length < 2) return null;
+    const first = sizeHistory[0].size_mb;
+    const last = sizeHistory[sizeHistory.length - 1].size_mb;
+    const diff = last - first;
+    const percentChange = ((diff / first) * 100).toFixed(1);
+    return { diff: diff.toFixed(2), percent: percentChange, isUp: diff > 0 };
+  };
+
+  const trend = calculateTrend();
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+          <p className="text-xs text-muted-foreground mb-1">{payload[0]?.payload?.fullDate || label}</p>
+          <p className="text-sm font-semibold">
+            {payload[0]?.value?.toFixed(2)} MB
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {payload[0]?.payload?.usage_percent?.toFixed(1)}% utilisé
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -274,6 +360,112 @@ export const DatabaseMonitoring = () => {
               )}
             </>
           ) : null}
+        </CardContent>
+      </Card>
+
+      {/* Size History Chart */}
+      <Card>
+        <CardHeader className="pb-2 sm:pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
+                Évolution de la taille
+              </CardTitle>
+              {trend && (
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  {trend.isUp ? (
+                    <TrendingUp className="w-3 h-3 text-amber-500" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3 text-emerald-500" />
+                  )}
+                  <span className={trend.isUp ? 'text-amber-500' : 'text-emerald-500'}>
+                    {trend.isUp ? '+' : ''}{trend.diff} MB ({trend.isUp ? '+' : ''}{trend.percent}%)
+                  </span>
+                  <span className="text-muted-foreground">sur la période</span>
+                </p>
+              )}
+            </div>
+            <Select value={historyPeriod} onValueChange={(v) => setHistoryPeriod(v as '7d' | '30d' | '90d')}>
+              <SelectTrigger className="w-[120px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">7 jours</SelectItem>
+                <SelectItem value="30d">30 jours</SelectItem>
+                <SelectItem value="90d">90 jours</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {historyLoading ? (
+            <div className="h-[200px] sm:h-[250px] flex items-center justify-center">
+              <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : sizeHistory.length === 0 ? (
+            <div className="h-[200px] sm:h-[250px] flex flex-col items-center justify-center text-muted-foreground">
+              <BarChart3 className="w-10 h-10 mb-2 opacity-50" />
+              <p className="text-sm">Pas encore de données historiques</p>
+              <p className="text-xs">Les données s'accumuleront au fil du temps</p>
+            </div>
+          ) : (
+            <div className="h-[200px] sm:h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={sizeHistory}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="sizeGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    className="text-muted-foreground"
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    className="text-muted-foreground"
+                    tickFormatter={(value) => `${value}`}
+                    domain={[0, 'auto']}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  {/* Threshold line at 80% = 409.6 MB */}
+                  <ReferenceLine 
+                    y={409.6} 
+                    stroke="hsl(var(--destructive))" 
+                    strokeDasharray="5 5" 
+                    strokeOpacity={0.5}
+                    label={{ 
+                      value: '80%', 
+                      position: 'right',
+                      fill: 'hsl(var(--destructive))',
+                      fontSize: 10
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="size_mb"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    fill="url(#sizeGradient)"
+                    dot={false}
+                    activeDot={{ r: 4, strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </CardContent>
       </Card>
 
