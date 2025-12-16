@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Building2, Save, Loader2, DollarSign } from 'lucide-react';
+import { Building2, Save, Loader2, DollarSign, Image, MapPin, CreditCard, ChevronDown, Settings2 } from 'lucide-react';
 
 interface CompanySettings {
   id: string;
@@ -35,6 +36,13 @@ export const CompanySettings = () => {
   const [uploading, setUploading] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
+  const [openSections, setOpenSections] = useState({
+    logo: true,
+    company: true,
+    address: false,
+    currency: false,
+    payment: false,
+  });
 
   useEffect(() => {
     fetchSettings();
@@ -97,19 +105,16 @@ export const CompanySettings = () => {
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `logos/${fileName}`;
 
-      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('company-assets')
         .upload(filePath, logoFile);
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('company-assets')
         .getPublicUrl(filePath);
 
-      // Update settings with new logo URL
       const { error: updateError } = await supabase
         .from('company_settings')
         .update({ logo_url: publicUrl })
@@ -178,13 +183,15 @@ export const CompanySettings = () => {
     }
   };
 
+  const toggleSection = (section: keyof typeof openSections) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
@@ -201,286 +208,357 @@ export const CompanySettings = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <div className="space-y-3 sm:space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Building2 className="h-5 w-5" />
-          <CardTitle>Paramètres de l'entreprise</CardTitle>
-        </div>
-        <CardDescription>
-          Gérer les informations de votre entreprise affichées sur les factures et reçus
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Logo Section */}
-        <div className="space-y-4 pb-6 border-b">
+          <Settings2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           <div>
-            <Label className="text-base font-semibold">Logo de l'entreprise</Label>
-            <p className="text-sm text-muted-foreground mt-1">
-              Téléversez le logo qui apparaîtra sur les factures et reçus
+            <h1 className="text-lg sm:text-xl font-semibold">Paramètres</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
+              Configuration de l'entreprise
             </p>
           </div>
-          
-          {logoPreview && (
-            <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
-              <img src={logoPreview} alt="Logo" className="h-20 w-20 object-contain" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Aperçu du logo actuel</p>
-                <p className="text-xs text-muted-foreground">Formats acceptés: PNG, JPG (max 2MB)</p>
-              </div>
-            </div>
+        </div>
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          size="sm"
+          className="gap-1.5"
+        >
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
           )}
+          <span className="hidden sm:inline">Enregistrer</span>
+        </Button>
+      </div>
 
-          <div className="flex gap-2">
-            <Input
-              type="file"
-              accept="image/png,image/jpeg,image/jpg"
-              onChange={handleLogoChange}
-              className="flex-1"
-            />
-            {logoFile && (
-              <Button 
-                onClick={handleLogoUpload} 
-                disabled={uploading}
-                className="gap-2"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Upload...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Téléverser
-                  </>
+      {/* Logo Section */}
+      <Card>
+        <Collapsible open={openSections.logo} onOpenChange={() => toggleSection('logo')}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3 sm:py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Image className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  <CardTitle className="text-sm sm:text-base">Logo</CardTitle>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${openSections.logo ? 'rotate-180' : ''}`} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0 space-y-3">
+              {logoPreview && (
+                <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                  <img src={logoPreview} alt="Logo" className="h-14 w-14 sm:h-16 sm:w-16 object-contain rounded" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm font-medium truncate">Logo actuel</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">PNG, JPG (max 2MB)</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={handleLogoChange}
+                  className="flex-1 text-xs sm:text-sm h-9"
+                />
+                {logoFile && (
+                  <Button 
+                    onClick={handleLogoUpload} 
+                    disabled={uploading}
+                    size="sm"
+                    className="gap-1.5 shrink-0"
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5" />
+                    )}
+                    <span className="hidden sm:inline">Upload</span>
+                  </Button>
                 )}
-              </Button>
-            )}
-          </div>
+              </div>
 
-          {settings?.logo_url && (
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="space-y-2">
-                <Label htmlFor="logo_width">Largeur (px)</Label>
+              {settings?.logo_url && (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Largeur</Label>
+                    <Input
+                      type="number"
+                      value={settings.logo_width || 50}
+                      onChange={(e) => setSettings({ ...settings, logo_width: parseFloat(e.target.value) || 50 })}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Hauteur</Label>
+                    <Input
+                      type="number"
+                      value={settings.logo_height || 50}
+                      onChange={(e) => setSettings({ ...settings, logo_height: parseFloat(e.target.value) || 50 })}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Position X</Label>
+                    <Input
+                      type="number"
+                      value={settings.logo_position_x || 0}
+                      onChange={(e) => setSettings({ ...settings, logo_position_x: parseFloat(e.target.value) || 0 })}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Position Y</Label>
+                    <Input
+                      type="number"
+                      value={settings.logo_position_y || 0}
+                      onChange={(e) => setSettings({ ...settings, logo_position_y: parseFloat(e.target.value) || 0 })}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+
+      {/* Company Info Section */}
+      <Card>
+        <Collapsible open={openSections.company} onOpenChange={() => toggleSection('company')}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3 sm:py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  <CardTitle className="text-sm sm:text-base">Entreprise</CardTitle>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${openSections.company ? 'rotate-180' : ''}`} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0 space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm">Nom</Label>
                 <Input
-                  id="logo_width"
-                  type="number"
-                  value={settings.logo_width || 50}
-                  onChange={(e) => setSettings({ ...settings, logo_width: parseFloat(e.target.value) || 50 })}
+                  value={settings.company_name}
+                  onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
+                  placeholder="Système Management!"
+                  className="h-9 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="logo_height">Hauteur (px)</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm">Description</Label>
                 <Input
-                  id="logo_height"
-                  type="number"
-                  value={settings.logo_height || 50}
-                  onChange={(e) => setSettings({ ...settings, logo_height: parseFloat(e.target.value) || 50 })}
+                  value={settings.company_description}
+                  onChange={(e) => setSettings({ ...settings, company_description: e.target.value })}
+                  placeholder="Vente de produit alimentaire"
+                  className="h-9 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="logo_position_x">Position X</Label>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs sm:text-sm">Téléphone</Label>
+                  <Input
+                    value={settings.phone}
+                    onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+                    placeholder="+509 1234-5678"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs sm:text-sm">Email</Label>
+                  <Input
+                    type="email"
+                    value={settings.email}
+                    onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+                    placeholder="contact@email.com"
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+
+      {/* Address Section */}
+      <Card>
+        <Collapsible open={openSections.address} onOpenChange={() => toggleSection('address')}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3 sm:py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  <CardTitle className="text-sm sm:text-base">Adresse</CardTitle>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${openSections.address ? 'rotate-180' : ''}`} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0 space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm">Adresse</Label>
                 <Input
-                  id="logo_position_x"
-                  type="number"
-                  value={settings.logo_position_x || 0}
-                  onChange={(e) => setSettings({ ...settings, logo_position_x: parseFloat(e.target.value) || 0 })}
+                  value={settings.address}
+                  onChange={(e) => setSettings({ ...settings, address: e.target.value })}
+                  placeholder="123 Rue Principale"
+                  className="h-9 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="logo_position_y">Position Y</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm">Ville</Label>
                 <Input
-                  id="logo_position_y"
-                  type="number"
-                  value={settings.logo_position_y || 0}
-                  onChange={(e) => setSettings({ ...settings, logo_position_y: parseFloat(e.target.value) || 0 })}
+                  value={settings.city}
+                  onChange={(e) => setSettings({ ...settings, city: e.target.value })}
+                  placeholder="Aux Cayes 8110"
+                  className="h-9 text-sm"
                 />
               </div>
-            </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+
+      {/* Currency Settings */}
+      <Card>
+        <Collapsible open={openSections.currency} onOpenChange={() => toggleSection('currency')}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3 sm:py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  <CardTitle className="text-sm sm:text-base">Devises</CardTitle>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${openSections.currency ? 'rotate-180' : ''}`} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0 space-y-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs sm:text-sm">Taux USD → HTG</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    value={settings.usd_htg_rate || 132}
+                    onChange={(e) => setSettings({ ...settings, usd_htg_rate: parseFloat(e.target.value) || 132 })}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs sm:text-sm">Devise par défaut</Label>
+                  <Select
+                    value={settings.default_display_currency || 'HTG'}
+                    onValueChange={(value: 'USD' | 'HTG') => setSettings({ ...settings, default_display_currency: value })}
+                  >
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="HTG">HTG</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="p-2.5 sm:p-3 rounded-lg bg-muted/50 border text-xs sm:text-sm">
+                <p className="font-medium mb-1.5">Aperçu</p>
+                <div className="space-y-1 text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>100 USD =</span>
+                    <span className="font-mono">{((settings.usd_htg_rate || 132) * 100).toLocaleString('fr-FR')} HTG</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>1,000 HTG =</span>
+                    <span className="font-mono">${(1000 / (settings.usd_htg_rate || 132)).toFixed(2)} USD</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+
+      {/* Payment & TVA */}
+      <Card>
+        <Collapsible open={openSections.payment} onOpenChange={() => toggleSection('payment')}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3 sm:py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  <CardTitle className="text-sm sm:text-base">Paiement & TVA</CardTitle>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${openSections.payment ? 'rotate-180' : ''}`} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0 space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm">Taux de TVA (%)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={settings.tva_rate}
+                  onChange={(e) => setSettings({ ...settings, tva_rate: parseFloat(e.target.value) || 0 })}
+                  placeholder="10.0"
+                  className="h-9 text-sm"
+                />
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Taux appliqué sur les factures
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm">Conditions de paiement</Label>
+                <Textarea
+                  value={settings.payment_terms}
+                  onChange={(e) => setSettings({ ...settings, payment_terms: e.target.value })}
+                  placeholder="Paiement comptant ou à crédit selon accord"
+                  rows={2}
+                  className="text-sm resize-none"
+                />
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+
+      {/* Mobile Save Button */}
+      <div className="sm:hidden pb-4">
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full gap-2"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Enregistrement...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              Enregistrer les modifications
+            </>
           )}
-        </div>
-
-        {/* Company Information */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="company_name">Nom de l'entreprise</Label>
-            <Input
-              id="company_name"
-              value={settings.company_name}
-              onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-              placeholder="Système Management!"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="company_description">Description</Label>
-            <Input
-              id="company_description"
-              value={settings.company_description}
-              onChange={(e) => setSettings({ ...settings, company_description: e.target.value })}
-              placeholder="Vente de produit alimentaire"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="address">Adresse</Label>
-            <Input
-              id="address"
-              value={settings.address}
-              onChange={(e) => setSettings({ ...settings, address: e.target.value })}
-              placeholder="123 Rue Principale"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="city">Ville</Label>
-            <Input
-              id="city"
-              value={settings.city}
-              onChange={(e) => setSettings({ ...settings, city: e.target.value })}
-              placeholder="Aux Cayes 8110"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone">Téléphone</Label>
-            <Input
-              id="phone"
-              value={settings.phone}
-              onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
-              placeholder="+509 1234-5678"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={settings.email}
-              onChange={(e) => setSettings({ ...settings, email: e.target.value })}
-              placeholder="contact@sysmanagement.com"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tva_rate">Taux de TVA (%)</Label>
-            <Input
-              id="tva_rate"
-              type="number"
-              step="0.1"
-              min="0"
-              max="100"
-              value={settings.tva_rate}
-              onChange={(e) => setSettings({ ...settings, tva_rate: parseFloat(e.target.value) || 0 })}
-              placeholder="10.0"
-            />
-            <p className="text-xs text-muted-foreground">
-              Taux de TVA appliqué sur les factures (ex: 10.0 pour 10%)
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="payment_terms">Conditions de paiement</Label>
-          <Textarea
-            id="payment_terms"
-            value={settings.payment_terms}
-            onChange={(e) => setSettings({ ...settings, payment_terms: e.target.value })}
-            placeholder="Paiement comptant ou à crédit selon accord"
-            rows={3}
-          />
-          <p className="text-xs text-muted-foreground">
-            Conditions de paiement affichées sur les factures
-          </p>
-        </div>
-
-        {/* Currency Settings Section */}
-        <div className="space-y-4 pt-6 border-t">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            <div>
-              <Label className="text-base font-semibold">Paramètres de devises</Label>
-              <p className="text-sm text-muted-foreground">
-                Configurez le taux de conversion pour afficher les totaux unifiés
-              </p>
-            </div>
-          </div>
-          
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="usd_htg_rate">Taux USD → HTG</Label>
-              <Input
-                id="usd_htg_rate"
-                type="number"
-                step="0.01"
-                min="1"
-                value={settings.usd_htg_rate || 132}
-                onChange={(e) => setSettings({ ...settings, usd_htg_rate: parseFloat(e.target.value) || 132 })}
-                placeholder="132.00"
-              />
-              <p className="text-xs text-muted-foreground">
-                1 USD = {(settings.usd_htg_rate || 132).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="default_display_currency">Devise d'affichage par défaut</Label>
-              <Select
-                value={settings.default_display_currency || 'HTG'}
-                onValueChange={(value: 'USD' | 'HTG') => setSettings({ ...settings, default_display_currency: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="HTG">HTG (Gourdes haïtiennes)</SelectItem>
-                  <SelectItem value="USD">USD (Dollars US)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Devise utilisée pour les totaux unifiés sur les reçus
-              </p>
-            </div>
-          </div>
-
-          {/* Preview */}
-          <div className="p-4 rounded-lg bg-muted/50 border">
-            <p className="text-sm font-medium mb-2">Aperçu de conversion</p>
-            <div className="grid gap-2 text-sm">
-              <div className="flex justify-between">
-                <span>100 USD =</span>
-                <span className="font-mono">{((settings.usd_htg_rate || 132) * 100).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG</span>
-              </div>
-              <div className="flex justify-between">
-                <span>1,000 HTG =</span>
-                <span className="font-mono">${(1000 / (settings.usd_htg_rate || 132)).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} USD</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-4">
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="gap-2"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Enregistrement...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                Enregistrer les modifications
-              </>
-            )}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </Button>
+      </div>
+    </div>
   );
 };
