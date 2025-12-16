@@ -111,18 +111,19 @@ export const ActivityLogPanel = () => {
 
   const getActionIcon = (actionType: string) => {
     const action = ACTION_TYPES.find(a => a.value === actionType);
-    if (!action) return <ClipboardList className="w-4 h-4" />;
+    if (!action) return <ClipboardList className="w-3 h-3 sm:w-4 sm:h-4" />;
     const Icon = action.icon;
-    return <Icon className="w-4 h-4" />;
+    return <Icon className="w-3 h-3 sm:w-4 sm:h-4" />;
   };
 
   const getActionBadge = (actionType: string) => {
     const action = ACTION_TYPES.find(a => a.value === actionType);
-    if (!action) return <Badge variant="secondary">{actionType}</Badge>;
+    if (!action) return <Badge variant="secondary" className="text-[10px] sm:text-xs">{actionType}</Badge>;
     
     return (
-      <Badge className={`${action.color} text-white`}>
-        {action.label}
+      <Badge className={`${action.color} text-white text-[10px] sm:text-xs`}>
+        <span className="hidden sm:inline">{action.label}</span>
+        <span className="sm:hidden">{action.label.split(' ')[0]}</span>
       </Badge>
     );
   };
@@ -130,20 +131,20 @@ export const ActivityLogPanel = () => {
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="w-5 h-5" />
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" />
             Logs d'activité
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+          <div className="space-y-3 sm:space-y-4">
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Type d'action</label>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+              <div className="space-y-1 sm:space-y-2">
+                <label className="text-[10px] sm:text-sm font-medium">Type d'action</label>
                 <Select
                   value={filters.action_type || 'all'}
                   onValueChange={(value) => {
@@ -154,8 +155,8 @@ export const ActivityLogPanel = () => {
                     setCurrentPage(0);
                   }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous les types" />
+                  <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
+                    <SelectValue placeholder="Tous" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les types</SelectItem>
@@ -168,8 +169,8 @@ export const ActivityLogPanel = () => {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Utilisateur</label>
+              <div className="space-y-1 sm:space-y-2">
+                <label className="text-[10px] sm:text-sm font-medium">Utilisateur</label>
                 <Select
                   value={filters.user_id || 'all'}
                   onValueChange={(value) => {
@@ -180,11 +181,11 @@ export const ActivityLogPanel = () => {
                     setCurrentPage(0);
                   }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous les utilisateurs" />
+                  <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
+                    <SelectValue placeholder="Tous" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tous les utilisateurs</SelectItem>
+                    <SelectItem value="all">Tous</SelectItem>
                     {users.map(user => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.full_name}
@@ -194,13 +195,14 @@ export const ActivityLogPanel = () => {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Date de début</label>
+              <div className="space-y-1 sm:space-y-2">
+                <label className="text-[10px] sm:text-sm font-medium">Date début</label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <CalendarIcon className="mr-2 w-4 h-4" />
-                      {dateFrom ? format(dateFrom, 'dd/MM/yyyy', { locale: fr }) : 'Sélectionner'}
+                    <Button variant="outline" className="w-full justify-start h-8 sm:h-10 text-xs sm:text-sm">
+                      <CalendarIcon className="mr-1 sm:mr-2 w-3 h-3 sm:w-4 sm:h-4" />
+                      {dateFrom ? format(dateFrom, 'dd/MM/yy', { locale: fr }) : <span className="hidden sm:inline">Sélectionner</span>}
+                      {!dateFrom && <span className="sm:hidden">-</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -214,13 +216,14 @@ export const ActivityLogPanel = () => {
                 </Popover>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Date de fin</label>
+              <div className="space-y-1 sm:space-y-2">
+                <label className="text-[10px] sm:text-sm font-medium">Date fin</label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <CalendarIcon className="mr-2 w-4 h-4" />
-                      {dateTo ? format(dateTo, 'dd/MM/yyyy', { locale: fr }) : 'Sélectionner'}
+                    <Button variant="outline" className="w-full justify-start h-8 sm:h-10 text-xs sm:text-sm">
+                      <CalendarIcon className="mr-1 sm:mr-2 w-3 h-3 sm:w-4 sm:h-4" />
+                      {dateTo ? format(dateTo, 'dd/MM/yy', { locale: fr }) : <span className="hidden sm:inline">Sélectionner</span>}
+                      {!dateTo && <span className="sm:hidden">-</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -239,27 +242,28 @@ export const ActivityLogPanel = () => {
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1">
                 <Input
-                  placeholder="Rechercher dans les descriptions..."
+                  placeholder="Rechercher..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  className="h-8 sm:h-10 text-xs sm:text-sm"
                 />
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleSearch} className="flex-1 sm:flex-none">
-                  <Search className="w-4 h-4 sm:mr-2" />
+                <Button onClick={handleSearch} className="flex-1 sm:flex-none h-8 sm:h-10 text-xs sm:text-sm">
+                  <Search className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Rechercher</span>
                 </Button>
-                <Button variant="outline" onClick={handleReset} className="flex-1 sm:flex-none">
-                  <RefreshCcw className="w-4 h-4 sm:mr-2" />
+                <Button variant="outline" onClick={handleReset} className="flex-1 sm:flex-none h-8 sm:h-10 text-xs sm:text-sm">
+                  <RefreshCcw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Réinitialiser</span>
                 </Button>
               </div>
             </div>
 
             {/* Results count */}
-            <div className="text-sm text-muted-foreground">
-              {totalCount} résultat{totalCount > 1 ? 's' : ''} trouvé{totalCount > 1 ? 's' : ''}
+            <div className="text-xs sm:text-sm text-muted-foreground">
+              {totalCount} résultat{totalCount > 1 ? 's' : ''}
             </div>
 
             {/* Table */}
@@ -267,45 +271,46 @@ export const ActivityLogPanel = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[140px] sm:w-[180px]">Date</TableHead>
-                    <TableHead className="min-w-[150px] sm:w-[200px]">Utilisateur</TableHead>
-                    <TableHead className="min-w-[140px] sm:w-[180px]">Action</TableHead>
-                    <TableHead className="min-w-[200px]">Description</TableHead>
+                    <TableHead className="text-xs sm:text-sm min-w-[80px] sm:min-w-[140px]">Date</TableHead>
+                    <TableHead className="text-xs sm:text-sm min-w-[80px] sm:min-w-[150px]">Utilisateur</TableHead>
+                    <TableHead className="text-xs sm:text-sm min-w-[80px] sm:min-w-[140px]">Action</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden sm:table-cell min-w-[200px]">Description</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8">
+                      <TableCell colSpan={4} className="text-center py-6 sm:py-8 text-xs sm:text-sm">
                         Chargement...
                       </TableCell>
                     </TableRow>
                   ) : logs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8">
+                      <TableCell colSpan={4} className="text-center py-6 sm:py-8 text-xs sm:text-sm">
                         Aucun log trouvé
                       </TableCell>
                     </TableRow>
                   ) : (
                     logs.map((log) => (
                       <TableRow key={log.id}>
-                        <TableCell className="font-mono text-sm">
-                          {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                        <TableCell className="text-[10px] sm:text-sm font-mono">
+                          <span className="sm:hidden">{format(new Date(log.created_at), 'dd/MM HH:mm', { locale: fr })}</span>
+                          <span className="hidden sm:inline">{format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs sm:text-sm">
                           <div className="flex flex-col">
-                            <span className="font-medium">{log.user?.full_name || 'N/A'}</span>
-                            <span className="text-xs text-muted-foreground">{log.user?.email || ''}</span>
+                            <span className="font-medium truncate max-w-[80px] sm:max-w-none">{log.user?.full_name || 'N/A'}</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">{log.user?.email || ''}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            {getActionIcon(log.action_type)}
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <span className="hidden sm:inline">{getActionIcon(log.action_type)}</span>
                             {getActionBadge(log.action_type)}
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-md">
-                          <div className="text-sm">{log.description}</div>
+                        <TableCell className="max-w-md hidden sm:table-cell">
+                          <div className="text-xs sm:text-sm truncate">{log.description}</div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -317,25 +322,27 @@ export const ActivityLogPanel = () => {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  Page {currentPage + 1} sur {totalPages}
+                <div className="text-[10px] sm:text-sm text-muted-foreground">
+                  Page {currentPage + 1}/{totalPages}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1 sm:gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
                     disabled={currentPage === 0}
+                    className="h-7 sm:h-8 w-7 sm:w-8 p-0"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
                     disabled={currentPage >= totalPages - 1}
+                    className="h-7 sm:h-8 w-7 sm:w-8 p-0"
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
                 </div>
               </div>
