@@ -19,8 +19,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Package, Plus, Edit, Trash2, AlertCircle, Search, Filter, LayoutGrid, List, Download, FileText, DollarSign, CheckCircle, XCircle, Upload, RotateCcw } from 'lucide-react';
-import { useRef } from 'react';
+import { Package, Plus, Edit, Trash2, AlertCircle, Search, Filter, LayoutGrid, List, Download, FileText, DollarSign, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -91,7 +90,6 @@ export const ProductManagement = () => {
   const { user, role } = useAuth();
   const isAdmin = role === 'admin';
   const isMobile = useIsMobile();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { categories: dynamicCategories } = useCategories();
   const { sousCategories: allSousCategories } = useSousCategories();
   const [products, setProducts] = useState<Product[]>([]);
@@ -101,7 +99,6 @@ export const ProductManagement = () => {
   const [sousCategoryFilter, setSousCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
-  const [importing, setImporting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -458,91 +455,6 @@ export const ProductManagement = () => {
 
   // Check if any filter is active
   const hasActiveFilters = searchTerm !== '' || categoryFilter !== 'all' || sousCategoryFilter !== 'all' || statusFilter !== 'all' || currencyFilter !== 'all';
-
-  // Import from Excel
-  const importFromExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setImporting(true);
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
-
-      if (jsonData.length === 0) {
-        toast({ title: "Erreur", description: "Le fichier est vide", variant: "destructive" });
-        return;
-      }
-
-      let importedCount = 0;
-      let errorCount = 0;
-
-      for (const row of jsonData) {
-        // Map category names to valid enum values
-        const categoryMap: Record<string, string> = {
-          'Alimentaires': 'alimentaires',
-          'Boissons': 'boissons',
-          'Gazeuses': 'gazeuses',
-          'Électronique': 'electronique',
-          'Céramique': 'ceramique',
-          'Fer / Acier': 'fer',
-          'Matériaux de construction': 'materiaux_de_construction',
-          'Énergie': 'energie',
-          'Blocs': 'blocs',
-          'Vêtements': 'vetements',
-          'Électroménager': 'electromenager',
-          'Autres': 'autres'
-        };
-        
-        const rawCategory = row['Catégorie'] || row['category'] || 'autres';
-        const mappedCategory = categoryMap[rawCategory] || rawCategory.toLowerCase().replace(/[^a-z_]/g, '_');
-        const validCategories = ['alimentaires', 'boissons', 'gazeuses', 'electronique', 'autres', 'energie', 'ceramique', 'fer', 'materiaux_de_construction', 'blocs', 'vetements', 'electromenager'];
-        const category = validCategories.includes(mappedCategory) ? mappedCategory : 'autres';
-        
-        const productData: any = {
-          name: row['Nom'] || row['name'] || '',
-          barcode: row['Code-barres'] || row['barcode'] || null,
-          category: category as ProductCategory,
-          unit: row['Unité'] || row['unit'] || 'unité',
-          price: parseFloat(row['Prix'] || row['price'] || 0),
-          purchase_price: parseFloat(row['Prix d\'achat'] || row['purchase_price'] || 0) || null,
-          quantity: parseInt(row['Quantité'] || row['quantity'] || 0),
-          alert_threshold: parseInt(row['Seuil alerte'] || row['alert_threshold'] || 10),
-          currency: (row['Devise'] || row['currency'] || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG',
-          is_active: row['Statut'] !== 'Inactif' && row['is_active'] !== false,
-          sale_type: (row['Type vente'] === 'Gros' || row['sale_type'] === 'wholesale' ? 'wholesale' : 'retail') as 'retail' | 'wholesale',
-          description: row['Description'] || row['description'] || null,
-        };
-
-        if (!productData.name || productData.price <= 0) {
-          errorCount++;
-          continue;
-        }
-
-        const { error } = await supabase.from('products').insert(productData);
-        if (error) {
-          console.error('Import error for row:', row, error);
-          errorCount++;
-        } else {
-          importedCount++;
-        }
-      }
-
-      await fetchProducts();
-      toast({ 
-        title: "Import terminé", 
-        description: `${importedCount} produit(s) importé(s)${errorCount > 0 ? `, ${errorCount} erreur(s)` : ''}`
-      });
-    } catch (error) {
-      console.error('Import error:', error);
-      toast({ title: "Erreur d'import", description: "Impossible de lire le fichier Excel", variant: "destructive" });
-    } finally {
-      setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
 
   const resetForm = () => {
     setFormData({
@@ -1913,27 +1825,8 @@ export const ProductManagement = () => {
             <Badge variant="secondary" className="hidden lg:flex text-xs whitespace-nowrap">
               {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
             </Badge>
-            {/* Hidden file input for import */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".xlsx,.xls"
-              onChange={importFromExcel}
-              className="hidden"
-            />
-            {/* Import/Export buttons */}
+            {/* Export buttons */}
             <div className="flex items-center gap-1">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={importing}
-                className="h-7 sm:h-8 px-2 text-[10px] sm:text-xs"
-                title="Importer depuis Excel"
-              >
-                <Upload className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                <span className="hidden sm:inline ml-1">{importing ? 'Import...' : 'Import'}</span>
-              </Button>
               <Button
                 size="sm"
                 variant="outline"

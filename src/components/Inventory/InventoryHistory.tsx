@@ -123,6 +123,30 @@ export const InventoryHistory = () => {
     fetchMovements();
   }, [dateRange]);
 
+  // Real-time subscription for stock movements
+  useEffect(() => {
+    const channel = supabase
+      .channel('stock-movements-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'stock_movements'
+        },
+        (payload) => {
+          console.log('Stock movement change detected:', payload);
+          // Refresh data when any change occurs
+          fetchMovements();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [dateRange]);
+
   // Filter movements
   const filteredMovements = useMemo(() => {
     return movements.filter(m => {
