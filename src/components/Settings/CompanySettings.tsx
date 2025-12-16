@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Building2, Save, Loader2, DollarSign, Image, MapPin, CreditCard, ChevronDown, Settings2 } from 'lucide-react';
+import { Building2, Save, Loader2, DollarSign, Image, MapPin, CreditCard, ChevronDown, Settings2, Check, AlertCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface CompanySettings {
   id: string;
@@ -31,11 +32,14 @@ interface CompanySettings {
 
 export const CompanySettings = () => {
   const [settings, setSettings] = useState<CompanySettings | null>(null);
+  const [originalSettings, setOriginalSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [openSections, setOpenSections] = useState({
     logo: true,
     company: true,
@@ -44,9 +48,47 @@ export const CompanySettings = () => {
     payment: false,
   });
 
+  // Check if there are unsaved changes
+  const isDirty = useCallback(() => {
+    if (!settings || !originalSettings) return false;
+    return JSON.stringify(settings) !== JSON.stringify(originalSettings);
+  }, [settings, originalSettings]);
+
+  // Get list of modified fields
+  const getModifiedFields = useCallback((): string[] => {
+    if (!settings || !originalSettings) return [];
+    const modified: string[] = [];
+    const keys = Object.keys(settings) as (keyof CompanySettings)[];
+    keys.forEach(key => {
+      if (settings[key] !== originalSettings[key]) {
+        modified.push(key);
+      }
+    });
+    return modified;
+  }, [settings, originalSettings]);
+
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  // Auto-save with 2 second debounce
+  useEffect(() => {
+    if (!isDirty() || saving) return;
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      handleSave(true);
+    }, 2000);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [settings, isDirty, saving]);
 
   const fetchSettings = async () => {
     try {
@@ -57,10 +99,12 @@ export const CompanySettings = () => {
         .single();
 
       if (error) throw error;
-      setSettings({
+      const settingsData = {
         ...data,
         default_display_currency: (data.default_display_currency as 'USD' | 'HTG') || 'HTG'
-      });
+      };
+      setSettings(settingsData);
+      setOriginalSettings(settingsData);
       if (data.logo_url) {
         setLogoPreview(data.logo_url);
       }
@@ -140,7 +184,7 @@ export const CompanySettings = () => {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (isAutoSave = false) => {
     if (!settings) return;
 
     setSaving(true);
@@ -167,10 +211,15 @@ export const CompanySettings = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Paramètres enregistrés",
-        description: "Les paramètres de l'entreprise ont été mis à jour avec succès",
-      });
+      setOriginalSettings(settings);
+      setLastSaved(new Date());
+
+      if (!isAutoSave) {
+        toast({
+          title: "Paramètres enregistrés",
+          description: "Les paramètres de l'entreprise ont été mis à jour avec succès",
+        });
+      }
     } catch (error) {
       console.error('Error saving settings:', error);
       toast({
@@ -220,19 +269,33 @@ export const CompanySettings = () => {
             </p>
           </div>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          size="sm"
-          className="gap-1.5"
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-          <span className="hidden sm:inline">Enregistrer</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Status indicator */}
+          {isDirty() ? (
+            <Badge variant="outline" className="gap-1 text-xs bg-amber-500/10 text-amber-600 border-amber-500/30 animate-pulse">
+              <AlertCircle className="h-3 w-3" />
+              <span className="hidden sm:inline">Non sauvegardé</span>
+            </Badge>
+          ) : lastSaved ? (
+            <Badge variant="outline" className="gap-1 text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+              <Check className="h-3 w-3" />
+              <span className="hidden sm:inline">Sauvegardé</span>
+            </Badge>
+          ) : null}
+          <Button
+            onClick={() => handleSave()}
+            disabled={saving || !isDirty()}
+            size="sm"
+            className="gap-1.5"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">Enregistrer</span>
+          </Button>
+        </div>
       </div>
 
       {/* Logo Section */}
