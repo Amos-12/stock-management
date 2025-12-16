@@ -223,13 +223,15 @@ export const SellerPerformanceReport = () => {
     fetchSellerStats();
   }, [period, companySettings]);
 
+  const displayCurrency = companySettings.default_display_currency as 'USD' | 'HTG';
+
   const exportToExcel = () => {
     const data = sellers.map((s, index) => ({
       'Rang': index + 1,
       'Vendeur': s.seller_name,
       'Ventes USD': s.total_revenue_usd,
       'Ventes HTG': s.total_revenue_htg,
-      'Total (HTG)': s.total_revenue_converted,
+      [`Total (${displayCurrency})`]: s.total_revenue_converted,
       'Nombre de ventes': s.total_sales,
       'Panier moyen': s.average_cart,
       'Bénéfice': s.total_profit,
@@ -242,7 +244,7 @@ export const SellerPerformanceReport = () => {
     XLSX.writeFile(wb, `performance_vendeurs_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   };
 
-  const formatCurrency = (amount: number, currency: string = 'HTG') => {
+  const formatCurrency = (amount: number, currency: 'USD' | 'HTG' = 'HTG') => {
     const formatted = new Intl.NumberFormat('fr-FR', { 
       minimumFractionDigits: 0,
       maximumFractionDigits: 0 
@@ -321,8 +323,8 @@ export const SellerPerformanceReport = () => {
           <CardContent className="p-3 sm:pt-6 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] sm:text-sm text-muted-foreground">Total ({companySettings.default_display_currency})</p>
-                <p className="text-sm sm:text-lg font-bold text-primary">{formatCurrency(totalRevenueConverted, 'HTG')}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Total ({displayCurrency})</p>
+                <p className="text-sm sm:text-lg font-bold text-primary">{formatCurrency(totalRevenueConverted, displayCurrency)}</p>
               </div>
               <div className="p-2 sm:p-3 bg-primary/10 rounded-full">
                 <TrendingUp className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
@@ -405,18 +407,18 @@ export const SellerPerformanceReport = () => {
                         <div className="flex items-center gap-1.5 sm:gap-4">
                           {/* Mobile: show converted total only */}
                           <div className="text-right sm:hidden">
-                            <p className="text-xs font-semibold">{formatCurrency(seller.total_revenue_converted, 'HTG')}</p>
+                            <p className="text-xs font-semibold">{formatCurrency(seller.total_revenue_converted, displayCurrency)}</p>
                           </div>
                           <div className="text-right hidden sm:block">
                             <p className="text-sm text-green-600">{formatCurrency(seller.total_revenue_usd, 'USD')}</p>
                             <p className="text-sm text-blue-600">{formatCurrency(seller.total_revenue_htg, 'HTG')}</p>
                           </div>
                           <div className="text-right hidden md:block">
-                            <p className="font-semibold">{formatCurrency(seller.total_revenue_converted, 'HTG')}</p>
+                            <p className="font-semibold">{formatCurrency(seller.total_revenue_converted, displayCurrency)}</p>
                             <p className="text-xs text-muted-foreground">Total converti</p>
                           </div>
                           <div className="text-right hidden lg:block">
-                            <p className="font-semibold">{formatCurrency(seller.total_profit, 'HTG')}</p>
+                            <p className="font-semibold">{formatCurrency(seller.total_profit, displayCurrency)}</p>
                             <p className="text-xs text-muted-foreground">Bénéfice</p>
                           </div>
                           <Badge variant={seller.trend_percent >= 0 ? 'default' : 'destructive'} className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs px-1.5 sm:px-2">
@@ -447,12 +449,12 @@ export const SellerPerformanceReport = () => {
                             <p className="text-xs sm:text-base font-semibold text-blue-600">{formatCurrency(seller.total_revenue_htg, 'HTG')}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] sm:text-sm text-muted-foreground">Total converti</p>
-                            <p className="text-xs sm:text-base font-semibold">{formatCurrency(seller.total_revenue_converted, 'HTG')}</p>
+                            <p className="text-[10px] sm:text-sm text-muted-foreground">Total converti ({displayCurrency})</p>
+                            <p className="text-xs sm:text-base font-semibold">{formatCurrency(seller.total_revenue_converted, displayCurrency)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] sm:text-sm text-muted-foreground">Panier moy.</p>
-                            <p className="text-xs sm:text-base font-semibold">{formatCurrency(seller.average_cart, 'HTG')}</p>
+                            <p className="text-xs sm:text-base font-semibold">{formatCurrency(seller.average_cart, displayCurrency)}</p>
                           </div>
                         </div>
                         <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">Taux: 1 USD = {companySettings.usd_htg_rate} HTG</p>
@@ -475,7 +477,7 @@ export const SellerPerformanceReport = () => {
                                   <TableRow key={idx}>
                                     <TableCell className="font-medium text-xs sm:text-sm max-w-[120px] sm:max-w-none truncate">{product.name}</TableCell>
                                     <TableCell className="text-right text-xs sm:text-sm">{product.quantity}</TableCell>
-                                    <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(product.revenue, 'HTG')}</TableCell>
+                                    <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(product.revenue, displayCurrency)}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>

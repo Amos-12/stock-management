@@ -77,6 +77,8 @@ export const AdvancedReports = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'HTG'>('HTG');
+  const [usdHtgRate, setUsdHtgRate] = useState(132);
   
   // Dynamic filters state
   const [selectedSeller, setSelectedSeller] = useState<string>('all');
@@ -98,6 +100,8 @@ export const AdvancedReports = () => {
         .single();
       if (data) {
         setCompanySettings(data as CompanySettings);
+        setDisplayCurrency((data.default_display_currency as 'USD' | 'HTG') || 'HTG');
+        setUsdHtgRate(data.usd_htg_rate || 132);
       }
     };
     fetchCompanySettings();
@@ -132,7 +136,7 @@ export const AdvancedReports = () => {
       
       const fromDate = format(dateRange.from, 'yyyy-MM-dd');
       const toDate = format(dateRange.to, 'yyyy-MM-dd');
-      const usdHtgRate = companySettings?.usd_htg_rate || 132;
+      const rate = usdHtgRate;
 
       // Build sales query with filters
       let salesQuery = supabase
@@ -210,7 +214,10 @@ export const AdvancedReports = () => {
         });
       });
 
-      const totalRevenueConverted = totalRevenueHTG + (totalRevenueUSD * usdHtgRate);
+      // Convert to display currency
+      const totalRevenueConverted = displayCurrency === 'HTG'
+        ? totalRevenueHTG + (totalRevenueUSD * rate)
+        : totalRevenueUSD + (totalRevenueHTG / rate);
       const totalSales = salesWithSellers.length;
       const averageOrderValue = totalSales > 0 ? totalRevenueConverted / totalSales : 0;
 
@@ -250,7 +257,9 @@ export const AdvancedReports = () => {
         .map(p => ({
           product_name: p.product_name,
           quantity_sold: p.quantity_sold,
-          total_revenue: p.revenueHTG + (p.revenueUSD * usdHtgRate) // Convert to HTG
+          total_revenue: displayCurrency === 'HTG'
+            ? p.revenueHTG + (p.revenueUSD * rate)
+            : p.revenueUSD + (p.revenueHTG / rate)
         }))
         .sort((a, b) => b.total_revenue - a.total_revenue)
         .slice(0, 10);
@@ -317,10 +326,12 @@ export const AdvancedReports = () => {
 
       const categoryDistribution = Object.entries(categoryRevenue)
         .map(([category, data]) => {
-          const totalConverted = data.revenueHTG + (data.revenueUSD * usdHtgRate);
+          const totalConverted = displayCurrency === 'HTG'
+            ? data.revenueHTG + (data.revenueUSD * rate)
+            : data.revenueUSD + (data.revenueHTG / rate);
           return {
             category,
-            revenue: totalConverted, // Already converted to HTG
+            revenue: totalConverted,
             count: data.count,
             percentage: totalRevenueConverted > 0 ? (totalConverted / totalRevenueConverted) * 100 : 0
           };
@@ -357,6 +368,10 @@ export const AdvancedReports = () => {
     generateReport();
   }, [dateRange, reportType, selectedSeller, selectedPaymentMethod, selectedCurrency, selectedCategory, selectedStockLevel]);
 
+  const formatCurrencyDisplay = (amount: number) => {
+    return displayCurrency === 'USD' ? `$ ${formatNumber(amount)}` : `${formatNumber(amount)} HTG`;
+  };
+
   const exportReport = () => {
     if (!reportData) return;
 
@@ -366,13 +381,13 @@ Rapport de Ventes - ${format(dateRange.from, 'dd/MM/yyyy', { locale: fr })} au $
 Résumé:
 Ventes USD,$ ${formatNumber(reportData.totalRevenueUSD)}
 Ventes HTG,${formatNumber(reportData.totalRevenueHTG)} HTG
-Total converti,${formatNumber(reportData.totalRevenueConverted)} HTG
+Total converti (${displayCurrency}),${formatCurrencyDisplay(reportData.totalRevenueConverted)}
 Nombre de ventes,${reportData.totalSales}
-Panier moyen,${formatNumber(reportData.averageOrderValue)} HTG
+Panier moyen,${formatCurrencyDisplay(reportData.averageOrderValue)}
 
 Top Produits:
-Produit,Quantité vendue,Chiffre d'affaires
-${reportData.topProducts.map(p => `${p.product_name},${p.quantity_sold},${formatNumber(p.total_revenue)} HTG`).join('\n')}
+Produit,Quantité vendue,Chiffre d'affaires (${displayCurrency})
+${reportData.topProducts.map(p => `${p.product_name},${p.quantity_sold},${formatCurrencyDisplay(p.total_revenue)}`).join('\n')}
 
 Méthodes de paiement:
 Méthode,Nombre,Pourcentage
@@ -397,7 +412,6 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
 
   const exportToExcel = () => {
     if (!reportData) return;
-    const usdHtgRate = companySettings?.usd_htg_rate || 132;
 
     // Sheet 1: Résumé
     const summaryData = [
@@ -405,19 +419,20 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
       ['Période', `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`],
       ['Date de génération', format(new Date(), 'dd/MM/yyyy HH:mm')],
       ['Taux de change', `1 USD = ${usdHtgRate} HTG`],
+      ['Devise d\'affichage', displayCurrency],
       [''],
       ['Métrique', 'Valeur'],
       ['Ventes USD', `$ ${formatNumber(reportData.totalRevenueUSD)}`],
       ['Ventes HTG', `${formatNumber(reportData.totalRevenueHTG)} HTG`],
-      ['Total converti (HTG)', `${formatNumber(reportData.totalRevenueConverted)} HTG`],
-      ['Bénéfices totaux', `${formatNumber(reportData.totalProfit)} HTG`],
+      [`Total converti (${displayCurrency})`, formatCurrencyDisplay(reportData.totalRevenueConverted)],
+      ['Bénéfices totaux', formatCurrencyDisplay(reportData.totalProfit)],
       ['Nombre total de ventes', reportData.totalSales],
-      ['Panier moyen', `${formatNumber(reportData.averageOrderValue)} HTG`]
+      ['Panier moyen', formatCurrencyDisplay(reportData.averageOrderValue)]
     ];
 
     // Sheet 2: Ventes par catégorie
     const categoryData = [
-      ['Catégorie', 'Revenu (HTG)', 'Nombre de ventes', 'Pourcentage (%)'],
+      ['Catégorie', `Revenu (${displayCurrency})`, 'Nombre de ventes', 'Pourcentage (%)'],
       ...reportData.categoryDistribution.map(cat => [
         cat.category,
         cat.revenue.toFixed(2),
@@ -428,7 +443,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
 
     // Sheet 3: Top 10 Produits
     const productsData = [
-      ['Position', 'Produit', 'Quantité vendue', 'Chiffre d\'affaires (HTG)'],
+      ['Position', 'Produit', 'Quantité vendue', `Chiffre d\'affaires (${displayCurrency})`],
       ...reportData.topProducts.map((prod, idx) => [
         idx + 1,
         prod.product_name,
@@ -449,7 +464,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
 
     // Sheet 5: Historique chronologique
     const historyData = [
-      ['Date', 'Revenu (HTG)', 'Nombre de ventes'],
+      ['Date', `Revenu (${displayCurrency})`, 'Nombre de ventes'],
       ...reportData.salesByPeriod.map(sp => [
         format(new Date(sp.period), 'dd/MM/yyyy'),
         sp.revenue.toFixed(2),
