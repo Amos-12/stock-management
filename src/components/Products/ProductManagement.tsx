@@ -1694,65 +1694,74 @@ export const ProductManagement = () => {
             </DialogContent>
           </Dialog>
         </div>
-        <div className="mt-4 space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher un produit..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+        {/* Filters Section - Compact and organized */}
+        <div className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
+          {/* Row 1: Search + View Toggle */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 sm:pl-9 h-8 sm:h-10 text-xs sm:text-sm"
+              />
+            </div>
+            <Badge variant="secondary" className="hidden sm:flex text-xs whitespace-nowrap">
+              {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
+            </Badge>
+            {/* View mode toggle */}
+            <div className="hidden sm:flex items-center gap-1 border rounded-md p-0.5 bg-muted/50">
+              <Button
+                size="sm"
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                onClick={() => setViewMode('table')}
+                className="h-7 w-7 p-0"
+              >
+                <List className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                onClick={() => setViewMode('cards')}
+                className="h-7 w-7 p-0"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
-            <div className="hidden sm:flex items-center gap-2">
-              <Filter className="w-4 h-4 text-muted-foreground" />
-              <Label className="text-sm text-muted-foreground">Filtres:</Label>
+          
+          {/* Row 2: Category filters + Badge (mobile) */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-[10px] sm:text-xs font-medium">Filtres:</span>
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="h-7 sm:h-8 w-[120px] sm:w-[150px] text-[10px] sm:text-xs">
                 <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
               <SelectContent className="z-50 bg-popover">
-                <SelectItem value="all">Toutes catégories</SelectItem>
+                <SelectItem value="all" className="text-xs">Toutes catégories</SelectItem>
                 {dynamicCategories.map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>{cat.nom}</SelectItem>
+                  <SelectItem key={cat.id} value={cat.id} className="text-xs">{cat.nom}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={sousCategoryFilter} onValueChange={setSousCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Sous-catégorie" />
+              <SelectTrigger className="h-7 sm:h-8 w-[120px] sm:w-[150px] text-[10px] sm:text-xs">
+                <SelectValue placeholder="Sous-cat." />
               </SelectTrigger>
               <SelectContent className="z-50 bg-popover">
-                <SelectItem value="all">Toutes sous-catégories</SelectItem>
+                <SelectItem value="all" className="text-xs">Toutes sous-cat.</SelectItem>
                 {filterSousCategories.map(sc => (
-                  <SelectItem key={sc.id} value={sc.id}>{sc.nom}</SelectItem>
+                  <SelectItem key={sc.id} value={sc.id} className="text-xs">{sc.nom}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Badge variant="secondary" className="self-start sm:self-auto text-xs sm:text-sm">
-              {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
+            <Badge variant="outline" className="sm:hidden text-[10px] ml-auto">
+              {filteredProducts.length}
             </Badge>
-            {/* View mode toggle - hidden on mobile */}
-            <div className="hidden sm:flex items-center gap-1 ml-auto">
-              <Button
-                size="sm"
-                variant={viewMode === 'table' ? 'default' : 'outline'}
-                onClick={() => setViewMode('table')}
-                className="h-8 px-2"
-              >
-                <List className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === 'cards' ? 'default' : 'outline'}
-                onClick={() => setViewMode('cards')}
-                className="h-8 px-2"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-            </div>
           </div>
         </div>
       </CardHeader>
