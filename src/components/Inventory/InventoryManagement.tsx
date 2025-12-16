@@ -552,12 +552,14 @@ export const InventoryManagement = () => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <p className="text-sm sm:text-xl font-bold truncate">
-                  {stats.totalValueUSD > 0 && <span className="text-green-600">${formatNumber(stats.totalValueUSD)}</span>}
-                  {stats.totalValueUSD > 0 && stats.totalValueHTG > 0 && <span className="text-muted-foreground"> + </span>}
-                  {stats.totalValueHTG > 0 && <span className="hidden sm:inline">{formatNumber(stats.totalValueHTG)} HTG</span>}
-                  {stats.totalValueHTG > 0 && <span className="sm:hidden">{formatNumber(stats.totalValueHTG)}</span>}
-                </p>
+                <div className="flex flex-col">
+                  {stats.totalValueHTG > 0 && (
+                    <p className="text-sm sm:text-xl font-bold truncate">{formatNumber(stats.totalValueHTG)} HTG</p>
+                  )}
+                  {stats.totalValueUSD > 0 && (
+                    <p className="text-[10px] sm:text-sm text-green-600">${formatNumber(stats.totalValueUSD)}</p>
+                  )}
+                </div>
               </div>
               <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-primary opacity-50 flex-shrink-0" />
             </div>

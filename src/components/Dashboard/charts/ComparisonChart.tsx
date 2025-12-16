@@ -46,15 +46,15 @@ export const ComparisonChart = ({
     const change = previous > 0 ? ((current - previous) / previous) * 100 : 0;
 
     return (
-      <div className="bg-card/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-border text-card-foreground">
-        <p className="font-medium text-sm mb-2">{label}</p>
+      <div className="bg-card/95 backdrop-blur-sm p-2 sm:p-3 rounded-lg shadow-xl border border-border text-card-foreground">
+        <p className="font-medium text-xs sm:text-sm mb-1.5 sm:mb-2">{label}</p>
         {payload.map((entry, index) => (
-          <p key={index} className="text-sm" style={{ color: entry.color }}>
+          <p key={index} className="text-[10px] sm:text-sm" style={{ color: entry.color }}>
             {entry.name}: {formatNumber(entry.value)} HTG
           </p>
         ))}
-        <div className="mt-2 pt-2 border-t border-border">
-          <p className={`text-sm font-medium ${change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+        <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-border">
+          <p className={`text-[10px] sm:text-sm font-medium ${change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
             {change >= 0 ? '+' : ''}{change.toFixed(1)}% variation
           </p>
         </div>
@@ -65,17 +65,17 @@ export const ComparisonChart = ({
   return (
     <Card className="bg-card">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        <CardTitle className="text-sm sm:text-lg font-semibold">{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div style={{ height }}>
+      <CardContent className="px-2 sm:px-6">
+        <div className="h-[200px] sm:h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+            <LineChart data={data} margin={{ top: 10, right: 5, left: -10, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               
               <XAxis 
                 dataKey="label" 
-                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
                 stroke="hsl(var(--foreground))"
                 tickLine={false}
                 axisLine={false}
@@ -83,11 +83,11 @@ export const ComparisonChart = ({
               
               <YAxis 
                 tickFormatter={formatYAxis}
-                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
                 stroke="hsl(var(--foreground))"
                 tickLine={false}
                 axisLine={false}
-                width={50}
+                width={40}
               />
               
               <Tooltip content={<CustomTooltip />} />

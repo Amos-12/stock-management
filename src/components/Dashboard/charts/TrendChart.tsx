@@ -31,7 +31,7 @@ export const TrendChart = ({
   data, 
   title = "Tendance des ventes",
   showBrush = true,
-  height = 350,
+  height = 300,
 }: TrendChartProps) => {
   const formatYAxis = (value: number) => {
     if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
@@ -44,10 +44,10 @@ export const TrendChart = ({
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-semibold">{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div style={{ height }}>
+      <CardContent className="px-2 sm:px-6">
+        <div className="h-[200px] sm:h-[280px]" style={{ minHeight: height }}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: showBrush ? 30 : 10 }}>
+            <AreaChart data={data} margin={{ top: 10, right: 5, left: -10, bottom: showBrush ? 30 : 10 }}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
@@ -63,7 +63,7 @@ export const TrendChart = ({
               
               <XAxis 
                 dataKey="date" 
-                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
                 stroke="hsl(var(--foreground))"
                 tickLine={false}
                 axisLine={false}
@@ -71,11 +71,11 @@ export const TrendChart = ({
               
               <YAxis 
                 tickFormatter={formatYAxis}
-                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
                 stroke="hsl(var(--foreground))"
                 tickLine={false}
                 axisLine={false}
-                width={50}
+                width={40}
               />
               
               <Tooltip content={<EnhancedTooltip />} />
