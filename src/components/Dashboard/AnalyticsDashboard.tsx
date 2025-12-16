@@ -362,23 +362,23 @@ export const AnalyticsDashboard = () => {
 
   return (
     <div className="space-y-6 overflow-x-hidden">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Analytics</h2>
-          <p className="text-sm text-muted-foreground">
-            Dernière mise à jour: {format(lastRefresh, 'HH:mm:ss', { locale: fr })}
-          </p>
+      {/* Header - Compact layout */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <h2 className="text-lg sm:text-2xl font-bold text-foreground">Analytics</h2>
+          <span className="text-[10px] sm:text-xs text-muted-foreground">
+            MàJ: {format(lastRefresh, 'HH:mm:ss', { locale: fr })}
+          </span>
         </div>
         
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className="flex items-center gap-2 text-sm px-3 py-1.5 bg-muted/50">
-            <DollarSign className="h-4 w-4 text-primary" />
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          <Badge variant="outline" className="flex items-center gap-1 text-[10px] sm:text-sm px-2 py-1 bg-muted/50">
+            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
             <span>1 USD = {formatNumber(usdHtgRate)} HTG</span>
           </Badge>
 
           <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[110px] sm:w-[140px] h-7 sm:h-9 text-xs sm:text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="z-[100]">
@@ -393,8 +393,8 @@ export const AnalyticsDashboard = () => {
           {period === 'custom' && (
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <CalendarIcon className="w-4 h-4 mr-2" />
+                <Button variant="outline" size="sm" className="h-7 sm:h-9 text-xs sm:text-sm">
+                  <CalendarIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                   {format(dateRange.from, 'dd/MM')} - {format(dateRange.to, 'dd/MM')}
                 </Button>
               </PopoverTrigger>
@@ -413,8 +413,8 @@ export const AnalyticsDashboard = () => {
             </Popover>
           )}
 
-          <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <Button variant="outline" size="icon" onClick={fetchData} disabled={loading} className="h-7 w-7 sm:h-9 sm:w-9">
+            <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
@@ -534,46 +534,78 @@ export const AnalyticsDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Category Distribution */}
+            {/* Category Distribution - Professional */}
             <Card className="flex flex-col bg-card">
               <CardHeader className="pb-2 shrink-0">
-                <CardTitle className="text-sm sm:text-lg font-semibold text-card-foreground">Distribution par catégorie</CardTitle>
+                <CardTitle className="text-sm sm:text-lg font-semibold text-card-foreground flex items-center gap-2">
+                  <PieChartIcon className="h-4 w-4 text-primary" />
+                  Distribution par catégorie
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex-1">
-                <div className="h-[280px] sm:h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={categoryDistribution}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius="80%"
-                        innerRadius="50%"
-                        paddingAngle={2}
-                        animationBegin={0}
-                        animationDuration={800}
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        labelLine={{ stroke: 'hsl(var(--foreground))', strokeWidth: 1 }}
-                      >
-                        {categoryDistribution.map((_, index) => (
-                          <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          color: 'hsl(var(--card-foreground))',
-                        }}
-                        itemStyle={{ color: 'hsl(var(--card-foreground))' }}
-                        labelStyle={{ color: 'hsl(var(--card-foreground))' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="flex flex-col lg:flex-row items-center gap-4 h-[280px] sm:h-[400px]">
+                  {/* Chart with center total */}
+                  <div className="relative flex-1 h-full min-h-[180px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={categoryDistribution}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius="75%"
+                          innerRadius="45%"
+                          paddingAngle={2}
+                          animationBegin={0}
+                          animationDuration={800}
+                          label={false}
+                        >
+                          {categoryDistribution.map((_, index) => (
+                            <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            color: 'hsl(var(--card-foreground))',
+                            padding: '6px 10px',
+                            fontSize: '12px',
+                          }}
+                          itemStyle={{ color: 'hsl(var(--card-foreground))' }}
+                          labelStyle={{ color: 'hsl(var(--card-foreground))' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    {/* Center total */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <p className="text-lg sm:text-2xl font-bold text-foreground">
+                        {formatNumber(categoryDistribution.reduce((sum, c) => sum + c.value, 0))}
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">HTG Total</p>
+                    </div>
+                  </div>
+                  
+                  {/* Professional Legend */}
+                  <div className="flex flex-wrap lg:flex-col gap-1.5 sm:gap-2 justify-center lg:w-36 xl:w-44">
+                    {categoryDistribution.map((cat, index) => {
+                      const total = categoryDistribution.reduce((sum, c) => sum + c.value, 0);
+                      const percent = total > 0 ? ((cat.value / total) * 100).toFixed(0) : '0';
+                      return (
+                        <div key={cat.name} className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
+                          <div 
+                            className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm flex-shrink-0" 
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          />
+                          <span className="truncate max-w-[60px] sm:max-w-[80px] text-foreground">{cat.name}</span>
+                          <span className="text-muted-foreground ml-auto font-medium">{percent}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </CardContent>
             </Card>
