@@ -589,6 +589,16 @@ export const AdminDashboardCharts = () => {
             <DollarSign className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
             1 USD = {formatNumber(usdHtgRate)} HTG
           </Badge>
+          <Badge 
+            variant="outline" 
+            className={`text-[10px] sm:text-xs px-1.5 sm:px-2 ${
+              displayCurrency === 'USD' 
+                ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700' 
+                : 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+            }`}
+          >
+            {displayCurrency === 'USD' ? '$ USD' : 'HTG'}
+          </Badge>
           <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
             <SelectTrigger className="w-[115px] sm:w-40 h-7 sm:h-8 text-[10px] sm:text-xs">
               <Calendar className="w-3 h-3 mr-1" />

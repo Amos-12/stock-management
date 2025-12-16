@@ -621,6 +621,21 @@ export const SalesManagement = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Header with currency indicator */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg sm:text-2xl font-bold text-foreground">Gestion des Ventes</h2>
+        <Badge 
+          variant="outline" 
+          className={`text-xs px-2 py-0.5 ${
+            filteredStats.displayCurrency === 'USD' 
+              ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700' 
+              : 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+          }`}
+        >
+          Affichage: {filteredStats.displayCurrency === 'USD' ? '$ USD' : 'HTG'}
+        </Badge>
+      </div>
+
       {/* Stats Cards - Dynamic based on filters */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <Card className="shadow-sm">
