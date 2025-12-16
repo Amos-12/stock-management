@@ -32,13 +32,28 @@ const SellerDashboard = () => {
   const [currentSection, setCurrentSection] = useState('dashboard');
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
   const [loadingApproval, setLoadingApproval] = useState(true);
+  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'HTG'>('HTG');
+  const [usdHtgRate, setUsdHtgRate] = useState(132);
 
   useEffect(() => {
     if (user && !authLoading) {
       checkApprovalStatus();
       fetchMySales();
+      fetchCompanySettings();
     }
   }, [user, authLoading]);
+
+  const fetchCompanySettings = async () => {
+    const { data } = await supabase
+      .from('company_settings')
+      .select('usd_htg_rate, default_display_currency')
+      .single();
+    
+    if (data) {
+      setUsdHtgRate(data.usd_htg_rate || 132);
+      setDisplayCurrency((data.default_display_currency || 'HTG') as 'USD' | 'HTG');
+    }
+  };
 
   const checkApprovalStatus = async () => {
     if (!user) return;
@@ -117,7 +132,12 @@ const SellerDashboard = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-success">{sale.total_amount.toFixed(2)} HTG</div>
+                        <div className="font-bold text-success">
+                          {displayCurrency === 'USD' 
+                            ? `$${(sale.total_amount / usdHtgRate).toFixed(2)}` 
+                            : `${sale.total_amount.toFixed(2)} HTG`
+                          }
+                        </div>
                       </div>
                     </div>
                   ))}
