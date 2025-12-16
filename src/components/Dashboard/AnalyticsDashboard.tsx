@@ -90,6 +90,7 @@ export const AnalyticsDashboard = () => {
   const [previousSaleItems, setPreviousSaleItems] = useState<SaleItem[]>([]);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [usdHtgRate, setUsdHtgRate] = useState(132);
+  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'HTG'>('HTG');
 
   const getDateRange = (p: Period): { from: Date; to: Date; prevFrom: Date; prevTo: Date } => {
     const now = new Date();
@@ -135,13 +136,16 @@ export const AnalyticsDashboard = () => {
     setLoading(true);
     const { from, to, prevFrom, prevTo } = getDateRange(period);
 
-    // Fetch company settings for rate
+    // Fetch company settings for rate and currency
     const { data: settings } = await supabase
       .from('company_settings')
-      .select('usd_htg_rate')
+      .select('usd_htg_rate, default_display_currency')
       .single();
     const rate = settings?.usd_htg_rate || 132;
     setUsdHtgRate(rate);
+    if (settings?.default_display_currency) {
+      setDisplayCurrency(settings.default_display_currency as 'USD' | 'HTG');
+    }
 
     try {
       // Current period sales
@@ -205,12 +209,12 @@ export const AnalyticsDashboard = () => {
 
   const kpis = useMemo<KPIData>(() => {
     // Use proper currency conversion for revenue
-    const currentRevenue = calculateUnifiedTotal(saleItems, usdHtgRate).unified;
-    const previousRevenue = calculateUnifiedTotal(previousSaleItems, usdHtgRate).unified;
+    const currentRevenue = calculateUnifiedTotal(saleItems, usdHtgRate, displayCurrency).unified;
+    const previousRevenue = calculateUnifiedTotal(previousSaleItems, usdHtgRate, displayCurrency).unified;
     
     // Use proper currency conversion for profit
-    const currentProfit = calculateUnifiedProfit(saleItems, usdHtgRate);
-    const previousProfit = calculateUnifiedProfit(previousSaleItems, usdHtgRate);
+    const currentProfit = calculateUnifiedProfit(saleItems, usdHtgRate, displayCurrency);
+    const previousProfit = calculateUnifiedProfit(previousSaleItems, usdHtgRate, displayCurrency);
     
     const currentUniqueSellers = new Set(sales.map(s => s.seller_id)).size;
     const previousUniqueSellers = new Set(previousSales.map(s => s.seller_id)).size;
@@ -225,7 +229,7 @@ export const AnalyticsDashboard = () => {
       },
       uniqueSellers: { current: currentUniqueSellers, previous: previousUniqueSellers },
     };
-  }, [sales, previousSales, saleItems, previousSaleItems, usdHtgRate]);
+  }, [sales, previousSales, saleItems, previousSaleItems, usdHtgRate, displayCurrency]);
 
   const trendData = useMemo(() => {
     const { from, to } = getDateRange(period);
@@ -246,12 +250,12 @@ export const AnalyticsDashboard = () => {
 
       return {
         date: format(day, 'dd/MM', { locale: fr }),
-        revenue: calculateUnifiedTotal(dayItems, usdHtgRate).unified,
-        profit: calculateUnifiedProfit(dayItems, usdHtgRate),
+        revenue: calculateUnifiedTotal(dayItems, usdHtgRate, displayCurrency).unified,
+        profit: calculateUnifiedProfit(dayItems, usdHtgRate, displayCurrency),
         salesCount: daySales.length,
       };
     });
-  }, [sales, saleItems, period, usdHtgRate]);
+  }, [sales, saleItems, period, usdHtgRate, displayCurrency]);
 
   const sparklineData = useMemo(() => {
     return trendData.map(d => ({ value: d.revenue }));
@@ -291,11 +295,11 @@ export const AnalyticsDashboard = () => {
 
       return {
         label: format(day, 'EEE', { locale: fr }),
-        current: calculateUnifiedTotal(currentDayItems, usdHtgRate).unified,
-        previous: calculateUnifiedTotal(prevDayItems, usdHtgRate).unified,
+        current: calculateUnifiedTotal(currentDayItems, usdHtgRate, displayCurrency).unified,
+        previous: calculateUnifiedTotal(prevDayItems, usdHtgRate, displayCurrency).unified,
       };
     });
-  }, [sales, previousSales, saleItems, previousSaleItems, period, usdHtgRate]);
+  }, [sales, previousSales, saleItems, previousSaleItems, period, usdHtgRate, displayCurrency]);
 
   const heatmapData = useMemo(() => {
     const data: { day: number; hour: number; value: number }[] = [];
@@ -321,10 +325,10 @@ export const AnalyticsDashboard = () => {
       if (!productTotals[item.product_name]) {
         productTotals[item.product_name] = { name: item.product_name, revenue: 0, quantity: 0 };
       }
-      // Convert USD to HTG for unified revenue
-      const itemRevenue = item.currency === 'USD' 
-        ? item.subtotal * usdHtgRate 
-        : item.subtotal;
+      // Convert to display currency
+      const itemRevenue = displayCurrency === 'USD'
+        ? (item.currency === 'USD' ? item.subtotal : item.subtotal / usdHtgRate)
+        : (item.currency === 'USD' ? item.subtotal * usdHtgRate : item.subtotal);
       productTotals[item.product_name].revenue += itemRevenue;
       productTotals[item.product_name].quantity += Number(item.quantity);
     });
@@ -332,17 +336,17 @@ export const AnalyticsDashboard = () => {
     return Object.values(productTotals)
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
-  }, [saleItems, usdHtgRate]);
+  }, [saleItems, usdHtgRate, displayCurrency]);
 
   const categoryDistribution = useMemo(() => {
     const categories: Record<string, number> = {};
     
     saleItems.forEach(item => {
       const category = item.product_name.split(' ')[0] || 'Autre';
-      // Convert USD to HTG for unified total
-      const itemValue = item.currency === 'USD' 
-        ? item.subtotal * usdHtgRate 
-        : item.subtotal;
+      // Convert to display currency
+      const itemValue = displayCurrency === 'USD'
+        ? (item.currency === 'USD' ? item.subtotal : item.subtotal / usdHtgRate)
+        : (item.currency === 'USD' ? item.subtotal * usdHtgRate : item.subtotal);
       categories[category] = (categories[category] || 0) + itemValue;
     });
     
@@ -350,7 +354,7 @@ export const AnalyticsDashboard = () => {
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
-  }, [saleItems]);
+  }, [saleItems, usdHtgRate, displayCurrency]);
 
   const periodLabels: Record<Period, string> = {
     today: "Aujourd'hui",
@@ -427,6 +431,7 @@ export const AnalyticsDashboard = () => {
           previousValue={kpis.revenue.previous}
           icon={DollarSign}
           sparklineData={sparklineData}
+          currency={displayCurrency}
         />
         <KPICard
           title="Bénéfices"
@@ -435,6 +440,7 @@ export const AnalyticsDashboard = () => {
           icon={TrendingUp}
           colorScheme="success"
           sparklineData={sparklineData}
+          currency={displayCurrency}
         />
         <KPICard
           title="Ventes"
@@ -448,11 +454,12 @@ export const AnalyticsDashboard = () => {
           value={kpis.avgTicket.current}
           previousValue={kpis.avgTicket.previous}
           icon={Target}
+          currency={displayCurrency}
         />
       </div>
 
       {/* Main Trend Chart - without Brush */}
-      <TrendChart data={trendData} title={`Tendance des ventes - ${periodLabels[period]}`} showBrush={false} height={250} />
+      <TrendChart data={trendData} title={`Tendance des ventes - ${periodLabels[period]}`} showBrush={false} height={250} currency={displayCurrency} />
 
       {/* Tabs for different views */}
       <Tabs defaultValue="comparison" className="space-y-4">
@@ -472,6 +479,7 @@ export const AnalyticsDashboard = () => {
             <ComparisonChart 
               data={comparisonData} 
               title="Comparaison vs période précédente"
+              currency={displayCurrency}
             />
             <HeatmapChart 
               data={heatmapData} 
@@ -519,7 +527,7 @@ export const AnalyticsDashboard = () => {
                         tickLine={false}
                       />
                       <Tooltip 
-                        formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
+                        formatter={(value: number) => [displayCurrency === 'USD' ? `$${formatNumber(value)}` : `${formatNumber(value)} HTG`, 'Revenus']}
                         contentStyle={{ 
                           backgroundColor: 'hsl(var(--card))',
                           border: '1px solid hsl(var(--border))',
@@ -579,7 +587,7 @@ export const AnalyticsDashboard = () => {
                           ))}
                         </Pie>
                         <Tooltip 
-                          formatter={(value: number) => [`${formatNumber(value)} HTG`, 'Revenus']}
+                          formatter={(value: number) => [displayCurrency === 'USD' ? `$${formatNumber(value)}` : `${formatNumber(value)} HTG`, 'Revenus']}
                           contentStyle={{ 
                             backgroundColor: 'hsl(var(--card))',
                             border: '1px solid hsl(var(--border))',
@@ -596,9 +604,9 @@ export const AnalyticsDashboard = () => {
                     {/* Center total */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <p className="text-lg sm:text-2xl font-bold text-foreground">
-                        {formatNumber(categoryDistribution.reduce((sum, c) => sum + c.value, 0))}
+                        {displayCurrency === 'USD' ? '$' : ''}{formatNumber(categoryDistribution.reduce((sum, c) => sum + c.value, 0))}
                       </p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">HTG Total</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">{displayCurrency} Total</p>
                     </div>
                   </div>
                   
@@ -629,7 +637,7 @@ export const AnalyticsDashboard = () => {
       {/* Period Summary Badge */}
       <div className="flex justify-center">
         <Badge variant="outline" className="text-sm">
-          {periodLabels[period]} • {sales.length} vente{sales.length !== 1 ? 's' : ''} • {formatNumber(kpis.revenue.current)} HTG
+          {periodLabels[period]} • {sales.length} vente{sales.length !== 1 ? 's' : ''} • {displayCurrency === 'USD' ? '$' : ''}{formatNumber(kpis.revenue.current)} {displayCurrency === 'HTG' ? 'HTG' : ''}
         </Badge>
       </div>
     </div>
