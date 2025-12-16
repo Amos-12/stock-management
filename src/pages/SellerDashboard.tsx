@@ -107,35 +107,52 @@ const SellerDashboard = () => {
       case 'history':
         return (
           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Mes Dernières Ventes (10 plus récentes)
+            <CardHeader className="pb-2 sm:pb-4 px-3 sm:px-6">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+                Mes Ventes
+                <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1">
+                  (10 récentes)
+                </span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
               {sales.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Aucune vente enregistrée</p>
+                <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                  <Receipt className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+                  <p className="text-xs sm:text-sm">Aucune vente enregistrée</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {sales.map((sale) => (
-                    <div key={sale.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-smooth">
-                      <div>
-                        <div className="font-medium">
-                          {sale.customer_name || 'Client non renseigné'}
+                    <div 
+                      key={sale.id} 
+                      className="flex items-center justify-between p-2 sm:p-3 border rounded-lg hover:bg-accent/50 transition-all"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-xs sm:text-sm truncate max-w-[140px] sm:max-w-none">
+                          {sale.customer_name || 'Client anonyme'}
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {new Date(sale.created_at).toLocaleString('fr-FR')} • {sale.payment_method}
+                        <div className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 sm:gap-2 flex-wrap">
+                          <span>
+                            {new Date(sale.created_at).toLocaleString('fr-FR', {
+                              day: '2-digit',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="px-1.5 py-0.5 bg-muted rounded text-[9px] sm:text-xs">
+                            {sale.payment_method || 'N/A'}
+                          </span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-success">
+                      <div className="text-right flex-shrink-0 ml-2">
+                        <div className="font-bold text-xs sm:text-sm text-success">
                           {displayCurrency === 'USD' 
-                            ? `$${(sale.total_amount / usdHtgRate).toFixed(2)}` 
-                            : `${sale.total_amount.toFixed(2)} HTG`
+                            ? `$${(sale.total_amount / usdHtgRate).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                            : `${sale.total_amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} HTG`
                           }
                         </div>
                       </div>
