@@ -195,10 +195,14 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
       unifiedSubtotal = currencySubtotals.usd + (currencySubtotals.htg / rate);
     }
     
-    // Apply discount if any
+    // Apply discount if any - convert to display currency
     let subtotalAfterDiscount = unifiedSubtotal;
     if (saleData.discount_amount > 0) {
-      subtotalAfterDiscount -= saleData.discount_amount;
+      // Le discount est stocké en HTG, convertir si on affiche en USD
+      const discountInDisplayCurrency = displayCurrency === 'USD'
+        ? saleData.discount_amount / rate
+        : saleData.discount_amount;
+      subtotalAfterDiscount -= discountInDisplayCurrency;
     }
     
     // Calculate TVA
@@ -352,7 +356,16 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
                     {saleData.discount_type === 'percentage' &&
                       ` (${saleData.discount_value}%)`}:
                   </span>
-                  <span>-{formatCurrencyAmount(saleData.discount_amount, companySettings?.default_display_currency || 'HTG')}</span>
+                  <span>
+                    {(() => {
+                      const displayCurr = companySettings?.default_display_currency || 'HTG';
+                      const rate = companySettings?.usd_htg_rate || 132;
+                      const discountConverted = displayCurr === 'USD' 
+                        ? saleData.discount_amount / rate 
+                        : saleData.discount_amount;
+                      return `-${formatCurrencyAmount(discountConverted, displayCurr)}`;
+                    })()}
+                  </span>
                 </div>
               )}
               
