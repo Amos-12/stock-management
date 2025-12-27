@@ -217,6 +217,9 @@ export const SellerDashboardStats = () => {
       });
 
       setLastUpdate(new Date());
+      
+      // Fetch recent sales with the same settings to ensure consistency
+      await fetchRecentSales(rate, currency, tva);
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
@@ -225,7 +228,7 @@ export const SellerDashboardStats = () => {
     }
   }, [user]);
 
-  const fetchRecentSales = useCallback(async () => {
+  const fetchRecentSales = useCallback(async (rate: number, currency: 'USD' | 'HTG', tva: number) => {
     if (!user) return;
 
     try {
@@ -250,11 +253,11 @@ export const SellerDashboardStats = () => {
         .select('sale_id, subtotal, currency')
         .in('sale_id', saleIds);
 
-      // Calculate proper TTC for each sale using sale_items
+      // Calculate proper TTC for each sale using sale_items with passed parameters
       const enrichedSales = salesData.map(sale => {
         const itemsForSale = (saleItems || []).filter(item => item.sale_id === sale.id);
-        const { unified } = calculateUnifiedTotal(itemsForSale, usdHtgRate, displayCurrency);
-        const ttc = unified * (1 + tvaRate / 100);
+        const { unified } = calculateUnifiedTotal(itemsForSale, rate, currency);
+        const ttc = unified * (1 + tva / 100);
         
         return {
           ...sale,
@@ -266,30 +269,27 @@ export const SellerDashboardStats = () => {
     } catch (error) {
       console.error('Error fetching recent sales:', error);
     }
-  }, [user, displayCurrency, usdHtgRate, tvaRate]);
+  }, [user]);
 
   useEffect(() => {
     if (user) {
       fetchStats();
-      fetchRecentSales();
     }
-  }, [user, fetchStats, fetchRecentSales]);
+  }, [user, fetchStats]);
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       if (user) {
         fetchStats();
-        fetchRecentSales();
       }
     }, 60000);
     return () => clearInterval(interval);
-  }, [user, fetchStats, fetchRecentSales]);
+  }, [user, fetchStats]);
 
   const handleRefresh = () => {
     setRefreshing(true);
     fetchStats();
-    fetchRecentSales();
   };
 
   // Sparkline data for KPIs
