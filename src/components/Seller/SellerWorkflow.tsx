@@ -1052,10 +1052,24 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
       console.log('📦 Sale payload:', JSON.stringify(saleRequest, null, 2));
 
       // Get the current session to pass auth token
-      const { data: { session } } = await supabase.auth.getSession();
+      let { data: { session } } = await supabase.auth.getSession();
       
+      // If session is missing or expired, try to refresh
       if (!session) {
-        throw new Error('Session non valide. Veuillez vous reconnecter.');
+        console.log('🔄 Session manquante, tentative de rafraîchissement...');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError || !refreshData.session) {
+          console.error('❌ Impossible de rafraîchir la session:', refreshError);
+          toast({
+            title: "Session expirée",
+            description: "Veuillez vous reconnecter pour continuer",
+            variant: "destructive"
+          });
+          return;
+        }
+        session = refreshData.session;
+        console.log('✅ Session rafraîchie avec succès');
       }
 
       // Call Edge Function to process sale with auth header
