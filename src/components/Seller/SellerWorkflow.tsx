@@ -1063,9 +1063,13 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
           console.error('❌ Impossible de rafraîchir la session:', refreshError);
           toast({
             title: "Session expirée",
-            description: "Veuillez vous reconnecter pour continuer",
+            description: "Redirection vers la page de connexion...",
             variant: "destructive"
           });
+          // Redirect to auth page after a short delay
+          setTimeout(() => {
+            window.location.href = '/auth';
+          }, 1500);
           return;
         }
         session = refreshData.session;
