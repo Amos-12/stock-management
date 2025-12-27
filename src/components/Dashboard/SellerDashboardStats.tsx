@@ -54,30 +54,34 @@ export const SellerDashboardStats = () => {
   const [usdHtgRate, setUsdHtgRate] = useState(132);
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'HTG'>('HTG');
 
+  const [tvaRate, setTvaRate] = useState(0);
+
   const fetchCompanySettings = async () => {
     const { data } = await supabase
       .from('company_settings')
-      .select('usd_htg_rate, default_display_currency')
+      .select('usd_htg_rate, default_display_currency, tva_rate')
       .single();
     
     const rate = data?.usd_htg_rate || 132;
     const currency = (data?.default_display_currency || 'HTG') as 'USD' | 'HTG';
+    const tva = data?.tva_rate || 0;
     
     setUsdHtgRate(rate);
     setDisplayCurrency(currency);
+    setTvaRate(tva);
     
-    return { rate, currency };
+    return { rate, currency, tva };
   };
 
   const fetchStats = useCallback(async () => {
     if (!user) return;
 
     try {
-      const { rate, currency } = await fetchCompanySettings();
+      const { rate, currency, tva } = await fetchCompanySettings();
 
       const { data: allSales, error: allError } = await supabase
         .from('sales')
-        .select('id, total_amount, created_at')
+        .select('id, created_at')
         .eq('seller_id', user.id);
 
       if (allError) throw allError;
@@ -87,10 +91,13 @@ export const SellerDashboardStats = () => {
       if (saleIds.length > 0) {
         const { data: items } = await supabase
           .from('sale_items')
-          .select('sale_id, product_name, quantity, subtotal, currency')
+          .select('sale_id, product_name, quantity, subtotal, currency, profit_amount')
           .in('sale_id', saleIds);
         allSaleItems = items || [];
       }
+
+      // Create a map of sale_id to sale for quick lookup
+      const salesMap = new Map((allSales || []).map(s => [s.id, s]));
 
       // Date calculations
       const today = new Date();
@@ -128,16 +135,16 @@ export const SellerDashboardStats = () => {
         return d >= twoMonthsAgo && d < monthAgo;
       }) || [];
 
-      // Calculate revenue TTC with proper currency conversion
-      // total_amount is stored in HTG and includes TVA (TTC)
+      // Calculate revenue TTC using sale_items with currency conversion (like AdminDashboardCharts)
       const calculateRevenueTTC = (salesList: any[]) => {
-        return salesList.reduce((sum, sale) => {
-          // total_amount is in HTG, convert to display currency if needed
-          const amount = currency === 'USD' 
-            ? sale.total_amount / rate 
-            : sale.total_amount;
-          return sum + amount;
-        }, 0);
+        const saleIdSet = new Set(salesList.map(s => s.id));
+        const itemsForSales = allSaleItems.filter(item => saleIdSet.has(item.sale_id));
+        
+        // Use calculateUnifiedTotal from utils
+        const { unified } = calculateUnifiedTotal(itemsForSales, rate, currency);
+        
+        // Apply TVA to get TTC
+        return unified * (1 + tva / 100);
       };
 
       const totalRevenue = calculateRevenueTTC(allSales || []);
@@ -236,20 +243,30 @@ export const SellerDashboardStats = () => {
         return;
       }
 
-      // Use total_amount directly (it's already TTC in HTG)
-      // Just convert to displayCurrency if needed
-      const enrichedSales = salesData.map(sale => ({
-        ...sale,
-        displayAmount: displayCurrency === 'USD' 
-          ? Number(sale.total_amount) / usdHtgRate 
-          : Number(sale.total_amount)
-      }));
+      // Fetch sale items for these sales to calculate proper amounts
+      const saleIds = salesData.map(s => s.id);
+      const { data: saleItems } = await supabase
+        .from('sale_items')
+        .select('sale_id, subtotal, currency')
+        .in('sale_id', saleIds);
+
+      // Calculate proper TTC for each sale using sale_items
+      const enrichedSales = salesData.map(sale => {
+        const itemsForSale = (saleItems || []).filter(item => item.sale_id === sale.id);
+        const { unified } = calculateUnifiedTotal(itemsForSale, usdHtgRate, displayCurrency);
+        const ttc = unified * (1 + tvaRate / 100);
+        
+        return {
+          ...sale,
+          displayAmount: ttc
+        };
+      });
 
       setRecentSales(enrichedSales);
     } catch (error) {
       console.error('Error fetching recent sales:', error);
     }
-  }, [user, displayCurrency, usdHtgRate]);
+  }, [user, displayCurrency, usdHtgRate, tvaRate]);
 
   useEffect(() => {
     if (user) {
