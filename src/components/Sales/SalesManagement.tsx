@@ -15,6 +15,8 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { useIsMobile } from '@/hooks/use-mobile';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
+import { useCurrencyCalculations, currencyUtils } from '@/hooks/useCurrencyCalculations';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
 
 import { 
   AlertDialog, 
@@ -79,6 +81,10 @@ const formatCompactNumber = (amount: number, isMobile: boolean): string => {
 };
 
 export const SalesManagement = () => {
+  // Centralized hooks
+  const { settings: companySettingsHook } = useCompanySettings();
+  const currencyCalc = useCurrencyCalculations();
+  
   const [sales, setSales] = useState<Sale[]>([]);
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -398,15 +404,15 @@ export const SalesManagement = () => {
     });
   };
 
-  // Dynamic stats based on filtered sales
+  // Dynamic stats based on filtered sales - using centralized calculation logic
   const filteredStats = useMemo(() => {
     let htg = 0;
     let usd = 0;
     let tvaHtg = 0;
     let tvaUsd = 0;
-    const tvaRate = companySettings?.tva_rate || 0;
-    const rate = companySettings?.usd_htg_rate || 132;
-    const displayCurrency = (companySettings?.default_display_currency || 'HTG') as 'USD' | 'HTG';
+    const tvaRate = companySettingsHook?.tvaRate || companySettings?.tva_rate || 0;
+    const rate = companySettingsHook?.usdHtgRate || companySettings?.usd_htg_rate || 132;
+    const displayCurrency = companySettingsHook?.displayCurrency || (companySettings?.default_display_currency || 'HTG') as 'USD' | 'HTG';
     
     filteredSales.forEach(sale => {
       htg += sale.currencies?.htg || 0;
@@ -419,7 +425,7 @@ export const SalesManagement = () => {
     tvaHtg = htg - htgHT;
     tvaUsd = usd - usdHT;
     
-    // Unified total converted to display currency
+    // Unified total converted to display currency using currencyUtils
     const unifiedTotal = displayCurrency === 'HTG'
       ? htg + (usd * rate)
       : usd + (htg / rate);
@@ -438,7 +444,7 @@ export const SalesManagement = () => {
       unifiedTva,
       displayCurrency
     };
-  }, [filteredSales, companySettings]);
+  }, [filteredSales, companySettings, companySettingsHook]);
 
 
   // Export functions

@@ -46,6 +46,8 @@ import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useInventorySounds } from '@/hooks/useInventorySounds';
 import { CartSection } from './CartSection';
 import { useConfetti } from '@/hooks/useConfetti';
+import { useCurrencyCalculations } from '@/hooks/useCurrencyCalculations';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
 
 interface Product {
   id: string;
@@ -117,6 +119,11 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const { user } = useAuth();
   const { categories: dynamicCategories } = useCategories();
   const { sousCategories: dynamicSousCategories } = useSousCategories();
+  
+  // Centralized hooks
+  const { settings: companySettingsHook } = useCompanySettings();
+  const currencyCalc = useCurrencyCalculations();
+  
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('products');
   const [transitionDirection, setTransitionDirection] = useState<'forward' | 'backward'>('forward');
   const [products, setProducts] = useState<Product[]>([]);
@@ -838,49 +845,77 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
     return { totalUSD, totalHTG };
   };
 
-  // Calculate unified total in preferred currency (before discount)
+  // Calculate unified total in preferred currency (before discount) using centralized hook
   const getUnifiedTotal = () => {
-    const { totalUSD, totalHTG } = getTotalsByCurrency();
-    const rate = companySettings?.usd_htg_rate || 132;
-    const displayCurrency = companySettings?.default_display_currency || 'HTG';
-    
-    if (displayCurrency === 'HTG') {
-      // Convert everything to HTG
-      const unifiedHTG = totalHTG + (totalUSD * rate);
-      return { amount: unifiedHTG, currency: 'HTG' as const };
-    } else {
-      // Convert everything to USD
-      const unifiedUSD = totalUSD + (totalHTG / rate);
-      return { amount: unifiedUSD, currency: 'USD' as const };
+    if (!currencyCalc) {
+      // Fallback if hook not ready
+      const { totalUSD, totalHTG } = getTotalsByCurrency();
+      const rate = companySettings?.usd_htg_rate || 132;
+      const displayCurrency = companySettings?.default_display_currency || 'HTG';
+      
+      if (displayCurrency === 'HTG') {
+        return { amount: totalHTG + (totalUSD * rate), currency: 'HTG' as const };
+      } else {
+        return { amount: totalUSD + (totalHTG / rate), currency: 'USD' as const };
+      }
     }
+    
+    // Convert cart items to SaleItemForCalc format
+    const saleItems = cart.map(item => ({
+      subtotal: item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity),
+      currency: (item.currency || 'HTG') as 'USD' | 'HTG',
+      profit_amount: 0
+    }));
+    
+    const result = currencyCalc.calculateUnifiedSubtotal(saleItems);
+    return { amount: result.unified, currency: result.displayCurrency };
   };
 
   // Calculate unified total WITH discount AND TVA applied (final TTC amount to pay)
   const getUnifiedFinalTotal = () => {
-    const { totalUSD, totalHTG } = getTotalsByCurrency();
-    const rate = companySettings?.usd_htg_rate || 132;
-    const displayCurrency = companySettings?.default_display_currency || 'HTG';
-    const discountAmount = getDiscountAmount();
-    const tvaRate = companySettings?.tva_rate || 0;
-    
-    if (displayCurrency === 'HTG') {
-      // Convert everything to HTG
-      const unifiedHTG = totalHTG + (totalUSD * rate);
-      // Apply discount to unified total
-      const afterDiscount = Math.max(0, unifiedHTG - discountAmount);
-      // Add TVA to get TTC
-      const tva = afterDiscount * (tvaRate / 100);
-      return { amount: afterDiscount + tva, currency: 'HTG' as const };
-    } else {
-      // Convert everything to USD
-      const unifiedUSD = totalUSD + (totalHTG / rate);
-      // Convert discount to USD and apply
-      const discountInUSD = discountAmount / rate;
-      const afterDiscount = Math.max(0, unifiedUSD - discountInUSD);
-      // Add TVA to get TTC
-      const tva = afterDiscount * (tvaRate / 100);
-      return { amount: afterDiscount + tva, currency: 'USD' as const };
+    if (!currencyCalc) {
+      // Fallback calculation
+      const { totalUSD, totalHTG } = getTotalsByCurrency();
+      const rate = companySettings?.usd_htg_rate || 132;
+      const displayCurrency = companySettings?.default_display_currency || 'HTG';
+      const discountAmount = getDiscountAmount();
+      const tvaRate = companySettings?.tva_rate || 0;
+      
+      if (displayCurrency === 'HTG') {
+        const unifiedHTG = totalHTG + (totalUSD * rate);
+        const afterDiscount = Math.max(0, unifiedHTG - discountAmount);
+        const tva = afterDiscount * (tvaRate / 100);
+        return { amount: afterDiscount + tva, currency: 'HTG' as const };
+      } else {
+        const unifiedUSD = totalUSD + (totalHTG / rate);
+        const rate2 = companySettings?.usd_htg_rate || 132;
+        const discountInUSD = discountAmount / rate2;
+        const afterDiscount = Math.max(0, unifiedUSD - discountInUSD);
+        const tva = afterDiscount * (tvaRate / 100);
+        return { amount: afterDiscount + tva, currency: 'USD' as const };
+      }
     }
+    
+    // Use centralized hook for calculation
+    const saleItems = cart.map(item => ({
+      subtotal: item.actualPrice !== undefined ? item.actualPrice : (item.price * item.cartQuantity),
+      currency: (item.currency || 'HTG') as 'USD' | 'HTG',
+      profit_amount: 0
+    }));
+    
+    // Calculate actual discount amount based on type
+    const discVal = parseFloat(discountValue) || 0;
+    const unifiedSubtotal = currencyCalc.calculateUnifiedSubtotal(saleItems).unified;
+    const actualDiscountAmount = discountType === 'percentage'
+      ? Math.min(unifiedSubtotal * (discVal / 100), unifiedSubtotal)
+      : Math.min(discVal, unifiedSubtotal);
+    
+    const result = currencyCalc.calculateTotalTTC({
+      items: saleItems,
+      discountAmount: actualDiscountAmount
+    });
+    
+    return { amount: result.totalTTC, currency: result.currency };
   };
 
   // Calculate discount amount based on UNIFIED total (properly converted)
