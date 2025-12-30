@@ -40,8 +40,11 @@ import { KPICard } from './KPICard';
 import { AdminBusinessHealth } from './AdminBusinessHealth';
 import { AdminTopSellersChart } from './AdminTopSellersChart';
 import { RecentActivities } from './RecentActivities';
-import { formatNumber, calculateUnifiedTotal, calculateUnifiedProfit } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 import { generateAdminDashboardPdf } from '@/lib/adminDashboardPdf';
+import { useSaleCalculations } from '@/hooks/useSaleCalculations';
+import { useCurrencyCalculations } from '@/hooks/useCurrencyCalculations';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
 
 interface RevenueData {
   date: string;
@@ -72,6 +75,11 @@ interface SellerData {
 const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
 
 export const AdminDashboardCharts = () => {
+  // Centralized hooks
+  const { settings: companySettingsHook } = useCompanySettings();
+  const saleCalc = useSaleCalculations();
+  const currencyCalc = useCurrencyCalculations();
+  
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
   const [topProducts, setTopProducts] = useState<ProductSalesData[]>([]);
@@ -101,8 +109,10 @@ export const AdminDashboardCharts = () => {
   const [prevWeekRevenue, setPrevWeekRevenue] = useState(0);
   const [prevMonthRevenue, setPrevMonthRevenue] = useState(0);
   const [prevMonthProfit, setPrevMonthProfit] = useState(0);
-  const [usdHtgRate, setUsdHtgRate] = useState(132);
-  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'HTG'>('HTG');
+  
+  // Use hook values with fallbacks
+  const usdHtgRate = companySettingsHook?.usdHtgRate || 132;
+  const displayCurrency = companySettingsHook?.displayCurrency || 'HTG';
 
   // Sparkline data
   const [revenueSparkline, setRevenueSparkline] = useState<number[]>([]);
@@ -144,20 +154,15 @@ export const AdminDashboardCharts = () => {
   }, [fetchData]);
 
   const fetchCompanySettings = async () => {
-    const { data } = await supabase
-      .from('company_settings')
-      .select('usd_htg_rate, default_display_currency')
-      .single();
-    if (data?.usd_htg_rate) {
-      setUsdHtgRate(data.usd_htg_rate);
-    }
-    if (data?.default_display_currency) {
-      setDisplayCurrency(data.default_display_currency as 'USD' | 'HTG');
-    }
-    return data;
+    // Use hook values - already fetched by useCompanySettings
+    const rate = companySettingsHook?.usdHtgRate || 132;
+    const currency = companySettingsHook?.displayCurrency || 'HTG';
+    return { usd_htg_rate: rate, default_display_currency: currency };
   };
 
   const fetchSparklineData = async (rate: number, currency: 'USD' | 'HTG') => {
+    if (!currencyCalc) return;
+    
     const days = 7;
     const sparklineRevenue: number[] = [];
     const sparklineProfit: number[] = [];
@@ -183,8 +188,16 @@ export const AdminDashboardCharts = () => {
         .gte('created_at', dayStart.toISOString())
         .lte('created_at', dayEnd.toISOString());
 
-      sparklineRevenue.push(calculateUnifiedTotal(items || [], rate, currency).unified);
-      sparklineProfit.push(calculateUnifiedProfit(items || [], rate, currency));
+      // Use centralized calculation
+      const saleItems = (items || []).map(item => ({
+        subtotal: item.subtotal,
+        currency: (item.currency || 'HTG') as 'USD' | 'HTG',
+        profit_amount: item.profit_amount || 0
+      }));
+      
+      const subtotalResult = currencyCalc.calculateUnifiedSubtotal(saleItems);
+      sparklineRevenue.push(subtotalResult.unified);
+      sparklineProfit.push(currencyCalc.calculateUnifiedProfit(saleItems));
       sparklineSales.push(salesData?.length || 0);
     }
 
@@ -206,9 +219,18 @@ export const AdminDashboardCharts = () => {
   };
 
   const fetchStatsData = async (rate: number, currency: 'USD' | 'HTG') => {
+    if (!currencyCalc) return;
+    
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      
+      // Helper to convert items to SaleItemForCalc format
+      const toSaleItems = (items: any[]) => (items || []).map(item => ({
+        subtotal: item.subtotal,
+        currency: (item.currency || 'HTG') as 'USD' | 'HTG',
+        profit_amount: item.profit_amount || 0
+      }));
       
       // Today's data
       const { data: todayData } = await supabase
@@ -223,8 +245,9 @@ export const AdminDashboardCharts = () => {
         .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', today.toISOString());
       
-      const todayRev = calculateUnifiedTotal(todayItems || [], rate, currency).unified;
-      const todayPft = calculateUnifiedProfit(todayItems || [], rate, currency);
+      const todaySaleItems = toSaleItems(todayItems);
+      const todayRev = currencyCalc.calculateUnifiedSubtotal(todaySaleItems).unified;
+      const todayPft = currencyCalc.calculateUnifiedProfit(todaySaleItems);
       setTodayRevenue(todayRev);
       setTodayProfit(todayPft);
 
@@ -243,8 +266,9 @@ export const AdminDashboardCharts = () => {
         .gte('sales.created_at', yesterday.toISOString())
         .lt('sales.created_at', today.toISOString());
       
-      setYesterdayRevenue(calculateUnifiedTotal(yesterdayItems || [], rate, currency).unified);
-      setYesterdayProfit(calculateUnifiedProfit(yesterdayItems || [], rate, currency));
+      const yesterdaySaleItems = toSaleItems(yesterdayItems);
+      setYesterdayRevenue(currencyCalc.calculateUnifiedSubtotal(yesterdaySaleItems).unified);
+      setYesterdayProfit(currencyCalc.calculateUnifiedProfit(yesterdaySaleItems));
 
       // Week data
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -253,8 +277,9 @@ export const AdminDashboardCharts = () => {
         .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', weekAgo.toISOString());
       
-      setWeekRevenue(calculateUnifiedTotal(weekItems || [], rate, currency).unified);
-      setWeekProfit(calculateUnifiedProfit(weekItems || [], rate, currency));
+      const weekSaleItems = toSaleItems(weekItems);
+      setWeekRevenue(currencyCalc.calculateUnifiedSubtotal(weekSaleItems).unified);
+      setWeekProfit(currencyCalc.calculateUnifiedProfit(weekSaleItems));
 
       // Previous week
       const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
@@ -264,7 +289,8 @@ export const AdminDashboardCharts = () => {
         .gte('sales.created_at', twoWeeksAgo.toISOString())
         .lt('sales.created_at', weekAgo.toISOString());
       
-      setPrevWeekRevenue(calculateUnifiedTotal(prevWeekItems || [], rate, currency).unified);
+      const prevWeekSaleItems = toSaleItems(prevWeekItems);
+      setPrevWeekRevenue(currencyCalc.calculateUnifiedSubtotal(prevWeekSaleItems).unified);
 
       // Month data
       const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -273,8 +299,9 @@ export const AdminDashboardCharts = () => {
         .select('subtotal, profit_amount, currency, sales!inner(created_at)')
         .gte('sales.created_at', monthAgo.toISOString());
       
-      setMonthRevenue(calculateUnifiedTotal(monthItems || [], rate, currency).unified);
-      setMonthProfit(calculateUnifiedProfit(monthItems || [], rate, currency));
+      const monthSaleItems = toSaleItems(monthItems);
+      setMonthRevenue(currencyCalc.calculateUnifiedSubtotal(monthSaleItems).unified);
+      setMonthProfit(currencyCalc.calculateUnifiedProfit(monthSaleItems));
 
       // Previous month
       const twoMonthsAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
@@ -284,8 +311,9 @@ export const AdminDashboardCharts = () => {
         .gte('sales.created_at', twoMonthsAgo.toISOString())
         .lt('sales.created_at', monthAgo.toISOString());
       
-      setPrevMonthRevenue(calculateUnifiedTotal(prevMonthItems || [], rate, currency).unified);
-      setPrevMonthProfit(calculateUnifiedProfit(prevMonthItems || [], rate, currency));
+      const prevMonthSaleItems = toSaleItems(prevMonthItems);
+      setPrevMonthRevenue(currencyCalc.calculateUnifiedSubtotal(prevMonthSaleItems).unified);
+      setPrevMonthProfit(currencyCalc.calculateUnifiedProfit(prevMonthSaleItems));
 
       // Products count
       const { count: productsCount } = await supabase
@@ -319,9 +347,18 @@ export const AdminDashboardCharts = () => {
   };
 
   const fetchRevenueData = async (rate: number, currency: 'USD' | 'HTG') => {
+    if (!currencyCalc) return;
+    
     const daysBack = period === 'daily' ? 7 : period === 'weekly' ? 28 : 90;
     
     const chartData: RevenueData[] = [];
+    
+    // Helper to convert items
+    const toSaleItems = (items: any[]) => (items || []).map(item => ({
+      subtotal: item.subtotal,
+      currency: (item.currency || 'HTG') as 'USD' | 'HTG',
+      profit_amount: item.profit_amount || 0
+    }));
     
     for (let i = daysBack - 1; i >= 0; i--) {
       const dayStart = new Date();
@@ -343,8 +380,9 @@ export const AdminDashboardCharts = () => {
         .gte('created_at', dayStart.toISOString())
         .lte('created_at', dayEnd.toISOString());
 
-      const revenue = calculateUnifiedTotal(items || [], rate, currency).unified;
-      const profit = calculateUnifiedProfit(items || [], rate, currency);
+      const saleItems = toSaleItems(items);
+      const revenue = currencyCalc.calculateUnifiedSubtotal(saleItems).unified;
+      const profit = currencyCalc.calculateUnifiedProfit(saleItems);
 
       chartData.push({
         date: dayStart.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
