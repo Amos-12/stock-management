@@ -7,6 +7,8 @@ import { Printer, Receipt as ReceiptIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { generateReceipt, generateInvoice } from '@/lib/pdfGenerator';
 import { toast } from '@/hooks/use-toast';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { useCurrencyCalculations } from '@/hooks/useCurrencyCalculations';
 
 interface SaleDetailsDialogProps {
   saleId: string | null;
@@ -34,25 +36,17 @@ interface SaleItem {
 export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [saleData, setSaleData] = useState<any>(null);
-  const [companySettings, setCompanySettings] = useState<any>(null);
   const [sellerName, setSellerName] = useState('');
+
+  // Use centralized hooks
+  const { settings: companySettings } = useCompanySettings();
+  const currencyCalc = useCurrencyCalculations();
 
   useEffect(() => {
     if (open && saleId) {
       loadSaleDetails();
-      loadCompanySettings();
     }
   }, [open, saleId]);
-
-  const loadCompanySettings = async () => {
-    const { data } = await supabase
-      .from('company_settings')
-      .select('*')
-      .single();
-    if (data) {
-      setCompanySettings(data);
-    }
-  };
 
   const loadSaleDetails = async () => {
     if (!saleId) return;
@@ -137,6 +131,21 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
   const handlePrintReceipt = () => {
     if (!saleData || !companySettings) return;
 
+    // Convert hook settings to pdfGenerator format
+    const pdfSettings = {
+      company_name: companySettings.companyName,
+      company_description: companySettings.companyDescription,
+      address: companySettings.address,
+      city: companySettings.city,
+      phone: companySettings.phone,
+      email: companySettings.email,
+      tva_rate: companySettings.tvaRate,
+      logo_url: companySettings.logoUrl || undefined,
+      payment_terms: companySettings.paymentTerms || undefined,
+      usd_htg_rate: companySettings.usdHtgRate,
+      default_display_currency: companySettings.displayCurrency,
+    };
+
     const cartItems = saleData.items.map((item: SaleItem) => ({
       id: item.product_id,
       name: item.product_name,
@@ -147,19 +156,32 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
       actualPrice: item.subtotal,
       displayUnit: item.unit,
       currency: item.currency || 'HTG',
-      // Données fer
       diametre: item.products?.diametre,
       bars_per_ton: item.products?.bars_per_ton,
-      // Données céramique
       surface_par_boite: item.products?.surface_par_boite
     }));
 
-    generateReceipt(saleData, companySettings, cartItems, sellerName);
+    generateReceipt(saleData, pdfSettings, cartItems, sellerName);
   };
 
   const handlePrintInvoice = () => {
     if (!saleData || !companySettings) return;
 
+    // Convert hook settings to pdfGenerator format
+    const pdfSettings = {
+      company_name: companySettings.companyName,
+      company_description: companySettings.companyDescription,
+      address: companySettings.address,
+      city: companySettings.city,
+      phone: companySettings.phone,
+      email: companySettings.email,
+      tva_rate: companySettings.tvaRate,
+      logo_url: companySettings.logoUrl || undefined,
+      payment_terms: companySettings.paymentTerms || undefined,
+      usd_htg_rate: companySettings.usdHtgRate,
+      default_display_currency: companySettings.displayCurrency,
+    };
+
     const cartItems = saleData.items.map((item: SaleItem) => ({
       id: item.product_id,
       name: item.product_name,
@@ -170,49 +192,41 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
       actualPrice: item.subtotal,
       displayUnit: item.unit,
       currency: item.currency || 'HTG',
-      // Données fer
       diametre: item.products?.diametre,
       bars_per_ton: item.products?.bars_per_ton,
-      // Données céramique
       surface_par_boite: item.products?.surface_par_boite
     }));
 
-    generateInvoice(saleData, companySettings, cartItems, sellerName);
+    generateInvoice(saleData, pdfSettings, cartItems, sellerName);
   };
 
-  // Calculate unified total with TVA
+  // Calculate unified total with TVA using centralized hooks
   const getUnifiedTotals = (): { subtotal: number; tva: number; total: number; currency: string; tvaRate: number } => {
-    if (!companySettings || !saleData) return { subtotal: 0, tva: 0, total: saleData?.total_amount || 0, currency: 'HTG', tvaRate: 0 };
-    
-    const rate = companySettings.usd_htg_rate || 132;
-    const displayCurrency = companySettings.default_display_currency || 'HTG';
-    const tvaRate = companySettings.tva_rate || 0;
-    
-    let unifiedSubtotal = 0;
-    if (displayCurrency === 'HTG') {
-      unifiedSubtotal = currencySubtotals.htg + (currencySubtotals.usd * rate);
-    } else {
-      unifiedSubtotal = currencySubtotals.usd + (currencySubtotals.htg / rate);
+    if (!companySettings || !saleData || !currencyCalc) {
+      return { subtotal: 0, tva: 0, total: saleData?.total_amount || 0, currency: 'HTG', tvaRate: 0 };
     }
     
-    // Apply discount if any - convert to display currency
-    let subtotalAfterDiscount = unifiedSubtotal;
-    if (saleData.discount_amount > 0) {
-      // Le discount est stocké en HTG, convertir si on affiche en USD
-      const discountInDisplayCurrency = displayCurrency === 'USD'
-        ? saleData.discount_amount / rate
-        : saleData.discount_amount;
-      subtotalAfterDiscount -= discountInDisplayCurrency;
-    }
+    const displayCurrency = companySettings.displayCurrency;
+    const tvaRate = companySettings.tvaRate;
     
-    // Calculate TVA
-    const tvaAmount = tvaRate > 0 ? (subtotalAfterDiscount * tvaRate / 100) : 0;
-    const totalTTC = subtotalAfterDiscount + tvaAmount;
+    // Convert items to SaleItemForCalc format
+    const saleItems = saleData.items.map((item: SaleItem) => ({
+      subtotal: item.subtotal,
+      currency: (item.currency || 'HTG') as 'USD' | 'HTG',
+      profit_amount: 0
+    }));
+    
+    // Use centralized calculation
+    const result = currencyCalc.calculateTotalTTC({
+      items: saleItems,
+      discountAmount: saleData.discount_amount || 0,
+      discountCurrency: 'HTG'
+    });
     
     return { 
-      subtotal: subtotalAfterDiscount, 
-      tva: tvaAmount, 
-      total: totalTTC, 
+      subtotal: result.subtotalHT, 
+      tva: result.tva, 
+      total: result.totalTTC, 
       currency: displayCurrency,
       tvaRate 
     };
@@ -223,16 +237,16 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
       <DialogContent className="w-[95vw] sm:w-auto max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader className="flex flex-row items-center justify-between gap-2">
           <DialogTitle className="text-base sm:text-lg">Détails de la vente</DialogTitle>
-          {companySettings?.default_display_currency && (
+          {companySettings?.displayCurrency && (
             <Badge 
               variant="outline" 
               className={`text-xs px-2 py-1 ${
-                companySettings.default_display_currency === 'USD' 
+                companySettings.displayCurrency === 'USD' 
                   ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700' 
                   : 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
               }`}
             >
-              Affichage: {companySettings.default_display_currency === 'USD' ? '$ USD' : 'HTG'}
+              Affichage: {companySettings.displayCurrency === 'USD' ? '$ USD' : 'HTG'}
             </Badge>
           )}
         </DialogHeader>
@@ -345,7 +359,7 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
                   {companySettings && (
                     <div className="flex justify-between text-[10px] sm:text-xs text-muted-foreground border-t pt-2">
                       <span>Taux:</span>
-                      <span>1 USD = {companySettings.usd_htg_rate || 132} HTG</span>
+                      <span>1 USD = {companySettings.usdHtgRate || 132} HTG</span>
                     </div>
                   )}
                 </>
@@ -370,8 +384,8 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
                   </span>
                   <span>
                     {(() => {
-                      const displayCurr = companySettings?.default_display_currency || 'HTG';
-                      const rate = companySettings?.usd_htg_rate || 132;
+                      const displayCurr = companySettings?.displayCurrency || 'HTG';
+                      const rate = companySettings?.usdHtgRate || 132;
                       const discountConverted = displayCurr === 'USD' 
                         ? saleData.discount_amount / rate 
                         : saleData.discount_amount;

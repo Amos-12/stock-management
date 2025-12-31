@@ -11,6 +11,8 @@ import { toast } from '@/hooks/use-toast';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { generateTvaReportPDF } from '@/lib/pdfGenerator';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { useCurrencyCalculations } from '@/hooks/useCurrencyCalculations';
 
 interface TvaSaleData {
   id: string;
@@ -42,7 +44,6 @@ const formatNumber = (amount: number): string => {
 export const TvaReport = () => {
   const [salesData, setSalesData] = useState<TvaSaleData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [companySettings, setCompanySettings] = useState<any>(null);
   const [dateFrom, setDateFrom] = useState(() => {
     const date = new Date();
     date.setDate(1); // First day of current month
@@ -56,6 +57,10 @@ export const TvaReport = () => {
     unifiedTotalHT: 0, unifiedTotalTVA: 0, unifiedTotalTTC: 0
   });
 
+  // Use centralized hooks
+  const { settings: companySettings } = useCompanySettings();
+  const currencyCalc = useCurrencyCalculations();
+
   const { 
     paginatedItems, 
     currentPage, 
@@ -68,22 +73,8 @@ export const TvaReport = () => {
     hasPrevPage 
   } = usePagination(salesData, 20);
 
-  useEffect(() => {
-    fetchCompanySettings();
-  }, []);
-
-  const fetchCompanySettings = async () => {
-    const { data } = await supabase
-      .from('company_settings')
-      .select('*')
-      .single();
-    if (data) {
-      setCompanySettings(data);
-    }
-  };
-
   const fetchTvaData = async () => {
-    if (!companySettings) {
+    if (!companySettings || !currencyCalc) {
       toast({
         title: "Erreur",
         description: "Paramètres de l'entreprise non chargés",
@@ -137,15 +128,24 @@ export const TvaReport = () => {
 
       setSalesData(enrichedSales);
 
-      // Calculate totals
-      const tvaRate = companySettings.tva_rate || 0;
-      const rate = companySettings.usd_htg_rate || 132;
-      const displayCurrency = companySettings.default_display_currency || 'HTG';
+      // Calculate totals using centralized calculation logic
+      const tvaRate = companySettings.tvaRate;
+      const rate = companySettings.usdHtgRate;
+      const displayCurrency = companySettings.displayCurrency;
 
       let totalHT_HTG = 0, totalHT_USD = 0;
       
       enrichedSales.forEach(sale => {
-        // Subtract discount proportionally from each currency
+        // Convert items to format for currencyCalc
+        const saleItems = [
+          { subtotal: sale.htg_subtotal, currency: 'HTG' as const, profit_amount: 0 },
+          { subtotal: sale.usd_subtotal, currency: 'USD' as const, profit_amount: 0 }
+        ].filter(item => item.subtotal > 0);
+        
+        // Calculate unified subtotal
+        const subtotalResult = currencyCalc.calculateUnifiedSubtotal(saleItems);
+        
+        // Subtract discount proportionally
         const totalRaw = sale.htg_subtotal + sale.usd_subtotal;
         const discountRatio = totalRaw > 0 ? sale.discount_amount / totalRaw : 0;
         
@@ -158,16 +158,16 @@ export const TvaReport = () => {
       const totalTTC_HTG = totalHT_HTG + totalTVA_HTG;
       const totalTTC_USD = totalHT_USD + totalTVA_USD;
 
-      // Unified totals
+      // Unified totals using currencyCalc.convert
       let unifiedTotalHT: number, unifiedTotalTVA: number, unifiedTotalTTC: number;
       if (displayCurrency === 'HTG') {
-        unifiedTotalHT = totalHT_HTG + (totalHT_USD * rate);
-        unifiedTotalTVA = totalTVA_HTG + (totalTVA_USD * rate);
-        unifiedTotalTTC = totalTTC_HTG + (totalTTC_USD * rate);
+        unifiedTotalHT = totalHT_HTG + currencyCalc.convert(totalHT_USD, 'USD', 'HTG');
+        unifiedTotalTVA = totalTVA_HTG + currencyCalc.convert(totalTVA_USD, 'USD', 'HTG');
+        unifiedTotalTTC = totalTTC_HTG + currencyCalc.convert(totalTTC_USD, 'USD', 'HTG');
       } else {
-        unifiedTotalHT = totalHT_USD + (totalHT_HTG / rate);
-        unifiedTotalTVA = totalTVA_USD + (totalTVA_HTG / rate);
-        unifiedTotalTTC = totalTTC_USD + (totalTTC_HTG / rate);
+        unifiedTotalHT = totalHT_USD + currencyCalc.convert(totalHT_HTG, 'HTG', 'USD');
+        unifiedTotalTVA = totalTVA_USD + currencyCalc.convert(totalTVA_HTG, 'HTG', 'USD');
+        unifiedTotalTTC = totalTTC_USD + currencyCalc.convert(totalTTC_HTG, 'HTG', 'USD');
       }
 
       setTotals({
@@ -192,9 +192,24 @@ export const TvaReport = () => {
   const handleExportPDF = () => {
     if (!companySettings) return;
     
+    // Convert hook settings to pdfGenerator format
+    const pdfCompanySettings = {
+      company_name: companySettings.companyName,
+      company_description: companySettings.companyDescription,
+      address: companySettings.address,
+      city: companySettings.city,
+      phone: companySettings.phone,
+      email: companySettings.email,
+      tva_rate: companySettings.tvaRate,
+      logo_url: companySettings.logoUrl || undefined,
+      payment_terms: companySettings.paymentTerms || undefined,
+      usd_htg_rate: companySettings.usdHtgRate,
+      default_display_currency: companySettings.displayCurrency,
+    };
+    
     generateTvaReportPDF(
       salesData,
-      companySettings,
+      pdfCompanySettings,
       { from: new Date(dateFrom), to: new Date(dateTo) },
       totals
     );
@@ -221,23 +236,18 @@ export const TvaReport = () => {
   };
 
   const getTvaForSale = (sale: TvaSaleData) => {
-    if (!companySettings) return { ht: 0, tva: 0, ttc: 0 };
-    const tvaRate = companySettings.tva_rate || 0;
-    const rate = companySettings.usd_htg_rate || 132;
-    const displayCurrency = companySettings.default_display_currency || 'HTG';
+    if (!companySettings || !currencyCalc) return { ht: 0, tva: 0, ttc: 0 };
+    const tvaRate = companySettings.tvaRate;
+    const displayCurrency = companySettings.displayCurrency;
 
-    // Calculate HT after discount
+    // Calculate HT after discount using centralized logic
     const totalRaw = sale.htg_subtotal + sale.usd_subtotal;
     const discountRatio = totalRaw > 0 ? sale.discount_amount / totalRaw : 0;
     const htHTG = sale.htg_subtotal * (1 - discountRatio);
     const htUSD = sale.usd_subtotal * (1 - discountRatio);
 
-    let ht: number;
-    if (displayCurrency === 'HTG') {
-      ht = htHTG + (htUSD * rate);
-    } else {
-      ht = htUSD + (htHTG / rate);
-    }
+    // Convert to display currency
+    const ht = currencyCalc.convert(htHTG, 'HTG', displayCurrency) + currencyCalc.convert(htUSD, 'USD', displayCurrency);
 
     const tva = ht * tvaRate / 100;
     const ttc = ht + tva;
@@ -245,8 +255,8 @@ export const TvaReport = () => {
     return { ht, tva, ttc };
   };
 
-  const displayCurrency = companySettings?.default_display_currency || 'HTG';
-  const tvaRate = companySettings?.tva_rate || 0;
+  const displayCurrency = companySettings?.displayCurrency || 'HTG';
+  const tvaRate = companySettings?.tvaRate || 0;
 
   return (
     <div className="space-y-4 sm:space-y-6">

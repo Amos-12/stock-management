@@ -32,6 +32,8 @@ import { fr } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn, formatNumber } from '@/lib/utils';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { useCurrencyCalculations } from '@/hooks/useCurrencyCalculations';
 
 interface SalesData {
   date: string;
@@ -76,9 +78,13 @@ export const AdvancedReports = () => {
   const [reportType, setReportType] = useState<'sales' | 'products' | 'sellers'>('sales');
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
-  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'HTG'>('HTG');
-  const [usdHtgRate, setUsdHtgRate] = useState(132);
+  
+  // Use centralized hooks
+  const { settings: companySettings } = useCompanySettings();
+  const currencyCalc = useCurrencyCalculations();
+  
+  const displayCurrency = companySettings?.displayCurrency || 'HTG';
+  const usdHtgRate = companySettings?.usdHtgRate || 132;
   
   // Dynamic filters state
   const [selectedSeller, setSelectedSeller] = useState<string>('all');
@@ -91,20 +97,27 @@ export const AdvancedReports = () => {
   const [sellers, setSellers] = useState<{ id: string; name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; nom: string }[]>([]);
 
-  // Fetch company settings for PDF export
+  // Fetch filter data
   useEffect(() => {
-    const fetchCompanySettings = async () => {
-      const { data } = await supabase
-        .from('company_settings')
-        .select('*')
-        .single();
-      if (data) {
-        setCompanySettings(data as CompanySettings);
-        setDisplayCurrency((data.default_display_currency as 'USD' | 'HTG') || 'HTG');
-        setUsdHtgRate(data.usd_htg_rate || 132);
+    const fetchFilterData = async () => {
+      // Fetch sellers
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name');
+      if (profiles) {
+        setSellers(profiles.map(p => ({ id: p.user_id, name: p.full_name })));
+      }
+      
+      // Fetch categories
+      const { data: cats } = await supabase
+        .from('categories')
+        .select('id, nom')
+        .eq('is_active', true);
+      if (cats) {
+        setCategories(cats);
       }
     };
-    fetchCompanySettings();
+    fetchFilterData();
   }, []);
 
   // Fetch filter data
@@ -131,6 +144,8 @@ export const AdvancedReports = () => {
   }, []);
 
   const generateReport = async () => {
+    if (!currencyCalc) return;
+    
     try {
       setLoading(true);
       
@@ -148,12 +163,14 @@ export const AdvancedReports = () => {
           customer_name,
           created_at,
           seller_id,
+          discount_amount,
           sale_items (
             product_name,
             quantity,
             unit_price,
             subtotal,
-            currency
+            currency,
+            profit_amount
           )
         `)
         .gte('created_at', fromDate)
@@ -198,7 +215,7 @@ export const AdvancedReports = () => {
         })
       );
 
-      // Calculate report data with multi-currency support
+      // Calculate report data using centralized hooks
       let totalRevenueUSD = 0;
       let totalRevenueHTG = 0;
       let totalProfit = 0;
@@ -211,6 +228,8 @@ export const AdvancedReports = () => {
           } else {
             totalRevenueHTG += item.subtotal || 0;
           }
+          // Calculate profit with currency conversion
+          totalProfit += currencyCalc.convert(item.profit_amount || 0, currency, displayCurrency);
         });
       });
 
@@ -220,16 +239,6 @@ export const AdvancedReports = () => {
         : totalRevenueUSD + (totalRevenueHTG / rate);
       const totalSales = salesWithSellers.length;
       const averageOrderValue = totalSales > 0 ? totalRevenueConverted / totalSales : 0;
-
-      // Calculate total profit
-      for (const sale of salesWithSellers) {
-        const { data: itemsData } = await supabase
-          .from('sale_items')
-          .select('profit_amount')
-          .eq('sale_id', sale.id);
-        
-        totalProfit += itemsData?.reduce((sum, item) => sum + (item.profit_amount || 0), 0) || 0;
-      }
 
       // Top products with currency conversion
       const productSales: Record<string, { product_name: string; quantity_sold: number; revenueUSD: number; revenueHTG: number }> = {};
@@ -514,7 +523,22 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
       return;
     }
     
-    generateAdvancedReportPDF(reportData, companySettings, dateRange);
+    // Convert hook settings to pdfGenerator format
+    const pdfCompanySettings = {
+      company_name: companySettings.companyName,
+      company_description: companySettings.companyDescription,
+      address: companySettings.address,
+      city: companySettings.city,
+      phone: companySettings.phone,
+      email: companySettings.email,
+      tva_rate: companySettings.tvaRate,
+      logo_url: companySettings.logoUrl || undefined,
+      payment_terms: companySettings.paymentTerms || undefined,
+      usd_htg_rate: companySettings.usdHtgRate,
+      default_display_currency: companySettings.displayCurrency,
+    };
+    
+    generateAdvancedReportPDF(reportData, pdfCompanySettings, dateRange);
     
     toast({
       title: "Export réussi",
@@ -776,7 +800,7 @@ ${reportData.paymentMethods.map(p => `${p.method},${p.count},${p.percentage.toFi
                 <div className="text-sm sm:text-lg font-bold text-primary">
                   {formatCurrencyDisplay(reportData.totalRevenueConverted)}
                 </div>
-                <p className="text-[8px] sm:text-xs text-muted-foreground hidden sm:block">Taux: 1 USD = {companySettings?.usd_htg_rate || 132} HTG</p>
+                <p className="text-[8px] sm:text-xs text-muted-foreground hidden sm:block">Taux: 1 USD = {companySettings?.usdHtgRate || 132} HTG</p>
               </CardContent>
             </Card>
 
