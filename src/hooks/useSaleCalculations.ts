@@ -11,6 +11,7 @@ export interface SaleForCalc {
   discount_amount?: number | null;
   discount_type?: string | null;
   discount_value?: number | null;
+  discount_currency?: string | null;
   seller_id?: string;
   customer_name?: string | null;
   payment_method?: string | null;
@@ -73,12 +74,15 @@ export function useSaleCalculations(): SaleCalculations | null {
   const { settings, loading } = useCompanySettings();
 
   const calculateSaleTotal = useCallback((sale: SaleForCalc, items: SaleItemForCalc[]) => {
+    // Use the discount_currency from the sale, fallback to HTG for older sales
+    const discountCurrency = (sale.discount_currency || 'HTG') as 'USD' | 'HTG';
+    
     if (!calc) {
       // Fallback calculation without hook
       const result = currencyUtils.calculateTotalTTC(
         items,
         sale.discount_amount || 0,
-        'HTG', // Assume discount is in HTG
+        discountCurrency,
         settings.usdHtgRate,
         settings.displayCurrency,
         settings.tvaRate
@@ -97,7 +101,7 @@ export function useSaleCalculations(): SaleCalculations | null {
     const result = calc.calculateTotalTTC({
       items,
       discountAmount: sale.discount_amount || 0,
-      discountCurrency: 'HTG', // Discount is stored in HTG
+      discountCurrency: discountCurrency,
     });
     
     // Calculate profit with discount adjustment
@@ -240,14 +244,15 @@ export function useSaleCalculations(): SaleCalculations | null {
     const profitNet = calculateNetProfit(periodSales, periodItems);
     const tvaCollected = calculateTvaCollected(periodSales, periodItems);
 
-    // Calculate total discount
+    // Calculate total discount using discount_currency
     let totalDiscount = 0;
     periodSales.forEach(sale => {
       if (sale.discount_amount) {
+        const discountCurrency = (sale.discount_currency || 'HTG') as 'USD' | 'HTG';
         // Convert discount to display currency
         totalDiscount += currencyUtils.convert(
           sale.discount_amount,
-          'HTG',
+          discountCurrency,
           settings.displayCurrency,
           settings.usdHtgRate
         );
@@ -290,10 +295,13 @@ export const saleCalculationUtils = {
     displayCurrency: 'USD' | 'HTG',
     tvaRate: number
   ) => {
+    // Use the discount_currency from the sale, fallback to HTG for older sales
+    const discountCurrency = (sale.discount_currency || 'HTG') as 'USD' | 'HTG';
+    
     const result = currencyUtils.calculateTotalTTC(
       items,
       sale.discount_amount || 0,
-      'HTG',
+      discountCurrency,
       usdHtgRate,
       displayCurrency,
       tvaRate
