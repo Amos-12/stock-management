@@ -161,12 +161,37 @@ export const AdminDashboardCharts = () => {
   };
 
   const fetchSparklineData = async (rate: number, currency: 'USD' | 'HTG') => {
-    if (!currencyCalc) return;
+    if (!saleCalc) return;
     
     const days = 7;
     const sparklineRevenue: number[] = [];
     const sparklineProfit: number[] = [];
     const sparklineSales: number[] = [];
+
+    // Fetch all sales and items once for efficiency
+    const { data: allSales } = await supabase
+      .from('sales')
+      .select('id, created_at, total_amount, subtotal, discount_amount, discount_currency');
+    
+    const { data: allItems } = await supabase
+      .from('sale_items')
+      .select('sale_id, subtotal, profit_amount, currency');
+    
+    const sales = (allSales || []).map(s => ({
+      id: s.id,
+      created_at: s.created_at,
+      total_amount: s.total_amount,
+      subtotal: s.subtotal,
+      discount_amount: s.discount_amount,
+      discount_currency: s.discount_currency
+    }));
+    
+    const items = (allItems || []).map(item => ({
+      sale_id: item.sale_id,
+      subtotal: item.subtotal,
+      currency: (item.currency || 'HTG') as 'USD' | 'HTG',
+      profit_amount: item.profit_amount || 0
+    }));
 
     for (let i = days - 1; i >= 0; i--) {
       const dayStart = new Date();
@@ -176,29 +201,11 @@ export const AdminDashboardCharts = () => {
       const dayEnd = new Date(dayStart);
       dayEnd.setHours(23, 59, 59, 999);
 
-      const { data: items } = await supabase
-        .from('sale_items')
-        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
-        .gte('sales.created_at', dayStart.toISOString())
-        .lte('sales.created_at', dayEnd.toISOString());
-
-      const { data: salesData } = await supabase
-        .from('sales')
-        .select('id')
-        .gte('created_at', dayStart.toISOString())
-        .lte('created_at', dayEnd.toISOString());
-
-      // Use centralized calculation
-      const saleItems = (items || []).map(item => ({
-        subtotal: item.subtotal,
-        currency: (item.currency || 'HTG') as 'USD' | 'HTG',
-        profit_amount: item.profit_amount || 0
-      }));
+      const dayStats = saleCalc.calculatePeriodStats(sales, items, dayStart, dayEnd);
       
-      const subtotalResult = currencyCalc.calculateUnifiedSubtotal(saleItems);
-      sparklineRevenue.push(subtotalResult.unified);
-      sparklineProfit.push(currencyCalc.calculateUnifiedProfit(saleItems));
-      sparklineSales.push(salesData?.length || 0);
+      sparklineRevenue.push(dayStats.revenueHT);
+      sparklineProfit.push(dayStats.profitNet);
+      sparklineSales.push(dayStats.count);
     }
 
     setRevenueSparkline(sparklineRevenue);
@@ -219,101 +226,79 @@ export const AdminDashboardCharts = () => {
   };
 
   const fetchStatsData = async (rate: number, currency: 'USD' | 'HTG') => {
-    if (!currencyCalc) return;
+    if (!saleCalc) return;
     
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const now = new Date();
       
-      // Helper to convert items to SaleItemForCalc format
-      const toSaleItems = (items: any[]) => (items || []).map(item => ({
+      // Fetch all sales with discount info for accurate calculations
+      const { data: allSales } = await supabase
+        .from('sales')
+        .select('id, created_at, total_amount, subtotal, discount_amount, discount_currency, discount_type, discount_value');
+      
+      // Fetch all sale items with sale_id
+      const { data: allItems } = await supabase
+        .from('sale_items')
+        .select('sale_id, subtotal, profit_amount, currency');
+      
+      const sales = (allSales || []).map(s => ({
+        id: s.id,
+        created_at: s.created_at,
+        total_amount: s.total_amount,
+        subtotal: s.subtotal,
+        discount_amount: s.discount_amount,
+        discount_currency: s.discount_currency,
+        discount_type: s.discount_type,
+        discount_value: s.discount_value
+      }));
+      
+      const items = (allItems || []).map(item => ({
+        sale_id: item.sale_id,
         subtotal: item.subtotal,
         currency: (item.currency || 'HTG') as 'USD' | 'HTG',
         profit_amount: item.profit_amount || 0
       }));
       
-      // Today's data
-      const { data: todayData } = await supabase
-        .from('sales')
-        .select('id')
-        .gte('created_at', today.toISOString());
+      // Today's stats
+      const todayStats = saleCalc.calculatePeriodStats(sales, items, today, now);
+      setTodaySales(todayStats.count);
+      setTodayRevenue(todayStats.revenueHT); // Use HT (after discount, before TVA) for dashboard
+      setTodayProfit(todayStats.profitNet);
+      setAvgBasket(todayStats.avgBasket);
       
-      setTodaySales(todayData?.length || 0);
-
-      const { data: todayItems } = await supabase
-        .from('sale_items')
-        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
-        .gte('sales.created_at', today.toISOString());
-      
-      const todaySaleItems = toSaleItems(todayItems);
-      const todayRev = currencyCalc.calculateUnifiedSubtotal(todaySaleItems).unified;
-      const todayPft = currencyCalc.calculateUnifiedProfit(todaySaleItems);
-      setTodayRevenue(todayRev);
-      setTodayProfit(todayPft);
-
-      // Average basket
-      if (todayData && todayData.length > 0) {
-        setAvgBasket(todayRev / todayData.length);
-      }
-
-      // Yesterday's data
+      // Yesterday's stats
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-      
-      const { data: yesterdayItems } = await supabase
-        .from('sale_items')
-        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
-        .gte('sales.created_at', yesterday.toISOString())
-        .lt('sales.created_at', today.toISOString());
-      
-      const yesterdaySaleItems = toSaleItems(yesterdayItems);
-      setYesterdayRevenue(currencyCalc.calculateUnifiedSubtotal(yesterdaySaleItems).unified);
-      setYesterdayProfit(currencyCalc.calculateUnifiedProfit(yesterdaySaleItems));
+      const yesterdayEnd = new Date(today);
+      yesterdayEnd.setMilliseconds(-1);
+      const yesterdayStats = saleCalc.calculatePeriodStats(sales, items, yesterday, yesterdayEnd);
+      setYesterdayRevenue(yesterdayStats.revenueHT);
+      setYesterdayProfit(yesterdayStats.profitNet);
 
-      // Week data
+      // Week stats
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const { data: weekItems } = await supabase
-        .from('sale_items')
-        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
-        .gte('sales.created_at', weekAgo.toISOString());
-      
-      const weekSaleItems = toSaleItems(weekItems);
-      setWeekRevenue(currencyCalc.calculateUnifiedSubtotal(weekSaleItems).unified);
-      setWeekProfit(currencyCalc.calculateUnifiedProfit(weekSaleItems));
+      const weekStats = saleCalc.calculatePeriodStats(sales, items, weekAgo, now);
+      setWeekRevenue(weekStats.revenueHT);
+      setWeekProfit(weekStats.profitNet);
 
-      // Previous week
+      // Previous week stats
       const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-      const { data: prevWeekItems } = await supabase
-        .from('sale_items')
-        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
-        .gte('sales.created_at', twoWeeksAgo.toISOString())
-        .lt('sales.created_at', weekAgo.toISOString());
-      
-      const prevWeekSaleItems = toSaleItems(prevWeekItems);
-      setPrevWeekRevenue(currencyCalc.calculateUnifiedSubtotal(prevWeekSaleItems).unified);
+      const prevWeekStats = saleCalc.calculatePeriodStats(sales, items, twoWeeksAgo, weekAgo);
+      setPrevWeekRevenue(prevWeekStats.revenueHT);
 
-      // Month data
+      // Month stats
       const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const { data: monthItems } = await supabase
-        .from('sale_items')
-        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
-        .gte('sales.created_at', monthAgo.toISOString());
-      
-      const monthSaleItems = toSaleItems(monthItems);
-      setMonthRevenue(currencyCalc.calculateUnifiedSubtotal(monthSaleItems).unified);
-      setMonthProfit(currencyCalc.calculateUnifiedProfit(monthSaleItems));
+      const monthStats = saleCalc.calculatePeriodStats(sales, items, monthAgo, now);
+      setMonthRevenue(monthStats.revenueHT);
+      setMonthProfit(monthStats.profitNet);
 
-      // Previous month
+      // Previous month stats
       const twoMonthsAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
-      const { data: prevMonthItems } = await supabase
-        .from('sale_items')
-        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
-        .gte('sales.created_at', twoMonthsAgo.toISOString())
-        .lt('sales.created_at', monthAgo.toISOString());
-      
-      const prevMonthSaleItems = toSaleItems(prevMonthItems);
-      setPrevMonthRevenue(currencyCalc.calculateUnifiedSubtotal(prevMonthSaleItems).unified);
-      setPrevMonthProfit(currencyCalc.calculateUnifiedProfit(prevMonthSaleItems));
+      const prevMonthStats = saleCalc.calculatePeriodStats(sales, items, twoMonthsAgo, monthAgo);
+      setPrevMonthRevenue(prevMonthStats.revenueHT);
+      setPrevMonthProfit(prevMonthStats.profitNet);
 
       // Products count
       const { count: productsCount } = await supabase
@@ -347,14 +332,38 @@ export const AdminDashboardCharts = () => {
   };
 
   const fetchRevenueData = async (rate: number, currency: 'USD' | 'HTG') => {
-    if (!currencyCalc) return;
+    if (!saleCalc) return;
     
     const daysBack = period === 'daily' ? 7 : period === 'weekly' ? 28 : 90;
     
     const chartData: RevenueData[] = [];
     
-    // Helper to convert items
-    const toSaleItems = (items: any[]) => (items || []).map(item => ({
+    // Fetch all sales and items once for efficiency
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - daysBack);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const { data: allSales } = await supabase
+      .from('sales')
+      .select('id, created_at, total_amount, subtotal, discount_amount, discount_currency')
+      .gte('created_at', startDate.toISOString());
+    
+    const { data: allItems } = await supabase
+      .from('sale_items')
+      .select('sale_id, subtotal, profit_amount, currency')
+      .in('sale_id', (allSales || []).map(s => s.id));
+    
+    const sales = (allSales || []).map(s => ({
+      id: s.id,
+      created_at: s.created_at,
+      total_amount: s.total_amount,
+      subtotal: s.subtotal,
+      discount_amount: s.discount_amount,
+      discount_currency: s.discount_currency
+    }));
+    
+    const items = (allItems || []).map(item => ({
+      sale_id: item.sale_id,
       subtotal: item.subtotal,
       currency: (item.currency || 'HTG') as 'USD' | 'HTG',
       profit_amount: item.profit_amount || 0
@@ -368,27 +377,13 @@ export const AdminDashboardCharts = () => {
       const dayEnd = new Date(dayStart);
       dayEnd.setHours(23, 59, 59, 999);
 
-      const { data: items } = await supabase
-        .from('sale_items')
-        .select('subtotal, profit_amount, currency, sales!inner(created_at)')
-        .gte('sales.created_at', dayStart.toISOString())
-        .lte('sales.created_at', dayEnd.toISOString());
-
-      const { data: salesCount } = await supabase
-        .from('sales')
-        .select('id')
-        .gte('created_at', dayStart.toISOString())
-        .lte('created_at', dayEnd.toISOString());
-
-      const saleItems = toSaleItems(items);
-      const revenue = currencyCalc.calculateUnifiedSubtotal(saleItems).unified;
-      const profit = currencyCalc.calculateUnifiedProfit(saleItems);
+      const dayStats = saleCalc.calculatePeriodStats(sales, items, dayStart, dayEnd);
 
       chartData.push({
         date: dayStart.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
-        revenue,
-        profit,
-        sales: salesCount?.length || 0
+        revenue: dayStats.revenueHT,
+        profit: dayStats.profitNet,
+        sales: dayStats.count
       });
     }
 
