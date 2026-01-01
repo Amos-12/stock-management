@@ -45,6 +45,7 @@ export interface SaleData {
   discount_type: 'percentage' | 'amount' | 'none';
   discount_value: number;
   discount_amount: number;
+  discount_currency?: 'USD' | 'HTG';
   created_at: string;
 }
 
@@ -406,13 +407,18 @@ export const generateReceipt = (
     baseSubtotal = saleData.subtotal;
   }
   
-  // Discount amount - convert to display currency if needed
+  // Discount amount - convert to display currency if needed using discount_currency
   let discountAmount = 0;
   if (saleData.discount_amount > 0) {
-    // Le discount est stocké en HTG, convertir si on affiche en USD
-    discountAmount = displayCurrency === 'HTG' 
-      ? saleData.discount_amount 
-      : saleData.discount_amount / rate;
+    const discountCurrency = saleData.discount_currency || 'HTG';
+    // Convert discount to display currency if different
+    if (discountCurrency === displayCurrency) {
+      discountAmount = saleData.discount_amount;
+    } else if (discountCurrency === 'HTG' && displayCurrency === 'USD') {
+      discountAmount = saleData.discount_amount / rate;
+    } else {
+      discountAmount = saleData.discount_amount * rate;
+    }
   }
   
   if (discountAmount > 0) {
@@ -666,13 +672,18 @@ export const generateInvoice = (
     ? subtotalHTG + (subtotalUSD * rate)
     : subtotalUSD + (subtotalHTG / rate);
   
-  // Discount - use the stored discount_amount directly (already calculated correctly)
+  // Discount - use the stored discount_amount with explicit currency
   let discountAmount = 0;
   if (saleData.discount_amount > 0) {
-    // Convert to display currency if needed
-    discountAmount = displayCurrency === 'HTG' 
-      ? saleData.discount_amount 
-      : saleData.discount_amount / rate;
+    const discountCurrency = saleData.discount_currency || 'HTG';
+    // Convert discount to display currency if different
+    if (discountCurrency === displayCurrency) {
+      discountAmount = saleData.discount_amount;
+    } else if (discountCurrency === 'HTG' && displayCurrency === 'USD') {
+      discountAmount = saleData.discount_amount / rate;
+    } else {
+      discountAmount = saleData.discount_amount * rate;
+    }
   }
   
   const afterDiscount = unifiedSubtotal - discountAmount;

@@ -23,6 +23,7 @@ interface SaleRequest {
   discount_type: 'percentage' | 'amount' | 'none'
   discount_value: number
   discount_amount: number
+  discount_currency?: 'USD' | 'HTG'
   customer_address?: string | null
   items: SaleItem[]
 }
@@ -153,6 +154,7 @@ Deno.serve(async (req) => {
         discount_type: saleData.discount_type,
         discount_value: saleData.discount_value,
         discount_amount: saleData.discount_amount,
+        discount_currency: saleData.discount_currency || 'HTG',
         notes: saleData.customer_address,
         payment_method: saleData.payment_method,
       }])
