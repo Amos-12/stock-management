@@ -216,11 +216,11 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
       profit_amount: 0
     }));
     
-    // Use centralized calculation
+    // Use centralized calculation with explicit discount currency
     const result = currencyCalc.calculateTotalTTC({
       items: saleItems,
       discountAmount: saleData.discount_amount || 0,
-      discountCurrency: 'HTG'
+      discountCurrency: (saleData.discount_currency as 'USD' | 'HTG') || 'HTG'
     });
     
     return { 
@@ -386,9 +386,16 @@ export const SaleDetailsDialog = ({ saleId, open, onOpenChange }: SaleDetailsDia
                     {(() => {
                       const displayCurr = companySettings?.displayCurrency || 'HTG';
                       const rate = companySettings?.usdHtgRate || 132;
-                      const discountConverted = displayCurr === 'USD' 
-                        ? saleData.discount_amount / rate 
-                        : saleData.discount_amount;
+                      const discountCurrency = saleData.discount_currency || 'HTG';
+                      // Convert discount to display currency if different
+                      let discountConverted = saleData.discount_amount;
+                      if (discountCurrency !== displayCurr) {
+                        if (discountCurrency === 'HTG' && displayCurr === 'USD') {
+                          discountConverted = saleData.discount_amount / rate;
+                        } else {
+                          discountConverted = saleData.discount_amount * rate;
+                        }
+                      }
                       return `-${formatCurrencyAmount(discountConverted, displayCurr)}`;
                     })()}
                   </span>

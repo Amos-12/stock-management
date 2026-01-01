@@ -1064,6 +1064,7 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
         discount_type: discountType,
         discount_value: parseFloat(discountValue) || 0,
         discount_amount: discountAmount,
+        discount_currency: displayCurrency,
         total_amount: totalAmount,
         items: cart.map(item => {
           // Pour les céramiques : envoyer directement les m² (pas de conversion en boîtes)

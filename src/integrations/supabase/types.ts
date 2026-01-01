@@ -439,6 +439,7 @@ export type Database = {
           customer_address: string | null
           customer_name: string | null
           discount_amount: number | null
+          discount_currency: string | null
           discount_type: string | null
           discount_value: number | null
           id: string
@@ -453,6 +454,7 @@ export type Database = {
           customer_address?: string | null
           customer_name?: string | null
           discount_amount?: number | null
+          discount_currency?: string | null
           discount_type?: string | null
           discount_value?: number | null
           id?: string
@@ -467,6 +469,7 @@ export type Database = {
           customer_address?: string | null
           customer_name?: string | null
           discount_amount?: number | null
+          discount_currency?: string | null
           discount_type?: string | null
           discount_value?: number | null
           id?: string
