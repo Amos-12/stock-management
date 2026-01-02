@@ -203,7 +203,8 @@ export const AdminDashboardCharts = () => {
 
       const dayStats = saleCalc.calculatePeriodStats(sales, items, dayStart, dayEnd);
       
-      sparklineRevenue.push(dayStats.revenueHT);
+      // Revenu réel = TTC (après remise + TVA)
+      sparklineRevenue.push(dayStats.revenueTTC);
       sparklineProfit.push(dayStats.profitNet);
       sparklineSales.push(dayStats.count);
     }
@@ -264,7 +265,7 @@ export const AdminDashboardCharts = () => {
       // Today's stats
       const todayStats = saleCalc.calculatePeriodStats(sales, items, today, now);
       setTodaySales(todayStats.count);
-      setTodayRevenue(todayStats.revenueHT); // Use HT (after discount, before TVA) for dashboard
+      setTodayRevenue(todayStats.revenueTTC); // Revenu réel (TTC) en devise d'affichage
       setTodayProfit(todayStats.profitNet);
       setAvgBasket(todayStats.avgBasket);
       
@@ -274,30 +275,30 @@ export const AdminDashboardCharts = () => {
       const yesterdayEnd = new Date(today);
       yesterdayEnd.setMilliseconds(-1);
       const yesterdayStats = saleCalc.calculatePeriodStats(sales, items, yesterday, yesterdayEnd);
-      setYesterdayRevenue(yesterdayStats.revenueHT);
+      setYesterdayRevenue(yesterdayStats.revenueTTC);
       setYesterdayProfit(yesterdayStats.profitNet);
 
       // Week stats
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const weekStats = saleCalc.calculatePeriodStats(sales, items, weekAgo, now);
-      setWeekRevenue(weekStats.revenueHT);
+      setWeekRevenue(weekStats.revenueTTC);
       setWeekProfit(weekStats.profitNet);
 
       // Previous week stats
       const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
       const prevWeekStats = saleCalc.calculatePeriodStats(sales, items, twoWeeksAgo, weekAgo);
-      setPrevWeekRevenue(prevWeekStats.revenueHT);
+      setPrevWeekRevenue(prevWeekStats.revenueTTC);
 
       // Month stats
       const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const monthStats = saleCalc.calculatePeriodStats(sales, items, monthAgo, now);
-      setMonthRevenue(monthStats.revenueHT);
+      setMonthRevenue(monthStats.revenueTTC);
       setMonthProfit(monthStats.profitNet);
 
       // Previous month stats
       const twoMonthsAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
       const prevMonthStats = saleCalc.calculatePeriodStats(sales, items, twoMonthsAgo, monthAgo);
-      setPrevMonthRevenue(prevMonthStats.revenueHT);
+      setPrevMonthRevenue(prevMonthStats.revenueTTC);
       setPrevMonthProfit(prevMonthStats.profitNet);
 
       // Products count
@@ -381,7 +382,7 @@ export const AdminDashboardCharts = () => {
 
       chartData.push({
         date: dayStart.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
-        revenue: dayStats.revenueHT,
+        revenue: dayStats.revenueTTC,
         profit: dayStats.profitNet,
         sales: dayStats.count
       });
