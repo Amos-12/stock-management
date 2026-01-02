@@ -22,8 +22,23 @@ import {
   BarChart3,
   PieChart as PieChartIcon,
 } from 'lucide-react';
-import { formatNumber, calculateUnifiedTotal, calculateUnifiedProfit } from '@/lib/utils';
-import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, getDay, getHours } from 'date-fns';
+import { formatNumber } from '@/lib/utils';
+import { useSaleCalculations, SaleForCalc } from '@/hooks/useSaleCalculations';
+import { SaleItemForCalc } from '@/hooks/useCurrencyCalculations';
+import {
+  format,
+  subDays,
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  subMonths,
+  eachDayOfInterval,
+  getDay,
+  getHours,
+} from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   BarChart,
@@ -42,14 +57,11 @@ import {
 
 type Period = 'today' | 'week' | 'month' | 'quarter' | 'custom';
 
-interface Sale {
-  id: string;
-  created_at: string;
-  total_amount: number;
+interface Sale extends SaleForCalc {
   seller_id: string;
 }
 
-interface SaleItem {
+interface SaleItem extends SaleItemForCalc {
   id: string;
   sale_id: string;
   product_name: string;
@@ -78,6 +90,8 @@ const COLORS = [
 ];
 
 export const AnalyticsDashboard = () => {
+  const saleCalc = useSaleCalculations();
+
   const [period, setPeriod] = useState<Period>('week');
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: subDays(new Date(), 7),
@@ -208,14 +222,22 @@ export const AnalyticsDashboard = () => {
   }, [period, dateRange]);
 
   const kpis = useMemo<KPIData>(() => {
-    // Use proper currency conversion for revenue
-    const currentRevenue = calculateUnifiedTotal(saleItems, usdHtgRate, displayCurrency).unified;
-    const previousRevenue = calculateUnifiedTotal(previousSaleItems, usdHtgRate, displayCurrency).unified;
-    
-    // Use proper currency conversion for profit
-    const currentProfit = calculateUnifiedProfit(saleItems, usdHtgRate, displayCurrency);
-    const previousProfit = calculateUnifiedProfit(previousSaleItems, usdHtgRate, displayCurrency);
-    
+    if (!saleCalc) {
+      return {
+        revenue: { current: 0, previous: 0 },
+        profit: { current: 0, previous: 0 },
+        sales: { current: 0, previous: 0 },
+        avgTicket: { current: 0, previous: 0 },
+        uniqueSellers: { current: 0, previous: 0 },
+      };
+    }
+
+    const currentRevenue = saleCalc.calculateRevenueTTC(sales as SaleForCalc[], saleItems as any);
+    const previousRevenue = saleCalc.calculateRevenueTTC(previousSales as SaleForCalc[], previousSaleItems as any);
+
+    const currentProfit = saleCalc.calculateNetProfit(sales as SaleForCalc[], saleItems as any);
+    const previousProfit = saleCalc.calculateNetProfit(previousSales as SaleForCalc[], previousSaleItems as any);
+
     const currentUniqueSellers = new Set(sales.map(s => s.seller_id)).size;
     const previousUniqueSellers = new Set(previousSales.map(s => s.seller_id)).size;
 
@@ -223,39 +245,39 @@ export const AnalyticsDashboard = () => {
       revenue: { current: currentRevenue, previous: previousRevenue },
       profit: { current: currentProfit, previous: previousProfit },
       sales: { current: sales.length, previous: previousSales.length },
-      avgTicket: { 
-        current: sales.length > 0 ? currentRevenue / sales.length : 0, 
-        previous: previousSales.length > 0 ? previousRevenue / previousSales.length : 0 
+      avgTicket: {
+        current: sales.length > 0 ? currentRevenue / sales.length : 0,
+        previous: previousSales.length > 0 ? previousRevenue / previousSales.length : 0,
       },
       uniqueSellers: { current: currentUniqueSellers, previous: previousUniqueSellers },
     };
-  }, [sales, previousSales, saleItems, previousSaleItems, usdHtgRate, displayCurrency]);
+  }, [saleCalc, sales, previousSales, saleItems, previousSaleItems]);
 
   const trendData = useMemo(() => {
+    if (!saleCalc) return [];
+
     const { from, to } = getDateRange(period);
     const days = eachDayOfInterval({ start: from, end: to });
-    
+
     return days.map(day => {
       const dayStart = startOfDay(day);
       const dayEnd = endOfDay(day);
-      
+
       const daySales = sales.filter(s => {
         const saleDate = new Date(s.created_at);
         return saleDate >= dayStart && saleDate <= dayEnd;
       });
-      
-      const dayItems = saleItems.filter(i => 
-        daySales.some(s => s.id === i.sale_id)
-      );
+
+      const dayItems = saleItems.filter(i => daySales.some(s => s.id === (i as any).sale_id));
 
       return {
         date: format(day, 'dd/MM', { locale: fr }),
-        revenue: calculateUnifiedTotal(dayItems, usdHtgRate, displayCurrency).unified,
-        profit: calculateUnifiedProfit(dayItems, usdHtgRate, displayCurrency),
+        revenue: saleCalc.calculateRevenueTTC(daySales as SaleForCalc[], dayItems as any),
+        profit: saleCalc.calculateNetProfit(daySales as SaleForCalc[], dayItems as any),
         salesCount: daySales.length,
       };
     });
-  }, [sales, saleItems, period, usdHtgRate, displayCurrency]);
+  }, [saleCalc, sales, saleItems, period]);
 
   const sparklineData = useMemo(() => {
     return trendData.map(d => ({ value: d.revenue }));
@@ -295,11 +317,11 @@ export const AnalyticsDashboard = () => {
 
       return {
         label: format(day, 'EEE', { locale: fr }),
-        current: calculateUnifiedTotal(currentDayItems, usdHtgRate, displayCurrency).unified,
-        previous: calculateUnifiedTotal(prevDayItems, usdHtgRate, displayCurrency).unified,
+        current: saleCalc ? saleCalc.calculateRevenueTTC(currentDaySales as SaleForCalc[], currentDayItems as any) : 0,
+        previous: saleCalc ? saleCalc.calculateRevenueTTC(prevDaySales as SaleForCalc[], prevDayItems as any) : 0,
       };
     });
-  }, [sales, previousSales, saleItems, previousSaleItems, period, usdHtgRate, displayCurrency]);
+  }, [saleCalc, sales, previousSales, saleItems, previousSaleItems, period]);
 
   const heatmapData = useMemo(() => {
     const data: { day: number; hour: number; value: number }[] = [];
