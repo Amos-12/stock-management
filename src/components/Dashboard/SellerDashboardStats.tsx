@@ -65,7 +65,7 @@ export const SellerDashboardStats = () => {
       // Fetch all sales for this seller
       const { data: allSales, error: allError } = await supabase
         .from('sales')
-        .select('id, created_at, total_amount, subtotal, discount_amount, discount_type, discount_value')
+        .select('id, created_at, total_amount, subtotal, discount_amount, discount_type, discount_value, discount_currency')
         .eq('seller_id', user.id);
 
       if (allError) throw allError;
@@ -205,7 +205,7 @@ export const SellerDashboardStats = () => {
     try {
       const { data: salesData, error } = await supabase
         .from('sales')
-        .select('id, created_at, total_amount, subtotal, discount_amount, discount_type, discount_value, customer_name')
+        .select('id, created_at, total_amount, subtotal, discount_amount, discount_type, discount_value, discount_currency, customer_name')
         .eq('seller_id', user.id)
         .order('created_at', { ascending: false })
         .limit(5);
