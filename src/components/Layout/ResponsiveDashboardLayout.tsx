@@ -54,15 +54,22 @@ export const ResponsiveDashboardLayout = ({
 
   useEffect(() => {
     const fetchCompanySettings = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('company_settings')
         .select('*')
-        .single();
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching company settings:', error);
+        return;
+      }
+
       if (data) {
         setCompanySettings(data);
       }
     };
-    
+
     fetchCompanySettings();
   }, []);
 

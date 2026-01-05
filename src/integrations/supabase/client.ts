@@ -8,10 +8,50 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Retry network errors (mobile connections can be flaky) + add a hard timeout.
+const resilientFetch: typeof fetch = async (input, init) => {
+  const maxAttempts = 3;
+  const timeoutMs = 15000;
+
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(input, {
+        ...init,
+        signal: init?.signal ?? controller.signal,
+      });
+      clearTimeout(timeout);
+      return res;
+    } catch (err) {
+      clearTimeout(timeout);
+      lastError = err;
+
+      const name = (err as any)?.name;
+      const msg = String((err as any)?.message ?? err);
+      const isNetwork = name === 'AbortError' || /Failed to fetch/i.test(msg);
+
+      if (!isNetwork || attempt === maxAttempts) throw err;
+
+      await sleep(300 * attempt);
+    }
+  }
+
+  throw lastError;
+};
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  global: {
+    fetch: resilientFetch,
+  },
 });
