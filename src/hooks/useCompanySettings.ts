@@ -63,7 +63,7 @@ export function useCompanySettings(): UseCompanySettingsReturn {
         .from('company_settings')
         .select('*')
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (fetchError) throw fetchError;
 
