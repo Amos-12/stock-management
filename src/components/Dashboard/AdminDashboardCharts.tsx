@@ -120,16 +120,17 @@ export const AdminDashboardCharts = () => {
   const [salesSparkline, setSalesSparkline] = useState<number[]>([]);
 
   const fetchData = useCallback(async () => {
-    // Wait for saleCalc to be ready before fetching data
-    if (!saleCalc) return;
-    
     try {
       setLoading(true);
+
+      // If calculations aren't ready yet, keep the skeleton and wait for next render.
+      if (!saleCalc) return;
+
       // First fetch company settings to get displayCurrency and rate
       const settings = await fetchCompanySettings();
       const rate = settings?.usd_htg_rate || 132;
       const currency = (settings?.default_display_currency || 'HTG') as 'USD' | 'HTG';
-      
+
       // Then fetch all data that depends on currency settings
       await Promise.all([
         fetchStatsData(rate, currency),
@@ -137,17 +138,18 @@ export const AdminDashboardCharts = () => {
         fetchTopProducts(rate, currency),
         fetchCategoryData(),
         fetchTopSellers(rate, currency),
-        fetchSparklineData(rate, currency)
+        fetchSparklineData(rate, currency),
       ]);
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Error fetching chart data:', error);
       toast({
-        title: "Erreur",
-        description: "Impossible de charger les données",
-        variant: "destructive"
+        title: 'Erreur',
+        description: 'Impossible de charger les données',
+        variant: 'destructive',
       });
     } finally {
+      // Always clear loading, even if saleCalc wasn't ready on the first render
       setLoading(false);
     }
   }, [period, saleCalc]);
