@@ -120,6 +120,9 @@ export const AdminDashboardCharts = () => {
   const [salesSparkline, setSalesSparkline] = useState<number[]>([]);
 
   const fetchData = useCallback(async () => {
+    // Wait for saleCalc to be ready before fetching data
+    if (!saleCalc) return;
+    
     try {
       setLoading(true);
       // First fetch company settings to get displayCurrency and rate
@@ -147,7 +150,7 @@ export const AdminDashboardCharts = () => {
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [period, saleCalc]);
 
   useEffect(() => {
     fetchData();
@@ -395,24 +398,59 @@ export const AdminDashboardCharts = () => {
     const daysBack = period === 'daily' ? 7 : period === 'weekly' ? 28 : 365;
     const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
     
-    const { data, error } = await supabase
+    // Fetch sale items with sale info including discount
+    const { data: itemsData, error } = await supabase
       .from('sale_items')
-      .select('product_name, quantity, subtotal, currency, sales!inner(created_at)')
+      .select('product_name, quantity, subtotal, currency, sale_id, sales!inner(id, created_at, subtotal, discount_amount, discount_currency)')
       .gte('sales.created_at', startDate.toISOString());
 
     if (error) throw error;
 
-    const grouped = data?.reduce((acc: Record<string, { sales: number; revenue: number }>, item) => {
+    // Group items by sale to calculate discount ratio per sale
+    const salesMap = new Map<string, { saleSubtotal: number; discountAmount: number; discountCurrency: string }>();
+    itemsData?.forEach((item: any) => {
+      const saleId = item.sale_id;
+      if (!salesMap.has(saleId)) {
+        salesMap.set(saleId, {
+          saleSubtotal: item.sales.subtotal || 0,
+          discountAmount: item.sales.discount_amount || 0,
+          discountCurrency: item.sales.discount_currency || 'HTG'
+        });
+      }
+    });
+
+    const grouped = itemsData?.reduce((acc: Record<string, { sales: number; revenue: number }>, item: any) => {
       if (!acc[item.product_name]) {
         acc[item.product_name] = { sales: 0, revenue: 0 };
       }
       acc[item.product_name].sales += Number(item.quantity);
-      const itemRevenue = currency === 'USD'
+      
+      // Convert item subtotal to display currency
+      const itemSubtotalInDisplay = currency === 'USD'
         ? (item.currency === 'USD' ? item.subtotal : item.subtotal / rate)
         : (item.currency === 'USD' ? item.subtotal * rate : item.subtotal);
-      acc[item.product_name].revenue += itemRevenue;
+      
+      // Get sale discount info
+      const saleInfo = salesMap.get(item.sale_id);
+      if (saleInfo && saleInfo.saleSubtotal > 0 && saleInfo.discountAmount > 0) {
+        // Convert discount to display currency
+        const discountInDisplay = currency === 'USD'
+          ? (saleInfo.discountCurrency === 'USD' ? saleInfo.discountAmount : saleInfo.discountAmount / rate)
+          : (saleInfo.discountCurrency === 'USD' ? saleInfo.discountAmount * rate : saleInfo.discountAmount);
+        
+        // Calculate proportional discount for this item
+        const discountRatio = itemSubtotalInDisplay / (currency === 'USD'
+          ? (item.currency === 'USD' ? saleInfo.saleSubtotal : saleInfo.saleSubtotal / rate)
+          : (item.currency === 'USD' ? saleInfo.saleSubtotal * rate : saleInfo.saleSubtotal));
+        
+        const itemDiscount = discountInDisplay * discountRatio;
+        acc[item.product_name].revenue += Math.max(0, itemSubtotalInDisplay - itemDiscount);
+      } else {
+        acc[item.product_name].revenue += itemSubtotalInDisplay;
+      }
+      
       return acc;
-    }, {});
+    }, {}) || {};
 
     const totalRevenue = Object.values(grouped).reduce((sum: number, p) => sum + p.revenue, 0);
 
@@ -450,34 +488,69 @@ export const AdminDashboardCharts = () => {
 
   const fetchTopSellers = async (rate: number, currency: 'USD' | 'HTG') => {
     try {
+      // Fetch sales with discount info
+      const { data: salesData } = await supabase
+        .from('sales')
+        .select('id, seller_id, subtotal, discount_amount, discount_currency');
+      
+      // Create a map of sale discount info
+      const salesMap = new Map<string, { sellerId: string; saleSubtotal: number; discountAmount: number; discountCurrency: string }>();
+      salesData?.forEach(sale => {
+        salesMap.set(sale.id, {
+          sellerId: sale.seller_id,
+          saleSubtotal: sale.subtotal || 0,
+          discountAmount: sale.discount_amount || 0,
+          discountCurrency: sale.discount_currency || 'HTG'
+        });
+      });
+
       // Fetch sale_items with currency for proper conversion
       const { data: saleItemsData } = await supabase
         .from('sale_items')
-        .select('subtotal, currency, sales!inner(seller_id)');
+        .select('subtotal, currency, sale_id');
 
-      const sellerGroups = saleItemsData?.reduce((acc: any, item: any) => {
-        const sellerId = item.sales.seller_id;
-        if (!acc[sellerId]) {
-          acc[sellerId] = { sales: new Set(), revenue: 0 };
+      // Group revenue by seller with discount applied proportionally
+      const sellerGroups: Record<string, { revenue: number }> = {};
+      
+      saleItemsData?.forEach((item: any) => {
+        const saleInfo = salesMap.get(item.sale_id);
+        if (!saleInfo) return;
+        
+        const sellerId = saleInfo.sellerId;
+        if (!sellerGroups[sellerId]) {
+          sellerGroups[sellerId] = { revenue: 0 };
         }
-        // Convert to display currency
-        const convertedRevenue = currency === 'USD'
+        
+        // Convert item subtotal to display currency
+        const itemSubtotalInDisplay = currency === 'USD'
           ? (item.currency === 'USD' ? item.subtotal : item.subtotal / rate)
           : (item.currency === 'USD' ? item.subtotal * rate : item.subtotal);
         
-        acc[sellerId].revenue += convertedRevenue;
-        return acc;
-      }, {}) || {};
-
-      // Count unique sales per seller
-      const { data: salesCountData } = await supabase
-        .from('sales')
-        .select('seller_id');
-
-      salesCountData?.forEach(sale => {
-        if (sellerGroups[sale.seller_id]) {
-          sellerGroups[sale.seller_id].sales.add(sale.seller_id);
+        // Apply proportional discount
+        if (saleInfo.saleSubtotal > 0 && saleInfo.discountAmount > 0) {
+          // Convert discount to display currency
+          const discountInDisplay = currency === 'USD'
+            ? (saleInfo.discountCurrency === 'USD' ? saleInfo.discountAmount : saleInfo.discountAmount / rate)
+            : (saleInfo.discountCurrency === 'USD' ? saleInfo.discountAmount * rate : saleInfo.discountAmount);
+          
+          // Calculate sale subtotal in display currency for ratio
+          // This is an approximation - we'll use the stored subtotal directly
+          const saleSubtotalInDisplay = currency === 'USD'
+            ? saleInfo.saleSubtotal / rate // Assume subtotal stored in HTG
+            : saleInfo.saleSubtotal;
+          
+          const discountRatio = itemSubtotalInDisplay / saleSubtotalInDisplay;
+          const itemDiscount = discountInDisplay * Math.min(1, discountRatio);
+          sellerGroups[sellerId].revenue += Math.max(0, itemSubtotalInDisplay - itemDiscount);
+        } else {
+          sellerGroups[sellerId].revenue += itemSubtotalInDisplay;
         }
+      });
+
+      // Count sales per seller
+      const salesCountBySeller: Record<string, number> = {};
+      salesData?.forEach(sale => {
+        salesCountBySeller[sale.seller_id] = (salesCountBySeller[sale.seller_id] || 0) + 1;
       });
 
       const sellerIds = Object.keys(sellerGroups);
@@ -485,12 +558,6 @@ export const AdminDashboardCharts = () => {
         setTopSellers([]);
         return;
       }
-
-      // Get sales count per seller
-      const salesCountBySeller: Record<string, number> = {};
-      salesCountData?.forEach(sale => {
-        salesCountBySeller[sale.seller_id] = (salesCountBySeller[sale.seller_id] || 0) + 1;
-      });
 
       const { data: profilesData } = await supabase
         .from('profiles')
