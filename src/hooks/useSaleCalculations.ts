@@ -273,17 +273,31 @@ export function useSaleCalculations(): SaleCalculations | null {
   // Return null while loading
   if (loading) return null;
 
-  return {
-    calculateRevenueTTC,
-    calculateRevenueHT,
-    calculateNetProfit,
-    calculateTvaCollected,
-    calculatePeriodStats,
-    calculateSaleTotal,
-    displayCurrency: settings.displayCurrency,
-    usdHtgRate: settings.usdHtgRate,
-    tvaRate: settings.tvaRate,
-  };
+  // Memoize to keep a stable reference; prevents downstream effects from re-running endlessly.
+  return useMemo(
+    () => ({
+      calculateRevenueTTC,
+      calculateRevenueHT,
+      calculateNetProfit,
+      calculateTvaCollected,
+      calculatePeriodStats,
+      calculateSaleTotal,
+      displayCurrency: settings.displayCurrency,
+      usdHtgRate: settings.usdHtgRate,
+      tvaRate: settings.tvaRate,
+    }),
+    [
+      calculateRevenueTTC,
+      calculateRevenueHT,
+      calculateNetProfit,
+      calculateTvaCollected,
+      calculatePeriodStats,
+      calculateSaleTotal,
+      settings.displayCurrency,
+      settings.usdHtgRate,
+      settings.tvaRate,
+    ]
+  );
 }
 
 // Pure utility functions for use outside of React (e.g., PDF generation)
