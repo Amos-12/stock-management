@@ -270,11 +270,9 @@ export function useSaleCalculations(): SaleCalculations | null {
     };
   }, [calculateRevenueTTC, calculateRevenueHT, calculateNetProfit, calculateTvaCollected, settings]);
 
-  // Return null while loading
-  if (loading) return null;
-
   // Memoize to keep a stable reference; prevents downstream effects from re-running endlessly.
-  return useMemo(
+  // IMPORTANT: This must be called unconditionally to respect the Rules of Hooks.
+  const result = useMemo<SaleCalculations>(
     () => ({
       calculateRevenueTTC,
       calculateRevenueHT,
@@ -298,6 +296,11 @@ export function useSaleCalculations(): SaleCalculations | null {
       settings.tvaRate,
     ]
   );
+
+  // Return null while loading (AFTER all hooks have been called)
+  if (loading) return null;
+
+  return result;
 }
 
 // Pure utility functions for use outside of React (e.g., PDF generation)
