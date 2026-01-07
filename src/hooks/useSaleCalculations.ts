@@ -73,6 +73,11 @@ export function useSaleCalculations(): SaleCalculations | null {
   const calc = useCurrencyCalculations();
   const { settings, loading } = useCompanySettings();
 
+  // Extract scalar values to avoid unstable object references in dependencies
+  const usdHtgRate = settings.usdHtgRate;
+  const displayCurrency = settings.displayCurrency;
+  const tvaRate = settings.tvaRate;
+
   const calculateSaleTotal = useCallback((sale: SaleForCalc, items: SaleItemForCalc[]) => {
     // Use the discount_currency from the sale, fallback to HTG for older sales
     const discountCurrency = (sale.discount_currency || 'HTG') as 'USD' | 'HTG';
@@ -83,15 +88,15 @@ export function useSaleCalculations(): SaleCalculations | null {
         items,
         sale.discount_amount || 0,
         discountCurrency,
-        settings.usdHtgRate,
-        settings.displayCurrency,
-        settings.tvaRate
+        usdHtgRate,
+        displayCurrency,
+        tvaRate
       );
       
       const profit = currencyUtils.calculateUnifiedProfit(
         items,
-        settings.usdHtgRate,
-        settings.displayCurrency,
+        usdHtgRate,
+        displayCurrency,
         result.subtotalHT > 0 ? (result.discount / result.subtotalHT) * 100 : 0
       );
       
@@ -111,7 +116,7 @@ export function useSaleCalculations(): SaleCalculations | null {
     const profit = calc.calculateUnifiedProfit(items, discountPercent);
     
     return { ...result, profit };
-  }, [calc, settings]);
+  }, [calc, usdHtgRate, displayCurrency, tvaRate]);
 
   const calculateRevenueTTC = useCallback((
     sales: SaleForCalc[],
@@ -248,13 +253,13 @@ export function useSaleCalculations(): SaleCalculations | null {
     let totalDiscount = 0;
     periodSales.forEach(sale => {
       if (sale.discount_amount) {
-        const discountCurrency = (sale.discount_currency || 'HTG') as 'USD' | 'HTG';
+        const discCurrency = (sale.discount_currency || 'HTG') as 'USD' | 'HTG';
         // Convert discount to display currency
         totalDiscount += currencyUtils.convert(
           sale.discount_amount,
-          discountCurrency,
-          settings.displayCurrency,
-          settings.usdHtgRate
+          discCurrency,
+          displayCurrency,
+          usdHtgRate
         );
       }
     });
@@ -268,7 +273,7 @@ export function useSaleCalculations(): SaleCalculations | null {
       tvaCollected,
       totalDiscount,
     };
-  }, [calculateRevenueTTC, calculateRevenueHT, calculateNetProfit, calculateTvaCollected, settings]);
+  }, [calculateRevenueTTC, calculateRevenueHT, calculateNetProfit, calculateTvaCollected, displayCurrency, usdHtgRate]);
 
   // Memoize to keep a stable reference; prevents downstream effects from re-running endlessly.
   // IMPORTANT: This must be called unconditionally to respect the Rules of Hooks.
@@ -280,9 +285,9 @@ export function useSaleCalculations(): SaleCalculations | null {
       calculateTvaCollected,
       calculatePeriodStats,
       calculateSaleTotal,
-      displayCurrency: settings.displayCurrency,
-      usdHtgRate: settings.usdHtgRate,
-      tvaRate: settings.tvaRate,
+      displayCurrency,
+      usdHtgRate,
+      tvaRate,
     }),
     [
       calculateRevenueTTC,
@@ -291,9 +296,9 @@ export function useSaleCalculations(): SaleCalculations | null {
       calculateTvaCollected,
       calculatePeriodStats,
       calculateSaleTotal,
-      settings.displayCurrency,
-      settings.usdHtgRate,
-      settings.tvaRate,
+      displayCurrency,
+      usdHtgRate,
+      tvaRate,
     ]
   );
 
