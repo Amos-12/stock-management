@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -119,12 +119,20 @@ export const AdminDashboardCharts = () => {
   const [profitSparkline, setProfitSparkline] = useState<number[]>([]);
   const [salesSparkline, setSalesSparkline] = useState<number[]>([]);
 
+  // Prevent concurrent fetches
+  const isFetchingRef = useRef(false);
+
   const fetchData = useCallback(async () => {
+    // Guard: if already fetching, skip
+    if (isFetchingRef.current) return;
+    
+    // If calculations aren't ready yet, keep the skeleton and wait for next render.
+    if (!saleCalc) return;
+
+    isFetchingRef.current = true;
+    
     try {
       setLoading(true);
-
-      // If calculations aren't ready yet, keep the skeleton and wait for next render.
-      if (!saleCalc) return;
 
       // First fetch company settings to get displayCurrency and rate
       const settings = await fetchCompanySettings();
@@ -149,8 +157,8 @@ export const AdminDashboardCharts = () => {
         variant: 'destructive',
       });
     } finally {
-      // Always clear loading, even if saleCalc wasn't ready on the first render
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [period, saleCalc]);
 
