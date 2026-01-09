@@ -312,9 +312,10 @@ Deno.serve(async (req) => {
           action_type: 'sale_created',
           entity_type: 'sale',
           entity_id: sale.id,
-          description: `Vente de ${saleData.total_amount.toFixed(2)} HTG créée par ${profile?.full_name || 'Vendeur'} pour ${saleData.customer_name || 'Client anonyme'}`,
+          description: `Vente de ${saleData.total_amount.toFixed(2)} ${saleData.discount_currency || 'HTG'} créée par ${profile?.full_name || 'Vendeur'} pour ${saleData.customer_name || 'Client anonyme'}`,
           metadata: {
             total_amount: saleData.total_amount,
+            currency: saleData.discount_currency || 'HTG',
             items_count: saleData.items.length,
             payment_method: saleData.payment_method
           }

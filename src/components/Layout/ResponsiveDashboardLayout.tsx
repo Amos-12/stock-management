@@ -73,6 +73,13 @@ export const ResponsiveDashboardLayout = ({
     fetchCompanySettings();
   }, []);
 
+  // Update document title dynamically
+  useEffect(() => {
+    if (companySettings?.company_name) {
+      document.title = companySettings.company_name;
+    }
+  }, [companySettings?.company_name]);
+
   useEffect(() => {
     const fetchNotifications = async () => {
       if (role !== 'admin') return;
@@ -308,11 +315,11 @@ export const ResponsiveDashboardLayout = ({
                 )}
                 <h1 className={cn(
                   "font-bold text-primary hidden sm:block max-w-[150px] md:max-w-[250px] lg:max-w-none truncate",
-                  (companySettings?.company_name || 'GF Distribution & Multi-Services').length > 30 
+                  (companySettings?.company_name || 'Gestion de Stock').length > 30 
                     ? "text-base lg:text-lg" 
                     : "text-lg lg:text-xl"
                 )}>
-                  {companySettings?.company_name || 'GF Distribution & Multi-Services'}
+                  {companySettings?.company_name || 'Gestion de Stock'}
                 </h1>
               </div>
             </div>
