@@ -128,6 +128,30 @@ export const ActivityLogPanel = () => {
     );
   };
 
+  const getCurrencyBadge = (log: { action_type: string; metadata?: { currency?: string } }) => {
+    // Only show for sale transactions
+    if (!['sale_created', 'sale_deleted', 'sale_cancelled'].includes(log.action_type)) {
+      return null;
+    }
+    
+    const currency = log.metadata?.currency;
+    if (!currency) return null;
+    
+    const isUSD = currency === 'USD';
+    return (
+      <Badge 
+        variant="outline"
+        className={`text-[10px] sm:text-xs ${
+          isUSD 
+            ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700' 
+            : 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+        }`}
+      >
+        {isUSD ? '$ USD' : 'G HTG'}
+      </Badge>
+    );
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
@@ -304,9 +328,10 @@ export const ActivityLogPanel = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1 sm:gap-2">
+                          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                             <span className="hidden sm:inline">{getActionIcon(log.action_type)}</span>
                             {getActionBadge(log.action_type)}
+                            {getCurrencyBadge(log)}
                           </div>
                         </TableCell>
                         <TableCell className="max-w-md hidden sm:table-cell">
