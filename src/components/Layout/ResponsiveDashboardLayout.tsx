@@ -23,7 +23,8 @@ import {
   UserCheck,
   FolderTree,
   BarChart3,
-  Receipt
+  Receipt,
+  HelpCircle
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -127,13 +128,15 @@ export const ResponsiveDashboardLayout = ({
     { icon: ClipboardList, label: "Logs", value: 'activity' },
     { icon: Bell, label: 'Notifications', value: 'notifications' },
     { icon: Settings, label: 'Paramètres', value: 'settings' },
-    { icon: Database, label: 'Base de données', value: 'database' }
+    { icon: Database, label: 'Base de données', value: 'database' },
+    { icon: HelpCircle, label: 'Aide', value: 'help', route: '/help' }
   ];
 
   const sellerNavItems = [
     { icon: Home, label: 'Dashboard', value: 'dashboard' },
     { icon: ShoppingCart, label: 'Nouvelle vente', value: 'sale' },
-    { icon: TrendingUp, label: 'Mes ventes', value: 'history' }
+    { icon: TrendingUp, label: 'Mes ventes', value: 'history' },
+    { icon: HelpCircle, label: 'Aide', value: 'help', route: '/help' }
   ];
 
   const navItems = role === 'admin' ? adminNavItems : sellerNavItems;
