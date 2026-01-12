@@ -61,6 +61,11 @@ export interface CurrencyCalculations {
 export function useCurrencyCalculations(): CurrencyCalculations | null {
   const { settings, loading } = useCompanySettings();
 
+  // Extract scalar values to avoid unstable object references in dependencies
+  const usdHtgRate = settings.usdHtgRate;
+  const displayCurrency = settings.displayCurrency;
+  const tvaRate = settings.tvaRate;
+
   const convert = useCallback((
     amount: number,
     from: 'USD' | 'HTG' | string | null,
@@ -70,9 +75,9 @@ export function useCurrencyCalculations(): CurrencyCalculations | null {
     if (sourceCurrency === to) return amount;
     
     return sourceCurrency === 'USD'
-      ? amount * settings.usdHtgRate  // USD to HTG
-      : amount / settings.usdHtgRate; // HTG to USD
-  }, [settings.usdHtgRate]);
+      ? amount * usdHtgRate  // USD to HTG
+      : amount / usdHtgRate; // HTG to USD
+  }, [usdHtgRate]);
 
   const format = useCallback((amount: number, currency?: 'USD' | 'HTG'): string => {
     return formatNumber(amount, 2);
@@ -113,25 +118,25 @@ export function useCurrencyCalculations(): CurrencyCalculations | null {
     const hasMultipleCurrencies = htgTotal > 0 && usdTotal > 0;
     
     // Convert to display currency
-    const unified = settings.displayCurrency === 'USD'
-      ? usdTotal + (htgTotal / settings.usdHtgRate)
-      : htgTotal + (usdTotal * settings.usdHtgRate);
+    const unified = displayCurrency === 'USD'
+      ? usdTotal + (htgTotal / usdHtgRate)
+      : htgTotal + (usdTotal * usdHtgRate);
     
     return {
       htg: htgTotal,
       usd: usdTotal,
       unified,
-      displayCurrency: settings.displayCurrency,
+      displayCurrency,
       hasMultipleCurrencies,
     };
-  }, [settings.displayCurrency, settings.usdHtgRate]);
+  }, [displayCurrency, usdHtgRate]);
 
   const calculateTotalTTC = useCallback((params: {
     items: SaleItemForCalc[];
     discountAmount?: number;
     discountCurrency?: 'USD' | 'HTG' | string | null;
   }): TotalTTCResult => {
-    const { items, discountAmount = 0, discountCurrency } = params;
+    const { items, discountAmount = 0, discountCurrency: discCurrency } = params;
     
     // Calculate unified subtotal
     const subtotalResult = calculateUnifiedSubtotal(items);
@@ -139,14 +144,14 @@ export function useCurrencyCalculations(): CurrencyCalculations | null {
     
     // Convert discount to display currency if needed
     const discountInDisplayCurrency = discountAmount > 0
-      ? convert(discountAmount, discountCurrency || 'HTG', settings.displayCurrency)
+      ? convert(discountAmount, discCurrency || 'HTG', displayCurrency)
       : 0;
     
     // Apply discount
     const afterDiscount = Math.max(0, subtotalHT - discountInDisplayCurrency);
     
     // Calculate TVA on post-discount amount
-    const tva = afterDiscount * (settings.tvaRate / 100);
+    const tva = afterDiscount * (tvaRate / 100);
     
     // Final TTC
     const totalTTC = afterDiscount + tva;
@@ -157,9 +162,9 @@ export function useCurrencyCalculations(): CurrencyCalculations | null {
       afterDiscount,
       tva,
       totalTTC,
-      currency: settings.displayCurrency,
+      currency: displayCurrency,
     };
-  }, [settings.displayCurrency, settings.tvaRate, calculateUnifiedSubtotal, convert]);
+  }, [displayCurrency, tvaRate, calculateUnifiedSubtotal, convert]);
 
   const calculateUnifiedProfit = useCallback((
     items: SaleItemForCalc[],
@@ -180,20 +185,19 @@ export function useCurrencyCalculations(): CurrencyCalculations | null {
     });
     
     // Convert to display currency
-    const unifiedProfit = settings.displayCurrency === 'USD'
-      ? usdProfit + (htgProfit / settings.usdHtgRate)
-      : htgProfit + (usdProfit * settings.usdHtgRate);
+    const unifiedProfit = displayCurrency === 'USD'
+      ? usdProfit + (htgProfit / usdHtgRate)
+      : htgProfit + (usdProfit * usdHtgRate);
     
     // Adjust for discount proportion (discount reduces profit proportionally)
     const adjustedProfit = unifiedProfit * (1 - discountPercent / 100);
     
     return adjustedProfit;
-  }, [settings.displayCurrency, settings.usdHtgRate]);
+  }, [displayCurrency, usdHtgRate]);
 
-  // Return null while loading to signal that calculations aren't ready
-  if (loading) return null;
-
-  return {
+  // Memoize the returned object to keep a stable reference
+  // This prevents downstream effects from re-running when none of the dependencies changed
+  const api = useMemo<CurrencyCalculations>(() => ({
     settings,
     convert,
     format,
@@ -203,7 +207,22 @@ export function useCurrencyCalculations(): CurrencyCalculations | null {
     calculateUnifiedSubtotal,
     calculateTotalTTC,
     calculateUnifiedProfit,
-  };
+  }), [
+    settings,
+    convert,
+    format,
+    formatCompact,
+    formatWithSymbol,
+    getCurrencySymbol,
+    calculateUnifiedSubtotal,
+    calculateTotalTTC,
+    calculateUnifiedProfit,
+  ]);
+
+  // Return null while loading to signal that calculations aren't ready
+  if (loading) return null;
+
+  return api;
 }
 
 // Pure utility functions for use outside of React (e.g., PDF generation)

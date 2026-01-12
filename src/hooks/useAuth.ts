@@ -221,9 +221,16 @@ export const useAuth = () => {
         });
       }
 
+      // Fetch company name for welcome message
+      const { data: companyData } = await supabase
+        .from('company_settings')
+        .select('company_name')
+        .limit(1)
+        .maybeSingle();
+
       toast({
         title: "Connexion réussie",
-        description: "Bienvenue sur Complexe Petit Pas !",
+        description: `Bienvenue sur ${companyData?.company_name || 'votre espace'} !`,
       });
 
       return { error: null };

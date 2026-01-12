@@ -23,7 +23,8 @@ import {
   UserCheck,
   FolderTree,
   BarChart3,
-  Receipt
+  Receipt,
+  HelpCircle
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,17 +55,31 @@ export const ResponsiveDashboardLayout = ({
 
   useEffect(() => {
     const fetchCompanySettings = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('company_settings')
         .select('*')
-        .single();
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching company settings:', error);
+        return;
+      }
+
       if (data) {
         setCompanySettings(data);
       }
     };
-    
+
     fetchCompanySettings();
   }, []);
+
+  // Update document title dynamically
+  useEffect(() => {
+    if (companySettings?.company_name) {
+      document.title = companySettings.company_name;
+    }
+  }, [companySettings?.company_name]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -113,13 +128,15 @@ export const ResponsiveDashboardLayout = ({
     { icon: ClipboardList, label: "Logs", value: 'activity' },
     { icon: Bell, label: 'Notifications', value: 'notifications' },
     { icon: Settings, label: 'Paramètres', value: 'settings' },
-    { icon: Database, label: 'Base de données', value: 'database' }
+    { icon: Database, label: 'Base de données', value: 'database' },
+    { icon: HelpCircle, label: 'Aide', value: 'help', route: '/help' }
   ];
 
   const sellerNavItems = [
     { icon: Home, label: 'Dashboard', value: 'dashboard' },
     { icon: ShoppingCart, label: 'Nouvelle vente', value: 'sale' },
-    { icon: TrendingUp, label: 'Mes ventes', value: 'history' }
+    { icon: TrendingUp, label: 'Mes ventes', value: 'history' },
+    { icon: HelpCircle, label: 'Aide', value: 'help', route: '/help' }
   ];
 
   const navItems = role === 'admin' ? adminNavItems : sellerNavItems;
@@ -301,11 +318,11 @@ export const ResponsiveDashboardLayout = ({
                 )}
                 <h1 className={cn(
                   "font-bold text-primary hidden sm:block max-w-[150px] md:max-w-[250px] lg:max-w-none truncate",
-                  (companySettings?.company_name || 'GF Distribution & Multi-Services').length > 30 
+                  (companySettings?.company_name || 'Gestion de Stock').length > 30 
                     ? "text-base lg:text-lg" 
                     : "text-lg lg:text-xl"
                 )}>
-                  {companySettings?.company_name || 'GF Distribution & Multi-Services'}
+                  {companySettings?.company_name || 'Gestion de Stock'}
                 </h1>
               </div>
             </div>

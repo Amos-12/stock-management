@@ -11,6 +11,7 @@ export interface SaleForCalc {
   discount_amount?: number | null;
   discount_type?: string | null;
   discount_value?: number | null;
+  discount_currency?: string | null;
   seller_id?: string;
   customer_name?: string | null;
   payment_method?: string | null;
@@ -72,22 +73,30 @@ export function useSaleCalculations(): SaleCalculations | null {
   const calc = useCurrencyCalculations();
   const { settings, loading } = useCompanySettings();
 
+  // Extract scalar values to avoid unstable object references in dependencies
+  const usdHtgRate = settings.usdHtgRate;
+  const displayCurrency = settings.displayCurrency;
+  const tvaRate = settings.tvaRate;
+
   const calculateSaleTotal = useCallback((sale: SaleForCalc, items: SaleItemForCalc[]) => {
+    // Use the discount_currency from the sale, fallback to HTG for older sales
+    const discountCurrency = (sale.discount_currency || 'HTG') as 'USD' | 'HTG';
+    
     if (!calc) {
       // Fallback calculation without hook
       const result = currencyUtils.calculateTotalTTC(
         items,
         sale.discount_amount || 0,
-        'HTG', // Assume discount is in HTG
-        settings.usdHtgRate,
-        settings.displayCurrency,
-        settings.tvaRate
+        discountCurrency,
+        usdHtgRate,
+        displayCurrency,
+        tvaRate
       );
       
       const profit = currencyUtils.calculateUnifiedProfit(
         items,
-        settings.usdHtgRate,
-        settings.displayCurrency,
+        usdHtgRate,
+        displayCurrency,
         result.subtotalHT > 0 ? (result.discount / result.subtotalHT) * 100 : 0
       );
       
@@ -97,7 +106,7 @@ export function useSaleCalculations(): SaleCalculations | null {
     const result = calc.calculateTotalTTC({
       items,
       discountAmount: sale.discount_amount || 0,
-      discountCurrency: 'HTG', // Discount is stored in HTG
+      discountCurrency: discountCurrency,
     });
     
     // Calculate profit with discount adjustment
@@ -107,7 +116,7 @@ export function useSaleCalculations(): SaleCalculations | null {
     const profit = calc.calculateUnifiedProfit(items, discountPercent);
     
     return { ...result, profit };
-  }, [calc, settings]);
+  }, [calc, usdHtgRate, displayCurrency, tvaRate]);
 
   const calculateRevenueTTC = useCallback((
     sales: SaleForCalc[],
@@ -240,16 +249,17 @@ export function useSaleCalculations(): SaleCalculations | null {
     const profitNet = calculateNetProfit(periodSales, periodItems);
     const tvaCollected = calculateTvaCollected(periodSales, periodItems);
 
-    // Calculate total discount
+    // Calculate total discount using discount_currency
     let totalDiscount = 0;
     periodSales.forEach(sale => {
       if (sale.discount_amount) {
+        const discCurrency = (sale.discount_currency || 'HTG') as 'USD' | 'HTG';
         // Convert discount to display currency
         totalDiscount += currencyUtils.convert(
           sale.discount_amount,
-          'HTG',
-          settings.displayCurrency,
-          settings.usdHtgRate
+          discCurrency,
+          displayCurrency,
+          usdHtgRate
         );
       }
     });
@@ -263,22 +273,39 @@ export function useSaleCalculations(): SaleCalculations | null {
       tvaCollected,
       totalDiscount,
     };
-  }, [calculateRevenueTTC, calculateRevenueHT, calculateNetProfit, calculateTvaCollected, settings]);
+  }, [calculateRevenueTTC, calculateRevenueHT, calculateNetProfit, calculateTvaCollected, displayCurrency, usdHtgRate]);
 
-  // Return null while loading
+  // Memoize to keep a stable reference; prevents downstream effects from re-running endlessly.
+  // IMPORTANT: This must be called unconditionally to respect the Rules of Hooks.
+  const result = useMemo<SaleCalculations>(
+    () => ({
+      calculateRevenueTTC,
+      calculateRevenueHT,
+      calculateNetProfit,
+      calculateTvaCollected,
+      calculatePeriodStats,
+      calculateSaleTotal,
+      displayCurrency,
+      usdHtgRate,
+      tvaRate,
+    }),
+    [
+      calculateRevenueTTC,
+      calculateRevenueHT,
+      calculateNetProfit,
+      calculateTvaCollected,
+      calculatePeriodStats,
+      calculateSaleTotal,
+      displayCurrency,
+      usdHtgRate,
+      tvaRate,
+    ]
+  );
+
+  // Return null while loading (AFTER all hooks have been called)
   if (loading) return null;
 
-  return {
-    calculateRevenueTTC,
-    calculateRevenueHT,
-    calculateNetProfit,
-    calculateTvaCollected,
-    calculatePeriodStats,
-    calculateSaleTotal,
-    displayCurrency: settings.displayCurrency,
-    usdHtgRate: settings.usdHtgRate,
-    tvaRate: settings.tvaRate,
-  };
+  return result;
 }
 
 // Pure utility functions for use outside of React (e.g., PDF generation)
@@ -290,10 +317,13 @@ export const saleCalculationUtils = {
     displayCurrency: 'USD' | 'HTG',
     tvaRate: number
   ) => {
+    // Use the discount_currency from the sale, fallback to HTG for older sales
+    const discountCurrency = (sale.discount_currency || 'HTG') as 'USD' | 'HTG';
+    
     const result = currencyUtils.calculateTotalTTC(
       items,
       sale.discount_amount || 0,
-      'HTG',
+      discountCurrency,
       usdHtgRate,
       displayCurrency,
       tvaRate

@@ -1,64 +1,62 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveDashboardLayout } from '@/components/Layout/ResponsiveDashboardLayout';
 import { SellerWorkflow } from '@/components/Seller/SellerWorkflow';
 import { SellerDashboardStats } from '@/components/Dashboard/SellerDashboardStats';
 import { StockAlerts } from '@/components/Notifications/StockAlerts';
 import { ProductManagement } from '@/components/Products/ProductManagement';
+import { SaleDetailsDialog } from '@/components/Sales/SaleDetailsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   TrendingUp,
   Receipt,
-  Calendar
+  Calendar,
+  Eye
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useSaleCalculations, SaleForCalc } from '@/hooks/useSaleCalculations';
 import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import logo from '@/assets/logo.png';
 
-interface Sale {
+interface EnrichedSale {
   id: string;
   customer_name?: string;
   total_amount: number;
   payment_method: string;
   created_at: string;
+  discount_amount?: number;
+  discount_currency?: string;
+  subtotal?: number;
+  displayAmount: number;
 }
 
 const SellerDashboard = () => {
   const { user, loading: authLoading, role } = useAuth();
-  const [sales, setSales] = useState<Sale[]>([]);
+  const saleCalc = useSaleCalculations();
+  const [sales, setSales] = useState<EnrichedSale[]>([]);
   const [currentSection, setCurrentSection] = useState('dashboard');
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
   const [loadingApproval, setLoadingApproval] = useState(true);
-  const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'HTG'>('HTG');
-  const [usdHtgRate, setUsdHtgRate] = useState(132);
   const [periodFilter, setPeriodFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [showSaleDetails, setShowSaleDetails] = useState(false);
+
+  // Use hook values with fallbacks
+  const displayCurrency = saleCalc?.displayCurrency || 'HTG';
 
   useEffect(() => {
     if (user && !authLoading) {
       checkApprovalStatus();
-      fetchCompanySettings();
     }
   }, [user, authLoading]);
 
   // Refetch sales when period filter changes
   useEffect(() => {
-    if (user && !authLoading && currentSection === 'history') {
+    if (user && !authLoading && saleCalc && currentSection === 'history') {
       fetchMySales();
     }
-  }, [periodFilter, currentSection]);
-
-  const fetchCompanySettings = async () => {
-    const { data } = await supabase
-      .from('company_settings')
-      .select('usd_htg_rate, default_display_currency')
-      .single();
-    
-    if (data) {
-      setUsdHtgRate(data.usd_htg_rate || 132);
-      setDisplayCurrency((data.default_display_currency || 'HTG') as 'USD' | 'HTG');
-    }
-  };
+  }, [periodFilter, currentSection, saleCalc]);
 
   const checkApprovalStatus = async () => {
     if (!user) return;
@@ -81,13 +79,13 @@ const SellerDashboard = () => {
     }
   };
 
-  const fetchMySales = async () => {
-    if (!user) return;
+  const fetchMySales = useCallback(async () => {
+    if (!user || !saleCalc) return;
 
     try {
       let query = supabase
         .from('sales')
-        .select('*')
+        .select('id, created_at, total_amount, subtotal, discount_amount, discount_currency, discount_type, discount_value, customer_name, payment_method')
         .eq('seller_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -105,13 +103,36 @@ const SellerDashboard = () => {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-      setSales(data || []);
+      
+      if (!data || data.length === 0) {
+        setSales([]);
+        return;
+      }
+
+      // Fetch sale items for proper calculation
+      const saleIds = data.map(s => s.id);
+      const { data: saleItems } = await supabase
+        .from('sale_items')
+        .select('sale_id, subtotal, currency, profit_amount')
+        .in('sale_id', saleIds);
+
+      // Calculate proper TTC for each sale using the centralized hook
+      const enrichedSales: EnrichedSale[] = data.map(sale => {
+        const itemsForSale = (saleItems || []).filter(item => item.sale_id === sale.id);
+        const result = saleCalc.calculateSaleTotal(sale as SaleForCalc, itemsForSale);
+        
+        return {
+          ...sale,
+          displayAmount: result.totalTTC
+        };
+      });
+
+      setSales(enrichedSales);
     } catch (error) {
       console.error('Error fetching sales:', error);
     }
-  };
+  }, [user, saleCalc, periodFilter]);
 
   const renderContent = () => {
     switch (currentSection) {
@@ -131,8 +152,8 @@ const SellerDashboard = () => {
           month: 'Ce mois'
         };
         
-        // Calculate total for filtered period
-        const periodTotal = sales.reduce((sum, sale) => sum + sale.total_amount, 0);
+        // Calculate total for filtered period using displayAmount (properly calculated TTC)
+        const periodTotal = sales.reduce((sum, sale) => sum + sale.displayAmount, 0);
         
         return (
           <Card className="shadow-lg">
@@ -165,7 +186,7 @@ const SellerDashboard = () => {
                   <span>Total {periodLabels[periodFilter]}:</span>
                   <span className="font-semibold text-foreground">
                     {displayCurrency === 'USD' 
-                      ? `$${(periodTotal / usdHtgRate).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                      ? `$${periodTotal.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
                       : `${periodTotal.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} HTG`
                     }
                   </span>
@@ -183,11 +204,16 @@ const SellerDashboard = () => {
                   {sales.map((sale) => (
                     <div 
                       key={sale.id} 
-                      className="flex items-center justify-between p-2 sm:p-3 border rounded-lg hover:bg-accent/50 transition-all"
+                      className="flex items-center justify-between p-2 sm:p-3 border rounded-lg hover:bg-accent/50 transition-all cursor-pointer group"
+                      onClick={() => {
+                        setSelectedSaleId(sale.id);
+                        setShowSaleDetails(true);
+                      }}
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-xs sm:text-sm truncate max-w-[140px] sm:max-w-none">
+                        <div className="font-medium text-xs sm:text-sm truncate max-w-[140px] sm:max-w-none flex items-center gap-1">
                           {sale.customer_name || 'Client anonyme'}
+                          <Eye className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                         <div className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 sm:gap-2 flex-wrap">
                           <span>
@@ -207,8 +233,8 @@ const SellerDashboard = () => {
                       <div className="text-right flex-shrink-0 ml-2">
                         <div className="font-bold text-xs sm:text-sm text-success">
                           {displayCurrency === 'USD' 
-                            ? `$${(sale.total_amount / usdHtgRate).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
-                            : `${sale.total_amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} HTG`
+                            ? `$${sale.displayAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                            : `${sale.displayAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} HTG`
                           }
                         </div>
                       </div>
@@ -261,6 +287,12 @@ const SellerDashboard = () => {
       <div className="space-y-6">
         {renderContent()}
       </div>
+
+      <SaleDetailsDialog
+        saleId={selectedSaleId}
+        open={showSaleDetails}
+        onOpenChange={setShowSaleDetails}
+      />
     </ResponsiveDashboardLayout>
   );
 };

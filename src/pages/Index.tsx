@@ -12,12 +12,28 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, profile, loading, isActive, signOut } = useAuth();
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
+  const [companyName, setCompanyName] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
     return () => {
       mountedRef.current = false;
     };
+  }, []);
+
+  // Fetch company name for display
+  useEffect(() => {
+    const fetchCompanyName = async () => {
+      const { data } = await supabase
+        .from('company_settings')
+        .select('company_name')
+        .limit(1)
+        .maybeSingle();
+      if (data?.company_name && mountedRef.current) {
+        setCompanyName(data.company_name);
+      }
+    };
+    fetchCompanyName();
   }, []);
 
   const handleCreateAdmin = async () => {
@@ -97,7 +113,7 @@ const Index = () => {
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
               <img src={logo} alt="Logo" className="w-12 h-12 object-contain mr-3" />
-              <CardTitle className="text-2xl">Complexe Petit Pas</CardTitle>
+              <CardTitle className="text-2xl">{companyName || 'Bienvenue'}</CardTitle>
             </div>
             <p className="text-muted-foreground">
               Système de gestion de stock et de vente
