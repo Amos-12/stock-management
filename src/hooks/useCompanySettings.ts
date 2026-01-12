@@ -19,14 +19,14 @@ const DEFAULT_SETTINGS: CompanySettings = {
   usdHtgRate: 132,
   displayCurrency: 'HTG',
   tvaRate: 10,
-  companyName: 'QUINCAILLERIE PRO',
+  companyName: 'SYSTEM MANAGEMENT',
   address: '123 Rue Principale',
-  city: 'Dakar 10000',
+  city: 'CAYES 8110',
   phone: '+221 XX XXX XX XX',
-  email: 'contact@quincaillerie.sn',
+  email: 'contact@systemmanagement.sn',
   logoUrl: null,
   paymentTerms: 'Paiement comptant ou à crédit selon accord',
-  companyDescription: 'Commerce de détail',
+  companyDescription: 'Gestion de la comptabilité',
 };
 
 interface UseCompanySettingsReturn {
