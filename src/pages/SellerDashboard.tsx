@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveDashboardLayout } from '@/components/Layout/ResponsiveDashboardLayout';
 import { SellerWorkflow } from '@/components/Seller/SellerWorkflow';
+import { ProformaWorkflow } from '@/components/Seller/ProformaWorkflow';
 import { SellerDashboardStats } from '@/components/Dashboard/SellerDashboardStats';
 import { StockAlerts } from '@/components/Notifications/StockAlerts';
 import { ProductManagement } from '@/components/Products/ProductManagement';
@@ -140,6 +141,8 @@ const SellerDashboard = () => {
         return <SellerDashboardStats />;
       case 'sale':
         return <SellerWorkflow onSaleComplete={fetchMySales} />;
+      case 'proforma':
+        return <ProformaWorkflow />;
       case 'products':
         return <ProductManagement />;
       case 'notifications':
