@@ -2031,3 +2031,314 @@ export const generateTvaReportPDF = (
   const fileName = `rapport_tva_${dateRange.from.toISOString().split('T')[0]}_${dateRange.to.toISOString().split('T')[0]}.pdf`;
   pdf.save(fileName);
 };
+
+// ============= PRO-FORMA GENERATION =============
+
+export interface ProformaData {
+  proforma_number: string;
+  customer_name: string;
+  validity_days: number;
+  validity_date: string;
+  created_at: string;
+  subtotal: number;
+  tva_amount: number;
+  total_ttc: number;
+}
+
+export const generateProforma = (
+  proformaData: ProformaData,
+  companySettings: CompanySettings,
+  items: CartItem[],
+  sellerName: string
+) => {
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  let yPos = 20;
+  
+  // Logo
+  if (companySettings.logo_url) {
+    try {
+      const logoX = companySettings.logo_position_x || 15;
+      const logoY = companySettings.logo_position_y || 15;
+      const logoW = companySettings.logo_width || 40;
+      const logoH = companySettings.logo_height || 40;
+      pdf.addImage(companySettings.logo_url, 'PNG', logoX, logoY, logoW, logoH);
+    } catch (error) {
+      console.error('Error loading logo:', error);
+    }
+  }
+  
+  // Company info (top right)
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(companySettings.company_name, 210 - 15, yPos, { align: 'right' });
+  yPos += 5;
+  
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  if (companySettings.company_description) {
+    pdf.text(companySettings.company_description, 210 - 15, yPos, { align: 'right' });
+    yPos += 4;
+  }
+  pdf.text(companySettings.address, 210 - 15, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(companySettings.city, 210 - 15, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(`Tél: ${companySettings.phone}`, 210 - 15, yPos, { align: 'right' });
+  yPos += 4;
+  pdf.text(companySettings.email, 210 - 15, yPos, { align: 'right' });
+  
+  // Reset yPos for title
+  yPos = 70;
+  
+  // Pro-forma title with badge style
+  pdf.setFillColor(59, 130, 246); // Blue background
+  pdf.roundedRect(60, yPos - 8, 90, 14, 2, 2, 'F');
+  pdf.setFontSize(16);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(255, 255, 255);
+  pdf.text('PRO-FORMA / ESTIMATION', 105, yPos, { align: 'center' });
+  pdf.setTextColor(0, 0, 0);
+  yPos += 15;
+  
+  // Pro-forma details
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  const proformaDate = new Date(proformaData.created_at).toLocaleDateString('fr-FR');
+  const validityDate = new Date(proformaData.validity_date).toLocaleDateString('fr-FR');
+  
+  pdf.text(`N° Pro-forma: ${proformaData.proforma_number}`, 15, yPos);
+  pdf.text(`Date: ${proformaDate}`, 15, yPos + 6);
+  pdf.text(`Valide jusqu'au: ${validityDate}`, 15, yPos + 12);
+  pdf.text(`Vendeur: ${sellerName}`, 15, yPos + 18);
+  yPos += 30;
+  
+  // Customer info
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('ESTIMATION POUR:', 15, yPos);
+  yPos += 6;
+  
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(proformaData.customer_name || 'Client', 15, yPos);
+  yPos += 15;
+  
+  // Table header
+  pdf.setFillColor(240, 240, 240);
+  pdf.rect(15, yPos, 180, 8, 'F');
+  
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9);
+  pdf.text('Description', 17, yPos + 5);
+  pdf.text('Qté', 95, yPos + 5, { align: 'right' });
+  pdf.text('Unité', 115, yPos + 5, { align: 'right' });
+  pdf.text('Prix unit.', 150, yPos + 5, { align: 'right' });
+  pdf.text('Montant', 188, yPos + 5, { align: 'right' });
+  yPos += 10;
+  
+  // Table items
+  pdf.setFont('helvetica', 'normal');
+  items.forEach(item => {
+    if (yPos > 260) {
+      pdf.addPage();
+      yPos = 20;
+    }
+    
+    // Build item description
+    let itemDescription = item.name;
+    if (item.category === 'fer' && item.diametre) {
+      itemDescription = `${item.name} Ø${item.diametre}`;
+      if (item.longueur_barre) {
+        itemDescription += ` - L:${item.longueur_barre}m`;
+      }
+    }
+    
+    // Truncate if too long
+    const maxDescLength = 45;
+    const displayDesc = itemDescription.length > maxDescLength 
+      ? itemDescription.substring(0, maxDescLength - 2) + '..' 
+      : itemDescription;
+    pdf.text(displayDesc, 17, yPos);
+    
+    // Quantity display
+    let qtyDisplay = '';
+    let unitText = '';
+    
+    if (item.category === 'fer' && item.bars_per_ton) {
+      const barsQty = Math.round(item.cartQuantity);
+      if (shouldDisplayAsTonnage(barsQty, item.bars_per_ton)) {
+        const tonnage = barsQty / item.bars_per_ton;
+        qtyDisplay = getTonnageLabel(tonnage);
+        unitText = '';
+      } else {
+        qtyDisplay = barsQty.toString();
+        unitText = 'barres';
+      }
+    } else if (item.category === 'fer') {
+      qtyDisplay = Math.round(item.cartQuantity).toString();
+      unitText = 'barres';
+    } else {
+      qtyDisplay = item.cartQuantity.toString();
+      unitText = item.displayUnit || item.unit;
+    }
+    
+    pdf.text(qtyDisplay, 95, yPos, { align: 'right' });
+    pdf.text(unitText, 115, yPos, { align: 'right' });
+    
+    // Unit price and total
+    const itemCurrency = item.currency || 'HTG';
+    const unitPrice = item.actualPrice ? item.actualPrice / item.cartQuantity : item.price;
+    pdf.text(formatAmount(unitPrice, itemCurrency), 150, yPos, { align: 'right' });
+    
+    const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
+    pdf.text(formatAmount(itemTotal, itemCurrency), 188, yPos, { align: 'right' });
+    yPos += 6;
+  });
+  
+  yPos += 5;
+  pdf.line(15, yPos, 195, yPos);
+  yPos += 10;
+  
+  // Calculate totals by currency
+  let subtotalHTG = 0;
+  let subtotalUSD = 0;
+  items.forEach(item => {
+    const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
+    if (item.currency === 'USD') {
+      subtotalUSD += itemTotal;
+    } else {
+      subtotalHTG += itemTotal;
+    }
+  });
+  
+  const hasMultipleCurrencies = subtotalUSD > 0 && subtotalHTG > 0;
+  const rate = companySettings.usd_htg_rate || 132;
+  const displayCurrency = companySettings.default_display_currency || 'HTG';
+  
+  // Calculate unified subtotal
+  const unifiedSubtotal = displayCurrency === 'HTG'
+    ? subtotalHTG + (subtotalUSD * rate)
+    : subtotalUSD + (subtotalHTG / rate);
+  
+  const tvaAmount = unifiedSubtotal * (companySettings.tva_rate / 100);
+  const totalTTC = unifiedSubtotal + tvaAmount;
+  
+  // Totals box
+  const boxX = 110;
+  const boxWidth = 85;
+  const labelX = boxX + 3;
+  const valueX = boxX + boxWidth - 3;
+  const lineHeight = 7;
+  
+  let linesCount = 3; // Sous-total + TVA + Total
+  if (hasMultipleCurrencies) linesCount += 3;
+  
+  const boxHeight = (linesCount * lineHeight) + 12;
+  const boxY = yPos;
+  
+  // Draw box
+  pdf.setFillColor(248, 249, 250);
+  pdf.setDrawColor(200, 200, 200);
+  pdf.roundedRect(boxX, boxY, boxWidth, boxHeight, 2, 2, 'FD');
+  
+  let currentY = boxY + 6;
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  
+  if (hasMultipleCurrencies) {
+    pdf.text('Sous-total USD', labelX, currentY);
+    pdf.text(formatAmount(subtotalUSD, 'USD'), valueX, currentY, { align: 'right' });
+    currentY += lineHeight;
+    
+    pdf.text('Sous-total HTG', labelX, currentY);
+    pdf.text(formatAmount(subtotalHTG, 'HTG'), valueX, currentY, { align: 'right' });
+    currentY += lineHeight;
+    
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'italic');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`Taux: 1 USD = ${rate.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} HTG`, labelX, currentY);
+    pdf.setTextColor(0, 0, 0);
+    currentY += lineHeight;
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+  }
+  
+  // Sous-total HT
+  pdf.text('Sous-total HT', labelX, currentY);
+  pdf.text(formatAmount(unifiedSubtotal, displayCurrency), valueX, currentY, { align: 'right' });
+  currentY += lineHeight;
+  
+  // TVA (indicative)
+  pdf.setFont('helvetica', 'italic');
+  pdf.text(`TVA (${companySettings.tva_rate}%) indicatif`, labelX, currentY);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(formatAmount(tvaAmount, displayCurrency), valueX, currentY, { align: 'right' });
+  currentY += lineHeight + 2;
+  
+  // Separator line
+  pdf.setDrawColor(150, 150, 150);
+  pdf.line(labelX, currentY - 2, valueX, currentY - 2);
+  
+  // Total TTC - blue background for proforma
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(11);
+  pdf.setFillColor(59, 130, 246); // Blue
+  pdf.setTextColor(255, 255, 255);
+  pdf.roundedRect(boxX, currentY - 1, boxWidth, 10, 1, 1, 'F');
+  pdf.text('TOTAL ESTIMÉ TTC', labelX + 1, currentY + 5);
+  pdf.text(formatAmount(totalTTC, displayCurrency), valueX - 1, currentY + 5, { align: 'right' });
+  pdf.setTextColor(0, 0, 0);
+  
+  yPos = boxY + boxHeight + 15;
+  
+  // Disclaimer
+  pdf.setFillColor(255, 243, 205); // Yellow background for warning
+  pdf.setDrawColor(255, 193, 7);
+  pdf.roundedRect(15, yPos, 180, 20, 2, 2, 'FD');
+  
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(133, 100, 4);
+  pdf.text('MENTION IMPORTANTE', 105, yPos + 6, { align: 'center' });
+  
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7);
+  pdf.text('Ce document est une estimation et ne constitue pas une facture.', 105, yPos + 12, { align: 'center' });
+  pdf.text('Les prix indiqués sont susceptibles de modification sans préavis.', 105, yPos + 16, { align: 'center' });
+  pdf.setTextColor(0, 0, 0);
+  
+  yPos += 30;
+  
+  // Validity info
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`Ce pro-forma est valable ${proformaData.validity_days} jours à compter de la date d'émission.`, 15, yPos);
+  
+  // Footer
+  yPos = 280;
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'italic');
+  const thanks = 'Merci de votre intérêt !';
+  pdf.text(thanks, 105, yPos, { align: 'center' });
+  
+  // Open print dialog
+  const pdfBlob = pdf.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  const printWindow = window.open(pdfUrl, '_blank');
+  
+  if (printWindow) {
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  } else {
+    // Fallback: download if popup blocked
+    const fileName = `proforma_${proformaData.proforma_number}_${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(fileName);
+  }
+};
