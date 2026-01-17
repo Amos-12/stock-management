@@ -523,35 +523,35 @@ export const ProformaWorkflow = () => {
         className="hover:shadow-md transition-all cursor-pointer group"
         onClick={() => handleAddProduct(product)}
       >
-        <CardContent className="p-3">
-          <div className="flex items-start gap-3">
-            <div className={`w-10 h-10 rounded-lg ${categoryColor} flex items-center justify-center flex-shrink-0`}>
-              <CategoryIcon className="w-5 h-5 text-white" />
+        <CardContent className="p-2 sm:p-3">
+          <div className="flex items-start gap-2 sm:gap-3">
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${categoryColor} flex items-center justify-center flex-shrink-0`}>
+              <CategoryIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-sm truncate">{product.name}</h4>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className="text-xs">
+              <h4 className="font-medium text-xs sm:text-sm truncate">{product.name}</h4>
+              <div className="flex flex-wrap items-center gap-1 mt-1">
+                <Badge variant="outline" className="text-[10px] sm:text-xs">
                   {product.category}
                 </Badge>
                 {product.diametre && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-[10px] sm:text-xs">
                     Ø{product.diametre}
                   </Badge>
                 )}
                 {product.dimension && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-[10px] sm:text-xs hidden sm:inline-flex">
                     {product.dimension}
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-sm font-bold text-primary">
+              <div className="flex items-center justify-between mt-1.5 sm:mt-2">
+                <span className="text-xs sm:text-sm font-bold text-primary">
                   {formatAmount(product.price, product.currency)}
                 </span>
                 <Badge 
                   variant={product.currency === 'USD' ? 'default' : 'secondary'}
-                  className={product.currency === 'USD' ? 'bg-green-500' : 'bg-blue-500'}
+                  className={`text-[10px] sm:text-xs ${product.currency === 'USD' ? 'bg-green-500' : 'bg-blue-500'}`}
                 >
                   {product.currency}
                 </Badge>
@@ -569,9 +569,9 @@ export const ProformaWorkflow = () => {
       <TableHeader>
         <TableRow>
           <TableHead>Produit</TableHead>
-          <TableHead>Catégorie</TableHead>
+          <TableHead className="hidden sm:table-cell">Catégorie</TableHead>
           <TableHead className="text-right">Prix</TableHead>
-          <TableHead className="text-center">Devise</TableHead>
+          <TableHead className="hidden sm:table-cell text-center">Devise</TableHead>
           <TableHead className="text-center">Action</TableHead>
         </TableRow>
       </TableHeader>
@@ -580,19 +580,19 @@ export const ProformaWorkflow = () => {
           <TableRow key={product.id} className="cursor-pointer hover:bg-muted/50">
             <TableCell>
               <div className="flex items-center gap-2">
-                <span className="font-medium">{product.name}</span>
+                <span className="font-medium text-xs sm:text-sm">{product.name}</span>
                 {product.diametre && (
-                  <Badge variant="outline" className="text-xs">Ø{product.diametre}</Badge>
+                  <Badge variant="outline" className="text-[10px] sm:text-xs">Ø{product.diametre}</Badge>
                 )}
               </div>
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden sm:table-cell">
               <Badge variant="secondary">{product.category}</Badge>
             </TableCell>
-            <TableCell className="text-right font-medium">
+            <TableCell className="text-right font-medium text-xs sm:text-sm">
               {formatAmount(product.price, product.currency)}
             </TableCell>
-            <TableCell className="text-center">
+            <TableCell className="hidden sm:table-cell text-center">
               <Badge 
                 variant={product.currency === 'USD' ? 'default' : 'secondary'}
                 className={product.currency === 'USD' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}
@@ -601,7 +601,7 @@ export const ProformaWorkflow = () => {
               </Badge>
             </TableCell>
             <TableCell className="text-center">
-              <Button size="sm" onClick={() => handleAddProduct(product)}>
+              <Button size="sm" className="h-7 w-7 p-0 sm:h-8 sm:w-auto sm:px-3" onClick={() => handleAddProduct(product)}>
                 <Plus className="w-4 h-4" />
               </Button>
             </TableCell>
@@ -700,31 +700,31 @@ export const ProformaWorkflow = () => {
         </Card>
       )}
 
-      {/* Quantity Dialog */}
+      {/* Quantity Dialog - Bottom sheet on mobile */}
       {showQuantityDialog && selectedProduct && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Quantité - {selectedProduct.name}</span>
-                <Button variant="ghost" size="icon" onClick={() => setShowQuantityDialog(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <Card className="w-full sm:max-w-md rounded-t-xl sm:rounded-xl max-h-[85vh] overflow-y-auto">
+            <CardHeader className="pb-2 sm:pb-4">
+              <CardTitle className="flex items-center justify-between text-sm sm:text-base">
+                <span className="truncate pr-2">Quantité - {selectedProduct.name}</span>
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setShowQuantityDialog(false)}>
                   <X className="w-4 h-4" />
                 </Button>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 pb-6">
               {selectedProduct.category === 'fer' && (
                 <div className="flex gap-2">
                   <Button
                     variant={quantityUnit === 'barre' ? 'default' : 'outline'}
-                    className="flex-1"
+                    className="flex-1 h-10 sm:h-9"
                     onClick={() => setQuantityUnit('barre')}
                   >
                     Barres
                   </Button>
                   <Button
                     variant={quantityUnit === 'tonne' ? 'default' : 'outline'}
-                    className="flex-1"
+                    className="flex-1 h-10 sm:h-9"
                     onClick={() => setQuantityUnit('tonne')}
                   >
                     Tonnes
@@ -733,7 +733,7 @@ export const ProformaWorkflow = () => {
               )}
               
               <div>
-                <Label>
+                <Label className="text-sm">
                   {selectedProduct.category === 'ceramique' 
                     ? 'Surface (m²)' 
                     : quantityUnit === 'tonne' 
@@ -747,22 +747,22 @@ export const ProformaWorkflow = () => {
                   value={customQuantityValue}
                   onChange={(e) => setCustomQuantityValue(e.target.value)}
                   placeholder="Entrez la quantité"
-                  className="mt-2"
+                  className="mt-2 h-11 sm:h-9 text-base sm:text-sm"
                   autoFocus
                 />
                 
                 {selectedProduct.category === 'fer' && quantityUnit === 'tonne' && customQuantityValue && selectedProduct.bars_per_ton && (
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-2">
                     ≈ {tonnageToBarres(parseFloat(customQuantityValue) || 0, selectedProduct.bars_per_ton)} barres
                   </p>
                 )}
               </div>
               
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setShowQuantityDialog(false)}>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1 h-11 sm:h-9" onClick={() => setShowQuantityDialog(false)}>
                   Annuler
                 </Button>
-                <Button className="flex-1" onClick={handleConfirmQuantity}>
+                <Button className="flex-1 h-11 sm:h-9" onClick={handleConfirmQuantity}>
                   Ajouter
                 </Button>
               </div>
@@ -775,46 +775,47 @@ export const ProformaWorkflow = () => {
 
   // Preview step
   const renderPreviewStep = () => (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => setCurrentStep('products')}>
+    <div className="space-y-3 sm:space-y-4">
+      {/* Header - Stacked on mobile */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+        <Button variant="ghost" onClick={() => setCurrentStep('products')} className="justify-start h-9">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour aux produits
+          <span className="hidden sm:inline">Retour aux produits</span>
+          <span className="sm:hidden">Retour</span>
         </Button>
         
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleNewProforma}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Nouveau
+        <div className="flex items-center gap-2 justify-end">
+          <Button variant="outline" size="sm" onClick={handleNewProforma} className="flex-1 sm:flex-none h-9">
+            <RefreshCw className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Nouveau</span>
           </Button>
-          <Button onClick={handlePrintProforma}>
-            <Printer className="w-4 h-4 mr-2" />
-            Imprimer PDF
+          <Button size="sm" onClick={handlePrintProforma} className="flex-1 sm:flex-none h-9">
+            <Printer className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Imprimer PDF</span>
           </Button>
         </div>
       </div>
 
       {/* Customer Info */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Informations client</CardTitle>
+        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
+          <CardTitle className="text-sm sm:text-base">Informations client</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6 pb-3 sm:pb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <Label>Nom du client</Label>
+              <Label className="text-xs sm:text-sm">Nom du client</Label>
               <Input
                 placeholder="Nom du client (optionnel)"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="mt-1"
+                className="mt-1 h-9 sm:h-10 text-sm"
               />
             </div>
             <div>
-              <Label>Validité du devis</Label>
+              <Label className="text-xs sm:text-sm">Validité du devis</Label>
               <Select value={validityDays} onValueChange={setValidityDays}>
-                <SelectTrigger className="mt-1">
+                <SelectTrigger className="mt-1 h-9 sm:h-10">
                   <Calendar className="w-4 h-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
@@ -831,68 +832,118 @@ export const ProformaWorkflow = () => {
 
       {/* Cart Items */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center justify-between">
+        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
+          <CardTitle className="text-sm sm:text-base flex items-center justify-between">
             <span>Articles ({cart.length})</span>
-            <Button variant="ghost" size="sm" onClick={clearCart} className="text-destructive">
-              <Trash2 className="w-4 h-4 mr-1" />
-              Vider
+            <Button variant="ghost" size="sm" onClick={clearCart} className="text-destructive h-8 px-2 sm:px-3">
+              <Trash2 className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Vider</span>
             </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+          <div className="space-y-2 sm:space-y-3">
             {cart.map(item => {
               const CategoryIcon = getCategoryIcon(item.category);
               const itemTotal = item.actualPrice || (item.price * item.cartQuantity);
               
               return (
-                <div key={item.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                  <div className={`w-10 h-10 rounded-lg ${getCategoryColor(item.category)} flex items-center justify-center flex-shrink-0`}>
-                    <CategoryIcon className="w-5 h-5 text-white" />
-                  </div>
+                <div key={item.id} className="flex flex-col gap-2 p-2 sm:p-3 border rounded-lg">
+                  {/* Mobile: 3-line layout / Desktop: single row */}
                   
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm truncate">{item.name}</h4>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      {item.diametre && <span>Ø{item.diametre}</span>}
-                      <span>•</span>
-                      <span>{item.cartQuantity} {item.displayUnit || item.unit}</span>
+                  {/* Line 1: Icon + Name + Price (always visible) */}
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${getCategoryColor(item.category)} flex items-center justify-center shrink-0`}>
+                      <CategoryIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
+                    
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-xs sm:text-sm truncate">{item.name}</h4>
+                      {/* Desktop: show specs inline */}
+                      <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+                        {item.diametre && <span>Ø{item.diametre}</span>}
+                        <span>•</span>
+                        <span>{item.cartQuantity} {item.displayUnit || item.unit}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Price - visible on both */}
+                    <span className="font-bold text-xs sm:text-sm shrink-0">
+                      {formatAmount(itemTotal, item.currency)}
+                    </span>
+                    
+                    {/* Desktop: quantity controls inline */}
+                    <div className="hidden sm:flex items-center gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => updateCartQuantity(item.id, item.cartQuantity - 1)}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <span className="w-6 text-center text-sm font-medium">{item.cartQuantity}</span>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => updateCartQuantity(item.id, item.cartQuantity + 1)}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    
+                    {/* Desktop: delete button */}
                     <Button 
-                      variant="outline" 
+                      variant="ghost" 
                       size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => updateCartQuantity(item.id, item.cartQuantity - 1)}
+                      className="hidden sm:flex h-7 w-7 text-destructive"
+                      onClick={() => removeFromCart(item.id)}
                     >
-                      <Minus className="w-3 h-3" />
+                      <X className="w-4 h-4" />
                     </Button>
-                    <span className="w-8 text-center text-sm font-medium">{item.cartQuantity}</span>
+                  </div>
+                  
+                  {/* Mobile Line 2: Specs + Unit price */}
+                  <div className="flex sm:hidden items-center gap-2 text-[10px] text-muted-foreground pl-10">
+                    {item.diametre && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1">Ø{item.diametre}</Badge>
+                    )}
+                    <span>{item.cartQuantity} {item.displayUnit || item.unit}</span>
+                    <span>•</span>
+                    <span>{formatAmount(item.price, item.currency)}/u</span>
+                  </div>
+                  
+                  {/* Mobile Line 3: Quantity controls + Delete */}
+                  <div className="flex sm:hidden items-center justify-between pl-10">
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => updateCartQuantity(item.id, item.cartQuantity - 1)}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <span className="w-6 text-center text-xs font-medium">{item.cartQuantity}</span>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => updateCartQuantity(item.id, item.cartQuantity + 1)}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
                     <Button 
-                      variant="outline" 
+                      variant="ghost" 
                       size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => updateCartQuantity(item.id, item.cartQuantity + 1)}
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => removeFromCart(item.id)}
                     >
-                      <Plus className="w-3 h-3" />
+                      <X className="w-4 h-4" />
                     </Button>
                   </div>
-                  
-                  <div className="text-right min-w-[80px]">
-                    <div className="font-bold text-sm">{formatAmount(itemTotal, item.currency)}</div>
-                  </div>
-                  
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-destructive"
-                    onClick={() => removeFromCart(item.id)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
                 </div>
               );
             })}
@@ -902,49 +953,52 @@ export const ProformaWorkflow = () => {
 
       {/* Totals */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-2">
+        <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6 pb-3 sm:pb-6">
+          <div className="space-y-1.5 sm:space-y-2">
             {cartTotals.hasMultipleCurrencies && (
               <>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-muted-foreground">Sous-total HTG</span>
                   <span>{formatAmount(cartTotals.totalHTG, 'HTG')}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-muted-foreground">Sous-total USD</span>
                   <span>{formatAmount(cartTotals.totalUSD, 'USD')}</span>
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
+                <div className="flex justify-between text-[10px] sm:text-xs text-muted-foreground">
                   <span>Taux de change</span>
                   <span>1 USD = {cartTotals.rate.toFixed(2)} HTG</span>
                 </div>
-                <Separator className="my-2" />
+                <Separator className="my-1.5 sm:my-2" />
               </>
             )}
             
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span className="text-muted-foreground">Sous-total HT</span>
               <span className="font-medium">{formatAmount(cartTotals.unifiedTotal, cartTotals.displayCurrency)}</span>
             </div>
             
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">TVA ({companySettings.tvaRate}%) <span className="text-xs">(indicatif)</span></span>
+            <div className="flex justify-between text-xs sm:text-sm">
+              <span className="text-muted-foreground">
+                TVA ({companySettings.tvaRate}%) 
+                <span className="text-[10px] sm:text-xs ml-1">(indicatif)</span>
+              </span>
               <span>{formatAmount(cartTotals.tvaAmount, cartTotals.displayCurrency)}</span>
             </div>
             
-            <Separator className="my-2" />
+            <Separator className="my-1.5 sm:my-2" />
             
-            <div className="flex justify-between items-center">
-              <span className="font-semibold">Total TTC estimé</span>
-              <span className="text-xl font-bold text-primary">
+            <div className="flex justify-between items-center pt-1">
+              <span className="font-semibold text-sm sm:text-base">Total TTC estimé</span>
+              <span className="text-lg sm:text-xl font-bold text-primary">
                 {formatAmount(cartTotals.totalTTC, cartTotals.displayCurrency)}
               </span>
             </div>
           </div>
           
-          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-            <p className="text-xs text-muted-foreground text-center">
-              Ce document est une estimation et ne constitue pas une facture. 
+          <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-muted/50 rounded-lg">
+            <p className="text-[10px] sm:text-xs text-muted-foreground text-center">
+              Ce document est une estimation et ne constitue pas une facture.
               Les prix peuvent être sujets à modification.
             </p>
           </div>
