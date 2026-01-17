@@ -135,6 +135,7 @@ export const ResponsiveDashboardLayout = ({
   const sellerNavItems = [
     { icon: Home, label: 'Dashboard', value: 'dashboard' },
     { icon: ShoppingCart, label: 'Nouvelle vente', value: 'sale' },
+    { icon: Receipt, label: 'Pro-forma', value: 'proforma' },
     { icon: TrendingUp, label: 'Mes ventes', value: 'history' },
     { icon: HelpCircle, label: 'Aide', value: 'help', route: '/help' }
   ];
