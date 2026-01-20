@@ -507,7 +507,7 @@ export const ProformaWorkflow = ({ onConvertToSale }: ProformaWorkflowProps) => 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + parseInt(validityDays));
 
-      // Prepare items for storage
+      // Prepare items for storage - include ALL fields needed for sale conversion
       const itemsToSave = cart.map(item => ({
         id: item.id,
         name: item.name,
@@ -526,7 +526,11 @@ export const ProformaWorkflow = ({ onConvertToSale }: ProformaWorkflowProps) => 
         longueur_barre: item.longueur_barre,
         prix_par_barre: item.prix_par_barre,
         bars_per_ton: item.bars_per_ton,
-        unit: item.unit
+        unit: item.unit,
+        quantity: item.quantity,
+        alert_threshold: item.alert_threshold,
+        is_active: item.is_active,
+        sale_type: item.sale_type
       }));
 
       const { error } = await supabase
