@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ShoppingCart, 
   Package, 
@@ -30,7 +31,9 @@ import {
   Shirt,
   Home,
   Coffee,
-  CircleDot
+  CircleDot,
+  Save,
+  History
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +43,22 @@ import { generateProforma } from '@/lib/pdfGenerator';
 import { useCategories, useSousCategories } from '@/hooks/useCategories';
 import { useCurrencyCalculations } from '@/hooks/useCurrencyCalculations';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { SavedProformasList } from './SavedProformasList';
+
+interface SavedProforma {
+  id: string;
+  proforma_number: string;
+  customer_name: string | null;
+  validity_days: number;
+  expires_at: string;
+  subtotal_ht: number;
+  tva_amount: number;
+  total_ttc: number;
+  display_currency: string;
+  items: any[];
+  status: 'active' | 'converted' | 'expired';
+  created_at: string;
+}
 
 interface Product {
   id: string;
@@ -88,7 +107,11 @@ interface CartItem extends Product {
   sourceValue?: number;
 }
 
-type WorkflowStep = 'products' | 'preview';
+type WorkflowStep = 'products' | 'preview' | 'saved';
+
+interface ProformaWorkflowProps {
+  onConvertToSale?: (items: CartItem[], customerName: string) => void;
+}
 
 // Session counter for proforma numbering
 let proformaCounter = 1;
@@ -129,7 +152,7 @@ const getCategoryColor = (category: string) => {
   return colors[category] || 'bg-gray-400';
 };
 
-export const ProformaWorkflow = () => {
+export const ProformaWorkflow = ({ onConvertToSale }: ProformaWorkflowProps) => {
   const { user, profile } = useAuth();
   const { categories: dynamicCategories } = useCategories();
   const { sousCategories: dynamicSousCategories } = useSousCategories();
@@ -137,6 +160,7 @@ export const ProformaWorkflow = () => {
   const currencyCalc = useCurrencyCalculations();
 
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('products');
+  const [activeTab, setActiveTab] = useState<'new' | 'saved'>('new');
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -152,6 +176,8 @@ export const ProformaWorkflow = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showQuantityDialog, setShowQuantityDialog] = useState(false);
   const [authorizedCategories, setAuthorizedCategories] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedProformasKey, setSavedProformasKey] = useState(0);
 
   // Dynamic categories for filtering
   const availableDynamicCategories = useMemo(() => {
@@ -465,8 +491,153 @@ export const ProformaWorkflow = () => {
     });
   };
 
+  const handleSaveProforma = async () => {
+    if (!user || cart.length === 0) {
+      toast({
+        title: "Panier vide",
+        description: "Ajoutez des produits au pro-forma",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const proformaNumber = generateProformaNumber();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + parseInt(validityDays));
+
+      // Prepare items for storage
+      const itemsToSave = cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        currency: item.currency,
+        cartQuantity: item.cartQuantity,
+        displayUnit: item.displayUnit,
+        actualPrice: item.actualPrice,
+        sourceUnit: item.sourceUnit,
+        sourceValue: item.sourceValue,
+        diametre: item.diametre,
+        dimension: item.dimension,
+        surface_par_boite: item.surface_par_boite,
+        prix_m2: item.prix_m2,
+        longueur_barre: item.longueur_barre,
+        prix_par_barre: item.prix_par_barre,
+        bars_per_ton: item.bars_per_ton,
+        unit: item.unit
+      }));
+
+      const { error } = await supabase
+        .from('proformas')
+        .insert({
+          proforma_number: proformaNumber,
+          seller_id: user.id,
+          customer_name: customerName || null,
+          validity_days: parseInt(validityDays),
+          expires_at: expiresAt.toISOString(),
+          subtotal_ht: cartTotals.unifiedTotal,
+          tva_amount: cartTotals.tvaAmount,
+          total_ttc: cartTotals.totalTTC,
+          display_currency: cartTotals.displayCurrency,
+          items: itemsToSave,
+          status: 'active'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Pro-forma sauvegardé",
+        description: `Numéro: ${proformaNumber}`,
+      });
+
+      // Refresh the saved proformas list
+      setSavedProformasKey(prev => prev + 1);
+      
+      // Clear and go back
+      clearCart();
+      setCustomerName('');
+      setCurrentStep('products');
+      setActiveTab('saved');
+    } catch (error) {
+      console.error('Error saving proforma:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder le pro-forma",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleConvertToSale = async (proforma: SavedProforma) => {
+    if (!onConvertToSale) {
+      toast({
+        title: "Fonction non disponible",
+        description: "La conversion en vente n'est pas disponible",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Mark proforma as converted
+      await supabase
+        .from('proformas')
+        .update({ status: 'converted' })
+        .eq('id', proforma.id);
+
+      // Refresh the list
+      setSavedProformasKey(prev => prev + 1);
+
+      // Convert items back to CartItem format
+      const cartItems: CartItem[] = proforma.items.map((item: any) => ({
+        ...item,
+        quantity: item.quantity || 0,
+        alert_threshold: item.alert_threshold || 0,
+        is_active: true,
+        sale_type: item.sale_type || 'retail'
+      }));
+
+      // Call the parent callback
+      onConvertToSale(cartItems, proforma.customer_name || '');
+
+      toast({
+        title: "Pro-forma converti",
+        description: "Vous pouvez maintenant finaliser la vente",
+      });
+    } catch (error) {
+      console.error('Error converting proforma:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de convertir le pro-forma",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleViewProforma = (proforma: SavedProforma) => {
+    // Load proforma into cart for viewing/editing
+    const cartItems: CartItem[] = proforma.items.map((item: any) => ({
+      ...item,
+      quantity: item.quantity || 0,
+      alert_threshold: item.alert_threshold || 0,
+      is_active: true,
+      sale_type: item.sale_type || 'retail'
+    }));
+
+    setCart(cartItems);
+    setCustomerName(proforma.customer_name || '');
+    setValidityDays(String(proforma.validity_days));
+    setCurrentStep('preview');
+    setActiveTab('new');
+  };
+
   const handleNewProforma = () => {
     clearCart();
+    setCustomerName('');
     setCurrentStep('products');
   };
 
@@ -784,12 +955,16 @@ export const ProformaWorkflow = () => {
           <span className="sm:hidden">Retour</span>
         </Button>
         
-        <div className="flex items-center gap-2 justify-end">
-          <Button variant="outline" size="sm" onClick={handleNewProforma} className="flex-1 sm:flex-none h-9">
+        <div className="flex items-center gap-2 justify-end flex-wrap">
+          <Button variant="outline" size="sm" onClick={handleNewProforma} className="h-9">
             <RefreshCw className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Nouveau</span>
           </Button>
-          <Button size="sm" onClick={handlePrintProforma} className="flex-1 sm:flex-none h-9">
+          <Button variant="outline" size="sm" onClick={handleSaveProforma} disabled={isSaving || cart.length === 0} className="h-9">
+            <Save className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">{isSaving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
+          </Button>
+          <Button size="sm" onClick={handlePrintProforma} className="h-9">
             <Printer className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Imprimer PDF</span>
           </Button>
@@ -1007,10 +1182,43 @@ export const ProformaWorkflow = () => {
     </div>
   );
 
+  // Saved proformas list with conversion callback
+  const renderSavedProformasTab = () => (
+    <SavedProformasList
+      key={savedProformasKey}
+      onConvertToSale={handleConvertToSale}
+      onViewProforma={handleViewProforma}
+    />
+  );
+
   return (
     <div className="space-y-4">
-      {currentStep === 'products' && renderProductsStep()}
-      {currentStep === 'preview' && renderPreviewStep()}
+      {currentStep === 'preview' ? (
+        renderPreviewStep()
+      ) : (
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'new' | 'saved')} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="new" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">Nouveau Pro-forma</span>
+              <span className="sm:hidden">Nouveau</span>
+            </TabsTrigger>
+            <TabsTrigger value="saved" className="flex items-center gap-2">
+              <History className="w-4 h-4" />
+              <span className="hidden sm:inline">Pro-formas sauvegardés</span>
+              <span className="sm:hidden">Sauvegardés</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="new" className="mt-0">
+            {renderProductsStep()}
+          </TabsContent>
+          
+          <TabsContent value="saved" className="mt-0">
+            {renderSavedProformasTab()}
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };
