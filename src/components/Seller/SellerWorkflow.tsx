@@ -113,9 +113,11 @@ type WorkflowStep = 'products' | 'cart' | 'checkout' | 'success';
 
 interface SellerWorkflowProps {
   onSaleComplete?: () => void;
+  initialCart?: CartItem[];
+  initialCustomerName?: string;
 }
 
-export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
+export const SellerWorkflow = ({ onSaleComplete, initialCart, initialCustomerName }: SellerWorkflowProps) => {
   const { user } = useAuth();
   const { categories: dynamicCategories } = useCategories();
   const { sousCategories: dynamicSousCategories } = useSousCategories();
@@ -124,17 +126,17 @@ export const SellerWorkflow = ({ onSaleComplete }: SellerWorkflowProps) => {
   const { settings: companySettingsHook } = useCompanySettings();
   const currencyCalc = useCurrencyCalculations();
   
-  const [currentStep, setCurrentStep] = useState<WorkflowStep>('products');
+  const [currentStep, setCurrentStep] = useState<WorkflowStep>(initialCart && initialCart.length > 0 ? 'cart' : 'products');
   const [transitionDirection, setTransitionDirection] = useState<'forward' | 'backward'>('forward');
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(initialCart || []);
   const [searchTerm, setSearchTerm] = useState('');
   const [saleTypeFilter, setSaleTypeFilter] = useState<'all' | 'retail' | 'wholesale'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [sousCategoryFilter, setSousCategoryFilter] = useState<string>('all');
   const [authorizedCategories, setAuthorizedCategories] = useState<string[]>([]);
-  const [customerName, setCustomerName] = useState('');
+  const [customerName, setCustomerName] = useState(initialCustomerName || '');
   const [customerAddress, setCustomerAddress] = useState('');
   const [discountType, setDiscountType] = useState<'none' | 'percentage' | 'amount'>('none');
   const [discountValue, setDiscountValue] = useState('0');

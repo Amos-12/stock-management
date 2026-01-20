@@ -32,6 +32,33 @@ interface EnrichedSale {
   displayAmount: number;
 }
 
+// Cart item type for proforma conversion
+interface ProformaCartItem {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  currency: 'USD' | 'HTG';
+  cartQuantity: number;
+  displayUnit?: string;
+  actualPrice?: number;
+  sourceUnit?: 'barre' | 'tonne';
+  sourceValue?: number;
+  unit: string;
+  quantity: number;
+  alert_threshold: number;
+  is_active: boolean;
+  sale_type: 'retail' | 'wholesale';
+  // Other optional fields
+  diametre?: string;
+  dimension?: string;
+  surface_par_boite?: number;
+  prix_m2?: number;
+  longueur_barre?: number;
+  prix_par_barre?: number;
+  bars_per_ton?: number;
+}
+
 const SellerDashboard = () => {
   const { user, loading: authLoading, role } = useAuth();
   const saleCalc = useSaleCalculations();
@@ -42,6 +69,10 @@ const SellerDashboard = () => {
   const [periodFilter, setPeriodFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [showSaleDetails, setShowSaleDetails] = useState(false);
+  
+  // State for proforma to sale conversion
+  const [proformaCart, setProformaCart] = useState<ProformaCartItem[] | undefined>(undefined);
+  const [proformaCustomerName, setProformaCustomerName] = useState<string | undefined>(undefined);
 
   // Use hook values with fallbacks
   const displayCurrency = saleCalc?.displayCurrency || 'HTG';
@@ -135,14 +166,34 @@ const SellerDashboard = () => {
     }
   }, [user, saleCalc, periodFilter]);
 
+  // Handler for converting proforma to sale
+  const handleConvertProformaToSale = (items: ProformaCartItem[], customerName: string) => {
+    setProformaCart(items);
+    setProformaCustomerName(customerName);
+    setCurrentSection('sale');
+  };
+
+  // Clear proforma data after sale completion
+  const handleSaleComplete = () => {
+    setProformaCart(undefined);
+    setProformaCustomerName(undefined);
+    fetchMySales();
+  };
+
   const renderContent = () => {
     switch (currentSection) {
       case 'dashboard':
         return <SellerDashboardStats />;
       case 'sale':
-        return <SellerWorkflow onSaleComplete={fetchMySales} />;
+        return (
+          <SellerWorkflow 
+            onSaleComplete={handleSaleComplete}
+            initialCart={proformaCart as any}
+            initialCustomerName={proformaCustomerName}
+          />
+        );
       case 'proforma':
-        return <ProformaWorkflow />;
+        return <ProformaWorkflow onConvertToSale={handleConvertProformaToSale as any} />;
       case 'products':
         return <ProductManagement />;
       case 'notifications':

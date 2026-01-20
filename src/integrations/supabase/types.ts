@@ -376,6 +376,68 @@ export type Database = {
         }
         Relationships: []
       }
+      proformas: {
+        Row: {
+          converted_sale_id: string | null
+          created_at: string
+          customer_name: string | null
+          display_currency: string
+          expires_at: string
+          id: string
+          items: Json
+          proforma_number: string
+          seller_id: string
+          status: string
+          subtotal_ht: number
+          total_ttc: number
+          tva_amount: number
+          updated_at: string
+          validity_days: number
+        }
+        Insert: {
+          converted_sale_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          display_currency?: string
+          expires_at: string
+          id?: string
+          items?: Json
+          proforma_number: string
+          seller_id: string
+          status?: string
+          subtotal_ht?: number
+          total_ttc?: number
+          tva_amount?: number
+          updated_at?: string
+          validity_days?: number
+        }
+        Update: {
+          converted_sale_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          display_currency?: string
+          expires_at?: string
+          id?: string
+          items?: Json
+          proforma_number?: string
+          seller_id?: string
+          status?: string
+          subtotal_ht?: number
+          total_ttc?: number
+          tva_amount?: number
+          updated_at?: string
+          validity_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proformas_converted_sale_id_fkey"
+            columns: ["converted_sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sale_items: {
         Row: {
           currency: string | null
