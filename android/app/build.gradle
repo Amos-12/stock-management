@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.gfdistribution.stock"
+    namespace "app.lovable.sm"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.gfdistribution.stock"
+        applicationId "app.lovable.sm"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
