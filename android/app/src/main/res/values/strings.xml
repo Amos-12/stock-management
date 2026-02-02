@@ -2,7 +2,6 @@
 <resources>
     <string name="app_name">SM - System Management</string>
     <string name="title_activity_main">SM - System Management</string>
-    <string name="package_name">app.lovable.sm</string>
-    <string name="custom_url_scheme">app.lovable.sm</string>
-    <string name="developer_name">ING Amos JOSEPH</string>
+    <string name="package_name">com.SM.app</string>
+    <string name="custom_url_scheme">com.SM.app</string>
 </resources>

@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/core';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.964f3753444140acacf5cd66e737e71f',
+  appId: 'com.SM.app',
   appName: 'SM - System Management',
   webDir: 'dist',
   server: {
