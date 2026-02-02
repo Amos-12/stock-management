@@ -264,9 +264,9 @@ export const ResponsiveDashboardLayout = ({
   );
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden pt-16">
-      {/* Header - Fixed */}
-      <header className="bg-background/90 backdrop-blur-md border-b border-border shadow-md fixed top-0 left-0 right-0 z-50 overflow-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden pt-[calc(64px+var(--safe-area-inset-top,0px))]">
+      {/* Header - Fixed with safe area padding */}
+      <header className="bg-background/90 backdrop-blur-md border-b border-border shadow-md fixed top-0 left-0 right-0 z-50 overflow-hidden pt-[var(--safe-area-inset-top,0px)]">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex items-center justify-between h-16 min-w-0">
             {/* Left side - Mobile menu button + Logo */}

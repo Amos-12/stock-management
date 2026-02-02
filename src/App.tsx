@@ -1,9 +1,12 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from "@capacitor/status-bar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -12,7 +15,26 @@ import InventoryPage from "./pages/InventoryPage";
 import HelpPage from "./pages/HelpPage";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+
 const queryClient = new QueryClient();
+
+// Configure Status Bar for native platforms
+const configureStatusBar = async () => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      // Disable overlay so content doesn't go behind status bar
+      await StatusBar.setOverlaysWebView({ overlay: false });
+      // Set status bar background color to match app theme
+      await StatusBar.setBackgroundColor({ color: '#26A69A' });
+      // Set status bar style
+      await StatusBar.setStyle({ style: Style.Light });
+    } catch (error) {
+      console.error('Error configuring status bar:', error);
+    }
+  }
+};
+
+configureStatusBar();
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
