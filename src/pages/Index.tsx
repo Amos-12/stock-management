@@ -97,7 +97,7 @@ const Index = () => {
   }, [profile?.role, isActive, navigate]);
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background pt-[var(--safe-area-inset-top,0px)] pb-[var(--safe-area-inset-bottom,0px)]">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background">
         <div className="text-center">
           <img src={logo} alt="Logo" className="w-14 h-14 object-contain mx-auto mb-4 animate-pulse" />
           <p className="text-muted-foreground">Chargement de votre espace...</p>
@@ -108,7 +108,7 @@ const Index = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background p-4 pt-[var(--safe-area-inset-top,0px)] pb-[var(--safe-area-inset-bottom,0px)]">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background p-4">
         <Card className="max-w-md w-full shadow-lg">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
@@ -138,7 +138,7 @@ const Index = () => {
   // Show inactive account message
   if (user && !isActive) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background p-4 pt-[var(--safe-area-inset-top,0px)] pb-[var(--safe-area-inset-bottom,0px)]">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background p-4">
         <Card className="max-w-md w-full shadow-lg">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-2">
@@ -168,7 +168,7 @@ const Index = () => {
 
   // Fallback for users without a role (shouldn't happen with proper setup)
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background pt-[var(--safe-area-inset-top,0px)] pb-[var(--safe-area-inset-bottom,0px)]">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background">
       <Card className="max-w-md w-full shadow-lg">
         <CardHeader className="text-center">
           <CardTitle>Configuration en cours</CardTitle>

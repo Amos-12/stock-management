@@ -264,9 +264,9 @@ export const ResponsiveDashboardLayout = ({
   );
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden pt-[calc(64px+var(--safe-area-inset-top,0px))] pb-[var(--safe-area-inset-bottom,0px)]">
-      {/* Header - Fixed with safe area padding */}
-      <header className="bg-background/90 backdrop-blur-md border-b border-border shadow-md fixed top-0 left-0 right-0 z-50 overflow-hidden pt-[var(--safe-area-inset-top,0px)]">
+    <div className="min-h-screen bg-background overflow-x-hidden pt-16">
+      {/* Header - Fixed at top */}
+      <header className="bg-background/90 backdrop-blur-md border-b border-border shadow-md fixed top-0 left-0 right-0 z-50 overflow-hidden">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex items-center justify-between h-16 min-w-0">
             {/* Left side - Mobile menu button + Logo */}
@@ -390,7 +390,7 @@ export const ResponsiveDashboardLayout = ({
         <div className="flex w-full">
           {/* Desktop Sidebar - Fixed */}
           <aside className={cn(
-            "flex-shrink-0 hidden lg:block bg-background border-r border-border fixed left-0 top-[calc(64px+var(--safe-area-inset-top,0px))] h-[calc(100vh-64px-var(--safe-area-inset-top,0px)-var(--safe-area-inset-bottom,0px))] transition-all duration-300 z-40",
+            "flex-shrink-0 hidden lg:block bg-background border-r border-border fixed left-0 top-16 h-[calc(100vh-64px)] transition-all duration-300 z-40",
             sidebarCollapsed ? "w-20" : "w-64"
           )}>
             <SidebarContent isDesktop={true} />
