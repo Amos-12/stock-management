@@ -16,6 +16,8 @@
         <!-- Status bar configuration -->
         <item name="android:statusBarColor">@color/colorPrimaryDark</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <!-- Navigation bar configuration -->
+        <item name="android:navigationBarColor">@color/colorPrimaryDark</item>
     </style>
 
 
