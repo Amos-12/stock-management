@@ -98,6 +98,11 @@ const Index = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background pt-[var(--safe-area-top,0px)] pb-[var(--safe-area-bottom,0px)]">
+        {/* Safe area background */}
+        <div 
+          className="fixed top-0 left-0 right-0 z-[60] bg-background"
+          style={{ height: 'var(--safe-area-top, 0px)' }}
+        />
         <div className="text-center">
           <img src={logo} alt="Logo" className="w-14 h-14 object-contain mx-auto mb-4 animate-pulse" />
           <p className="text-muted-foreground">Chargement de votre espace...</p>
@@ -109,6 +114,11 @@ const Index = () => {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background p-4 pt-[calc(16px+var(--safe-area-top,0px))] pb-[calc(16px+var(--safe-area-bottom,0px))]">
+        {/* Safe area background */}
+        <div 
+          className="fixed top-0 left-0 right-0 z-[60] bg-background"
+          style={{ height: 'var(--safe-area-top, 0px)' }}
+        />
         <Card className="max-w-md w-full shadow-lg">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
@@ -139,6 +149,11 @@ const Index = () => {
   if (user && !isActive) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background p-4 pt-[calc(16px+var(--safe-area-top,0px))] pb-[calc(16px+var(--safe-area-bottom,0px))]">
+        {/* Safe area background */}
+        <div 
+          className="fixed top-0 left-0 right-0 z-[60] bg-background"
+          style={{ height: 'var(--safe-area-top, 0px)' }}
+        />
         <Card className="max-w-md w-full shadow-lg">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-2">
@@ -169,6 +184,11 @@ const Index = () => {
   // Fallback for users without a role (shouldn't happen with proper setup)
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-light to-background pt-[var(--safe-area-top,0px)] pb-[var(--safe-area-bottom,0px)]">
+      {/* Safe area background */}
+      <div 
+        className="fixed top-0 left-0 right-0 z-[60] bg-background"
+        style={{ height: 'var(--safe-area-top, 0px)' }}
+      />
       <Card className="max-w-md w-full shadow-lg">
         <CardHeader className="text-center">
           <CardTitle>Configuration en cours</CardTitle>
