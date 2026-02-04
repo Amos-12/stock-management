@@ -18,7 +18,7 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Configure Status Bar for native platforms
+// Configure Status Bar for native platforms and set safe area CSS variables
 const configureStatusBar = async () => {
   if (Capacitor.isNativePlatform()) {
     try {
@@ -28,8 +28,23 @@ const configureStatusBar = async () => {
       await StatusBar.setBackgroundColor({ color: '#26A69A' });
       // Set status bar style
       await StatusBar.setStyle({ style: Style.Light });
+      
+      // Get status bar info and set CSS variable for safe area
+      const info = await StatusBar.getInfo();
+      if (info && typeof (info as any).height === 'number') {
+        document.documentElement.style.setProperty('--safe-area-top', `${(info as any).height}px`);
+      } else {
+        // Fallback for Android - typical status bar height is 24-32dp
+        document.documentElement.style.setProperty('--safe-area-top', '28px');
+      }
+      
+      // Set bottom safe area for navigation bar (estimated)
+      document.documentElement.style.setProperty('--safe-area-bottom', '24px');
     } catch (error) {
       console.error('Error configuring status bar:', error);
+      // Fallback values for safe areas
+      document.documentElement.style.setProperty('--safe-area-top', '28px');
+      document.documentElement.style.setProperty('--safe-area-bottom', '24px');
     }
   }
 };

@@ -38,7 +38,11 @@
 
 @layer base {
   :root {
-    /* Safe Area Insets for mobile devices */
+    /* Safe Area Variables - Updated dynamically on Android via JavaScript */
+    --safe-area-top: 0px;
+    --safe-area-bottom: 0px;
+    
+    /* Legacy Safe Area Insets for mobile devices */
     --safe-area-inset-top: env(safe-area-inset-top, 0px);
     --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
