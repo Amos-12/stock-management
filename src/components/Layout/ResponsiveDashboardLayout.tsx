@@ -265,8 +265,14 @@ export const ResponsiveDashboardLayout = ({
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden pt-[calc(64px+var(--safe-area-top,0px))]">
+      {/* Safe area background - prevents content from showing under status bar */}
+      <div 
+        className="fixed top-0 left-0 right-0 z-[60] bg-background"
+        style={{ height: 'var(--safe-area-top, 0px)' }}
+      />
+      
       {/* Header - Fixed at top, respecting safe area */}
-      <header className="bg-background/90 backdrop-blur-md border-b border-border shadow-md fixed top-[var(--safe-area-top,0px)] left-0 right-0 z-50 overflow-hidden">
+      <header className="bg-background border-b border-border shadow-md fixed top-[var(--safe-area-top,0px)] left-0 right-0 z-50 overflow-hidden">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex items-center justify-between h-16 min-w-0">
             {/* Left side - Mobile menu button + Logo */}

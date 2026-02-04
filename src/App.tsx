@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,7 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { Capacitor } from "@capacitor/core";
-import { StatusBar, Style } from "@capacitor/status-bar";
+import { StatusBar } from "@capacitor/status-bar";
+import { ThemeAwareStatusBar } from "@/components/Layout/ThemeAwareStatusBar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -18,16 +18,12 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Configure Status Bar for native platforms and set safe area CSS variables
-const configureStatusBar = async () => {
+// Configure safe area CSS variables for native platforms
+const configureSafeAreas = async () => {
   if (Capacitor.isNativePlatform()) {
     try {
       // Disable overlay so content doesn't go behind status bar
       await StatusBar.setOverlaysWebView({ overlay: false });
-      // Set status bar background color to match app theme
-      await StatusBar.setBackgroundColor({ color: '#26A69A' });
-      // Set status bar style
-      await StatusBar.setStyle({ style: Style.Light });
       
       // Get status bar info and set CSS variable for safe area
       const info = await StatusBar.getInfo();
@@ -41,7 +37,7 @@ const configureStatusBar = async () => {
       // Set bottom safe area for navigation bar (estimated)
       document.documentElement.style.setProperty('--safe-area-bottom', '24px');
     } catch (error) {
-      console.error('Error configuring status bar:', error);
+      console.error('Error configuring safe areas:', error);
       // Fallback values for safe areas
       document.documentElement.style.setProperty('--safe-area-top', '28px');
       document.documentElement.style.setProperty('--safe-area-bottom', '24px');
@@ -49,12 +45,14 @@ const configureStatusBar = async () => {
   }
 };
 
-configureStatusBar();
+configureSafeAreas();
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        {/* Theme-aware status bar for Android */}
+        <ThemeAwareStatusBar />
         <Toaster />
         <Sonner />
         <BrowserRouter>
