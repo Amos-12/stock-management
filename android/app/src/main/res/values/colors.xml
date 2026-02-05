@@ -8,7 +8,7 @@
     <color name="backgroundLight">#f8fafc</color>
     <color name="backgroundDark">#020817</color>
     
-    <!-- Navigation bar colors (match --background CSS variable) -->
+    <!-- Navigation bar colors (match background CSS variable) -->
     <color name="navigationBarLight">#f8fafc</color>
     <color name="navigationBarDark">#020817</color>
 </resources>
