@@ -264,7 +264,7 @@ export const ResponsiveDashboardLayout = ({
   );
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden pt-[calc(64px+var(--safe-area-top,0px))]">
+    <div className="min-h-screen bg-background overflow-x-hidden pt-[calc(64px+var(--safe-area-top,0px))] pb-[var(--safe-area-bottom,0px)]">
       {/* Safe area background - prevents content from showing under status bar */}
       <div 
         className="fixed top-0 left-0 right-0 z-[60] bg-background"
@@ -287,7 +287,7 @@ export const ResponsiveDashboardLayout = ({
                   <SidebarContent />
                   
                   {/* Compact Profile section in mobile menu */}
-                  <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-background p-3">
+                  <div className="absolute left-0 right-0 border-t border-border bg-background p-3" style={{ bottom: 'var(--safe-area-bottom, 0px)' }}>
                     <div 
                       className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
                       onClick={() => {
@@ -396,7 +396,7 @@ export const ResponsiveDashboardLayout = ({
         <div className="flex w-full">
         {/* Desktop Sidebar - Fixed, respecting safe area */}
           <aside className={cn(
-            "flex-shrink-0 hidden lg:block bg-background border-r border-border fixed left-0 top-[calc(64px+var(--safe-area-top,0px))] h-[calc(100vh-64px-var(--safe-area-top,0px))] transition-all duration-300 z-40",
+            "flex-shrink-0 hidden lg:block bg-background border-r border-border fixed left-0 top-[calc(64px+var(--safe-area-top,0px))] h-[calc(100vh-64px-var(--safe-area-top,0px)-var(--safe-area-bottom,0px))] transition-all duration-300 z-40",
             sidebarCollapsed ? "w-20" : "w-64"
           )}>
             <SidebarContent isDesktop={true} />
@@ -409,7 +409,7 @@ export const ResponsiveDashboardLayout = ({
           )} />
 
           {/* Main Content */}
-          <main className="flex-1 min-w-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <main className="flex-1 min-w-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-[calc(16px+var(--safe-area-bottom,0px))]">
             {children}
           </main>
         </div>

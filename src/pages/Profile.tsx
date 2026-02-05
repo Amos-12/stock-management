@@ -337,7 +337,13 @@ const Profile = () => {
     : null;
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+    <>
+    {/* Safe area background - prevents content from showing under status bar */}
+    <div 
+      className="fixed top-0 left-0 right-0 z-[60] bg-background"
+      style={{ height: 'var(--safe-area-top, 0px)' }}
+    />
+    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8 pt-[calc(16px+var(--safe-area-top,0px))] pb-[calc(16px+var(--safe-area-bottom,0px))]">
       <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -634,6 +640,7 @@ const Profile = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
