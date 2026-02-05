@@ -199,8 +199,8 @@ export const ResponsiveDashboardLayout = ({
         )}
       </div>
       
-      <ScrollArea className="flex-1 px-6 py-4 pb-20">
-        <nav className="space-y-1.5">
+      <ScrollArea className="flex-1 px-4 py-3">
+        <nav className="space-y-1">
           {navItems.map((item: any, index: number) => {
             const Icon = item.icon;
             return (
@@ -270,6 +270,11 @@ export const ResponsiveDashboardLayout = ({
         className="fixed top-0 left-0 right-0 z-[60] bg-background"
         style={{ height: 'var(--safe-area-top, 0px)' }}
       />
+      {/* Safe area background - prevents content from showing under navigation bar */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 z-[60] bg-background"
+        style={{ height: 'var(--safe-area-bottom, 0px)' }}
+      />
       
       {/* Header - Fixed at top, respecting safe area */}
       <header className="bg-background border-b border-border shadow-md fixed top-[var(--safe-area-top,0px)] left-0 right-0 z-50 overflow-hidden">
@@ -283,11 +288,13 @@ export const ResponsiveDashboardLayout = ({
                     <Menu className="w-5 h-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-80 p-0">
-                  <SidebarContent />
+                <SheetContent side="left" className="w-80 p-0 flex flex-col" style={{ paddingBottom: 'var(--safe-area-bottom, 0px)' }}>
+                  <div className="flex-1 overflow-hidden">
+                    <SidebarContent />
+                  </div>
                   
-                  {/* Compact Profile section in mobile menu */}
-                  <div className="absolute left-0 right-0 border-t border-border bg-background p-3" style={{ bottom: 'var(--safe-area-bottom, 0px)' }}>
+                  {/* Compact Profile section in mobile menu - always visible at bottom */}
+                  <div className="border-t border-border bg-background p-3 flex-shrink-0">
                     <div 
                       className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
                       onClick={() => {
@@ -306,6 +313,11 @@ export const ResponsiveDashboardLayout = ({
                       </Badge>
                     </div>
                   </div>
+                  {/* Background fill for navigation bar area */}
+                  <div 
+                    className="bg-background w-full flex-shrink-0"
+                    style={{ height: 'var(--safe-area-bottom, 0px)' }}
+                  />
                 </SheetContent>
               </Sheet>
               
