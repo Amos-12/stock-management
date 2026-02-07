@@ -8,15 +8,16 @@ export interface UserProfile {
   user_id: string;
   full_name: string;
   phone?: string;
-  role?: 'admin' | 'seller';
+  role?: 'admin' | 'seller' | 'super_admin';
   is_active?: boolean;
+  company_id?: string;
 }
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [role, setRole] = useState<'admin' | 'seller' | null>(null);
+  const [role, setRole] = useState<'admin' | 'seller' | 'super_admin' | null>(null);
   const [isActive, setIsActive] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
 
@@ -49,19 +50,20 @@ export const useAuth = () => {
           setProfile({
             ...profileData,
             role: (roleData?.role as any),
-            is_active: roleData?.is_active
+            is_active: roleData?.is_active,
+            company_id: profileData.company_id
           });
-          setRole(roleData?.role as 'admin' | 'seller' | null);
+          setRole(roleData?.role as 'admin' | 'seller' | 'super_admin' | null);
         } else {
-          // Graceful fallback when profile row doesn't exist yet
           setProfile({
             id: userId,
             user_id: userId,
             full_name: '',
             role: (roleData?.role as any),
-            is_active: roleData?.is_active
+            is_active: roleData?.is_active,
+            company_id: undefined
           });
-          setRole(roleData?.role as 'admin' | 'seller' | null);
+          setRole(roleData?.role as 'admin' | 'seller' | 'super_admin' | null);
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -119,7 +121,7 @@ export const useAuth = () => {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string, phone?: string) => {
+  const signUp = async (email: string, password: string, fullName: string, phone?: string, companyName?: string, companyId?: string) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
@@ -130,7 +132,9 @@ export const useAuth = () => {
           emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
-            phone: phone || ''
+            phone: phone || '',
+            company_name: companyName || '',
+            company_id: companyId || ''
           }
         }
       });
@@ -223,14 +227,14 @@ export const useAuth = () => {
 
       // Fetch company name for welcome message
       const { data: companyData } = await supabase
-        .from('company_settings')
-        .select('company_name')
+        .from('companies')
+        .select('name')
         .limit(1)
         .maybeSingle();
 
       toast({
         title: "Connexion réussie",
-        description: `Bienvenue sur ${companyData?.company_name || 'votre espace'} !`,
+        description: `Bienvenue sur ${companyData?.name || 'votre espace'} !`,
       });
 
       return { error: null };

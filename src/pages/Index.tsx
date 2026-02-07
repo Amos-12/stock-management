@@ -25,12 +25,12 @@ const Index = () => {
   useEffect(() => {
     const fetchCompanyName = async () => {
       const { data } = await supabase
-        .from('company_settings')
-        .select('company_name')
+        .from('companies')
+        .select('name')
         .limit(1)
         .maybeSingle();
-      if (data?.company_name && mountedRef.current) {
-        setCompanyName(data.company_name);
+      if (data?.name && mountedRef.current) {
+        setCompanyName(data.name);
       }
     };
     fetchCompanyName();
@@ -88,7 +88,9 @@ const Index = () => {
   // Redirect based on user role using navigate instead of window.location
   useEffect(() => {
     if (profile?.role && isActive && mountedRef.current) {
-      if (profile.role === 'admin') {
+      if (profile.role === 'super_admin') {
+        navigate('/super-admin', { replace: true });
+      } else if (profile.role === 'admin') {
         navigate('/admin', { replace: true });
       } else if (profile.role === 'seller') {
         navigate('/seller', { replace: true });

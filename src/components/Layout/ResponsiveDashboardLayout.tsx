@@ -56,7 +56,7 @@ export const ResponsiveDashboardLayout = ({
   useEffect(() => {
     const fetchCompanySettings = async () => {
       const { data, error } = await supabase
-        .from('company_settings')
+        .from('companies')
         .select('*')
         .limit(1)
         .maybeSingle();
@@ -188,9 +188,9 @@ export const ResponsiveDashboardLayout = ({
           <>
             <h2 className={cn(
               "font-semibold text-foreground",
-              (companySettings?.company_name || title).length > 30 ? "text-sm" : "text-base"
+              (companySettings?.name || title).length > 30 ? "text-sm" : "text-base"
             )}>
-              {companySettings?.company_name || title}
+              {companySettings?.name || title}
             </h2>
             <Badge variant={role === 'admin' ? 'default' : 'secondary'} className="mt-2">
               {role === 'admin' ? 'Administrateur' : 'Vendeur'}
@@ -337,11 +337,11 @@ export const ResponsiveDashboardLayout = ({
                 )}
                 <h1 className={cn(
                   "font-bold text-primary hidden sm:block max-w-[150px] md:max-w-[250px] lg:max-w-none truncate",
-                  (companySettings?.company_name || 'Gestion de Stock').length > 30 
+                  (companySettings?.name || 'Gestion de Stock').length > 30 
                     ? "text-base lg:text-lg" 
                     : "text-lg lg:text-xl"
                 )}>
-                  {companySettings?.company_name || 'Gestion de Stock'}
+                  {companySettings?.name || 'Gestion de Stock'}
                 </h1>
               </div>
             </div>
