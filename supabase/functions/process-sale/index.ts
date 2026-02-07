@@ -82,6 +82,21 @@ Deno.serve(async (req) => {
 
     console.log('✅ User authenticated:', user.id)
 
+    // STEP 2.5: Get user's company_id
+    const { data: userProfile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError || !userProfile?.company_id) {
+      console.error('❌ Failed to get user company:', profileError)
+      throw new Error('User is not associated with a company')
+    }
+
+    const companyId = userProfile.company_id
+    console.log('🏢 Company:', companyId)
+
     // STEP 3: Parse and validate request body
     let saleData: SaleRequest
     try {
@@ -149,6 +164,7 @@ Deno.serve(async (req) => {
       .insert([{
         customer_name: saleData.customer_name,
         seller_id: user.id,
+        company_id: companyId,
         total_amount: saleData.total_amount,
         subtotal: saleData.subtotal,
         discount_type: saleData.discount_type,
@@ -199,6 +215,7 @@ Deno.serve(async (req) => {
         .insert([{
           sale_id: sale.id,
           product_id: item.product_id,
+          company_id: companyId,
           product_name: item.product_name,
           quantity: item.quantity,
           unit: item.unit,
@@ -280,6 +297,7 @@ Deno.serve(async (req) => {
         .from('stock_movements')
         .insert([{
           product_id: item.product_id,
+          company_id: companyId,
           movement_type: 'out',
           quantity: -item.quantity,
           previous_quantity: previousQuantity,
@@ -309,6 +327,7 @@ Deno.serve(async (req) => {
         .from('activity_logs')
         .insert({
           user_id: user.id,
+          company_id: companyId,
           action_type: 'sale_created',
           entity_type: 'sale',
           entity_id: sale.id,

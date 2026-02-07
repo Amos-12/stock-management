@@ -60,7 +60,7 @@ export function useCompanySettings(): UseCompanySettingsReturn {
       setError(null);
 
       const { data, error: fetchError } = await supabase
-        .from('company_settings')
+        .from('companies')
         .select('*')
         .limit(1)
         .maybeSingle();
@@ -72,7 +72,7 @@ export function useCompanySettings(): UseCompanySettingsReturn {
           usdHtgRate: Number(data.usd_htg_rate) || DEFAULT_SETTINGS.usdHtgRate,
           displayCurrency: (data.default_display_currency as 'USD' | 'HTG') || DEFAULT_SETTINGS.displayCurrency,
           tvaRate: Number(data.tva_rate) || DEFAULT_SETTINGS.tvaRate,
-          companyName: data.company_name || DEFAULT_SETTINGS.companyName,
+          companyName: data.name || DEFAULT_SETTINGS.companyName,
           address: data.address || DEFAULT_SETTINGS.address,
           city: data.city || DEFAULT_SETTINGS.city,
           phone: data.phone || DEFAULT_SETTINGS.phone,

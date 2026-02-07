@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.delete-sale]
 verify_jwt = true
+
+[functions.validate-invitation]
+verify_jwt = false

@@ -47,6 +47,15 @@ Deno.serve(async (req) => {
       throw new Error('Non authentifié');
     }
 
+    // Get user's company_id
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single();
+
+    const companyId = userProfile?.company_id;
+
     // Verify admin role
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
@@ -137,6 +146,7 @@ Deno.serve(async (req) => {
         .from('stock_movements')
         .insert({
           product_id: item.product_id,
+          company_id: companyId,
           movement_type: 'in',
           quantity: item.quantity,
           previous_quantity: productData.category === 'fer' ? previousStockBarre : 
@@ -193,6 +203,7 @@ Deno.serve(async (req) => {
       .from('activity_logs')
       .insert({
         user_id: user.id,
+        company_id: companyId,
         action_type: 'sale_deleted',
         entity_type: 'sale',
         entity_id: saleId,
